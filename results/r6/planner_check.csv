@@ -1,0 +1,5 @@
+task,checkpoint_seed,eval_seed,layout,eval_mode,episodes,return_mean,return_min,return_max,published,published_step,fraction,seconds_first_episode,seconds_per_episode_after_first,steps_per_episode,compile,iterations,num_samples,horizon
+cartpole-swingup,2,1,public,True,5,883.233,882.968,883.441,882.5,4000000,1.00083,121.694,9.04294,500,True,6,512,3
+cartpole-swingup,2,1,public,False,5,882.188,882.013,882.5,882.5,4000000,0.999647,90.5622,9.80916,500,True,6,512,3
+humanoid-run,1,1,public,True,5,672.794,658.896,679.538,542.2,14000000,1.24086,135.305,13.3643,500,True,8,512,3
+humanoid-run,1,1,public,False,5,616.794,576.314,659.525,542.2,14000000,1.13758,124.718,13.5559,500,True,8,512,3
