@@ -32,4 +32,19 @@ flax_default:
   source: flax 0.12.8
   eps: [1.0e-6]
 
+# (d) TD-MPC2 defaults, read from tdmpc2 at e9f59321 (common/init.py:7-9) and
+# torch v2.14.0 (torch/nn/init.py:301-306; nn/modules/normalization.py:191):
+#   nn.init.trunc_normal_(m.weight, std=0.02)   # mean 0, bounds a=-2, b=2 (absolute)
+#   nn.init.constant_(m.bias, 0)
+#   nn.LayerNorm(out_features)                  # eps = 1e-5
+# Own shapes: H = 256 (enc_dim of the 5M model); k = the R6 tasks' state
+# dimensions once R6 step 3 records them. Until then k = 16 and 24.
+tdmpc2_default:
+  source: tdmpc2 e9f59321, torch 2.14.0
+  H: 256
+  k: [16, 24]
+  std: 0.02
+  bounds: [-2.0, 2.0]
+  eps: [1.0e-5]
+
 out_dir: results/initial_lens/

@@ -12,6 +12,9 @@ for what each experiment must do.
 - Never edit a file in `prereg/` after it has been git-tagged (tags look like
   `prereg-r6`, `prereg-p1`). Scripts for a pre-registered test must refuse to run
   unless that tag exists.
+- Cloud sessions cannot push tags. For a pre-registration, commit and push the
+  file, then stop and ask the author to create and push the annotated tag from
+  their own machine.
 - Paper figures come only from scripts in `figures/`. Notebooks are exploration only.
 - Every experiment run saves, next to its results: its config, the git commit hash,
   and the JAX (and PyTorch, if used) version.

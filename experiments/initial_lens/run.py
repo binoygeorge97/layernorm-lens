@@ -11,6 +11,9 @@ docs/theory.md implementation convention 4:
                  principal widths sqrt(H eps)/s_i are reported instead of r* (= 0).
   flax_default:  Flax's Dense init (lecun_normal kernel, zero bias) at Flax's
                  LayerNorm eps only; degenerate like zero_bias, reported the same way.
+  tdmpc2_default: TD-MPC2's weight_init (trunc_normal_ std 0.02, bounds +-2, zero
+                 bias) at eps = 1e-5, on its own (H, k) shapes; degenerate, reported
+                 like zero_bias, with sqrt(eps)/std as the reference width.
 
 Writes to out_dir: summary.csv, draws.npz (per-draw values), hist_H{H}_k{k}.png,
 config.yaml and meta.json (git commit, versions).
@@ -62,17 +65,29 @@ def draw_flax(seed, H, k, i):
     return np.asarray(kernel).T, np.zeros(H)
 
 
+def draw_tdmpc2(seed, H, k, i, std, bounds):
+    """TD-MPC2's weight_init: nn.init.trunc_normal_(weight, std=std) with torch's
+    absolute bounds (a, b), zero bias. Own random stream (extra fold_in(4)), so it is
+    independent of the Flax draws at the same (H, k)."""
+    key = jax.random.PRNGKey(seed)
+    for x in (H, k, i, 4):
+        key = jax.random.fold_in(key, x)
+    lo, hi = bounds[0] / std, bounds[1] / std
+    E = np.asarray(jax.random.truncated_normal(key, lo, hi, (H, k), jnp.float64)) * std
+    return E, np.zeros(H)
+
+
 def runs(cfg):
     """(eps, init) pairs: inits (a), (b) at every eps; (c) at Flax's own eps only."""
     pairs = [(e, init) for e in cfg["eps"] for init in cfg["inits"]]
     return pairs + [(e, "flax_default") for e in cfg["flax_default"]["eps"]]
 
 
-def run_shape(cfg, H, k):
-    """Per-draw values for every (eps, init) of one (H, k)."""
+def run_shape(cfg, H, k, pairs=None):
+    """Per-draw values for every (eps, init) pair of one (H, k)."""
     n, n_dir, seed = cfg["n_draws"], cfg["n_directions"], cfg["seed"]
     out = {}
-    for eps, init in runs(cfg):
+    for eps, init in (runs(cfg) if pairs is None else pairs):
         rec = dict(degenerate=np.zeros(n, bool), median_r_star=np.full(n, np.nan),
                    principal_widths=np.full((n, k), np.nan),
                    principal_widths_eff=np.full((n, k), np.nan),
@@ -83,6 +98,9 @@ def run_shape(cfg, H, k):
                 b = np.zeros(H)
             elif init == "flax_default":
                 E, b = draw_flax(seed, H, k, i)
+            elif init == "tdmpc2_default":
+                t = cfg["tdmpc2_default"]
+                E, b = draw_tdmpc2(seed, H, k, i, t["std"], t["bounds"])
             L = geo.lens(E, b, eps)
             rec["degenerate"][i] = L.degenerate
             rec["median_r_star"][i] = np.median([geo.width(L, dj) for dj in d])
@@ -101,7 +119,8 @@ def stats(x):
                 q05=q[0], q25=q[1], q50=q[2], q75=q[3], q95=q[4], max=x.max())
 
 
-def summary_rows(H, k, res):
+def summary_rows(H, k, res, ref=None):
+    """ref: optional reference width per eps for the eps_principal_width rows."""
     est = float(np.sqrt(1.0 - (k + 1) / H))
     rows = []
     for (eps, init), r in res.items():
@@ -123,6 +142,9 @@ def summary_rows(H, k, res):
             if name == "median_r_star":
                 row["estimate"] = est
                 row["q50_over_estimate"] = row["q50"] / est
+            elif ref is not None and name.startswith("eps_principal_width"):
+                row["estimate"] = ref[eps]
+                row["q50_over_estimate"] = row["q50"] / ref[eps]
             rows.append(row)
     return rows
 
@@ -209,6 +231,37 @@ def plot_shape(H, k, res, cfg, path):
     plt.close(fig)
 
 
+def plot_tdmpc2(H, k, res, cfg, path):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    ink, muted, grid, c1 = "#0b0b0b", "#52514e", "#e4e3df", "#2a78d6"
+    t = cfg["tdmpc2_default"]
+    fig, a = plt.subplots(figsize=(6.2, 3.6), facecolor="#fcfcfb")
+    for eps in t["eps"]:
+        r = res[(eps, "tdmpc2_default")]
+        a.hist(r["principal_widths_eff"].ravel(), bins=60, color=c1, edgecolor="#fcfcfb",
+               linewidth=0.6)
+        ref = np.sqrt(eps) / t["std"]
+        a.axvline(ref, color=ink, linestyle="--", linewidth=1.2)
+        a.text(ref, a.get_ylim()[1] * 0.95, f"  √ε/σ = {ref:.4f}", color=ink, va="top")
+        deg = f"degenerate {int(r['degenerate'].sum())}/{r['degenerate'].size}"
+    for sp in ("top", "right"):
+        a.spines[sp].set_visible(False)
+    a.grid(axis="y", color=grid, linewidth=0.6)
+    a.set_axisbelow(True)
+    a.set_facecolor("#fcfcfb")
+    a.set_xlabel("ε-limited principal width √(Hε)/sᵢ (input units)", color=ink)
+    a.set_ylabel("count", color=ink)
+    a.tick_params(colors=muted)
+    a.set_title(f"(d) TD-MPC2 init, H = {H}, k = {k}, ε = {t['eps'][0]:g}, σ = {t['std']}"
+                f"  ({deg})", color=ink, loc="left", fontsize=9.5)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150, facecolor=fig.get_facecolor())
+    plt.close(fig)
+
+
 def git(*args):
     r = subprocess.run(["git", *args], capture_output=True, text=True, cwd=ROOT)
     return r.stdout.strip()
@@ -245,6 +298,20 @@ def main():
         if not all(r["degenerate"].all() for (e, i), r in res.items() if i != "torch_default"):
             print(f"WARNING: a zero-bias draw at H={H}, k={k} is not degenerate")
         print(f"H={H} k={k} done")
+
+    t = cfg["tdmpc2_default"]
+    ref = {e: float(np.sqrt(e) / t["std"]) for e in t["eps"]}
+    for k in t["k"]:
+        H = t["H"]
+        res = run_shape(cfg, H, k, pairs=[(e, "tdmpc2_default") for e in t["eps"]])
+        rows += summary_rows(H, k, res, ref=ref)
+        for (eps, init), r in res.items():
+            for name, x in r.items():
+                arrays[f"H{H}_k{k}/eps{eps:g}/{init}/{name}"] = x
+        plot_tdmpc2(H, k, res, cfg, os.path.join(out, f"hist_tdmpc2_H{H}_k{k}.png"))
+        if not all(r["degenerate"].all() for r in res.values()):
+            print(f"WARNING: a TD-MPC2 draw at H={H}, k={k} is not degenerate")
+        print(f"(d) H={H} k={k} done")
 
     cols = ["H", "k", "eps", "init", "quantity", "n_draws", "n_degenerate", "n", "mean",
             "std", "min", "q05", "q25", "q50", "q75", "q95", "max", "estimate",
