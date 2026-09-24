@@ -7,7 +7,7 @@ source:
   checkpoints: https://huggingface.co/nicklashansen/tdmpc2
   # Claude Code: list the files actually available and report before downloading.
   repo_commit: e9f59321933cbc8e11a002b842adc7d4ffae8ff1   # cloned 24 Sep 2026
-  hf_revision: null    # pinned from the `list` stage before any download
+  hf_revision: "8fb2a82efb3bae96941da440128fe1332e4394fd"   # pinned from the `list` stage before any download
 model_size: 5          # all single-task checkpoints are 5M
 tasks:                 # approximate state dimension, to verify
   - cartpole-swingup   # ~5
@@ -15,7 +15,7 @@ tasks:                 # approximate state dimension, to verify
   - walker-run         # ~24
   - humanoid-run       # ~67
   - dog-run            # ~220, close to the k <= 255 limit
-seeds: [1]             # add more if several seeds are released per task
+seeds: [1, 2, 3]             # add more if several seeds are released per task
 
 # First encoder layer, read from the tdmpc2 code at repo_commit (step 1):
 #   layers.enc: mlp(obs_dim + task_dim, [enc_dim], latent_dim, act=SimNorm)
