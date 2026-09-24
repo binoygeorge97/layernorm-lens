@@ -4,9 +4,12 @@ Default mode is bit-exact and only meaningful in the environment recorded in
 tests/golden/manifest.json (same JAX/jaxlib/numpy/scipy, CPU): it is a guard
 against code changes, and it fails if the versions differ.
 
-LENS_TOL=1 compares with rtol=1e-12 (atol = 1e-12 x the array's largest
+LENS_TOL=1 compares with rtol=1e-12 (atol = 1e-12 x the array's largest finite
 magnitude, so entries that are rounding noise around zero do not fail) and skips
-the full-array hashes. Use it to check other machines.
+the full-array hashes. Use it to check other machines. In that mode only, outputs
+that are themselves rounding-noise diagnostics also pass when both values are at
+noise level: *_max_abs, *_relerr, *_orth if both |golden| and |new| <= 1e-12;
+*_sf (= -log10 of a relerr) if both are >= 12.
 """
 
 import json
@@ -24,6 +27,24 @@ from tests.golden import cases
 GOLDEN = os.path.join(os.path.dirname(__file__), "golden")
 TOL = os.environ.get("LENS_TOL", "0") == "1"
 RTOL = 1e-12
+NOISE_ABS = 1e-12  # *_max_abs, *_relerr, *_orth: both at or below this
+NOISE_SF = 12.0    # *_sf: both at or above this (significant figures)
+
+
+def _tol_close(key, g, n):
+    """Tolerance-mode comparison of one float output (LENS_TOL=1 only)."""
+    if g.shape != n.shape:
+        return False
+    fin = np.abs(g[np.isfinite(g)])
+    scale = float(fin.max()) if fin.size else 0.0  # all-NaN/inf golden: no atol
+    if np.allclose(n, g, rtol=RTOL, atol=RTOL * scale, equal_nan=True):
+        return True
+    with np.errstate(invalid="ignore"):
+        if key.endswith(("_max_abs", "_relerr", "_orth")):
+            return bool(np.all(np.abs(g) <= NOISE_ABS) and np.all(np.abs(n) <= NOISE_ABS))
+        if key.endswith("_sf"):
+            return bool(np.all(g >= NOISE_SF) and np.all(n >= NOISE_SF))
+    return False
 
 
 def _manifest():
@@ -51,9 +72,7 @@ def test_case(name):
         if TOL and key.endswith("#sha256"):
             continue
         if g.dtype.kind in "fc" and TOL:
-            scale = float(np.nanmax(np.abs(g))) if g.size and np.isfinite(g).any() else 0.0
-            ok = (g.shape == n.shape and
-                  np.allclose(n, g, rtol=RTOL, atol=RTOL * scale, equal_nan=True))
+            ok = _tol_close(key, g, n)
         elif g.dtype.kind in "fc":
             ok = g.shape == n.shape and g.dtype == n.dtype and np.array_equal(n, g, equal_nan=True)
         else:
