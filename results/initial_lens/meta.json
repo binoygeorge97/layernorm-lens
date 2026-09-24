@@ -1,5 +1,5 @@
 {
-  "git_commit": "f558059fb69312cb64ccea94051cffa0b14f113d",
+  "git_commit": "18329a0390e7d1dbbf4f71bdf75100e5615d3775",
   "git_dirty": false,
   "jax": "0.10.2",
   "numpy": "2.4.6",
@@ -7,7 +7,7 @@
   "torch": null,
   "python": "3.11.15",
   "x64": true,
-  "started": "2026-09-24T18:09:01.823266+00:00",
+  "started": "2026-09-24T19:46:51.829913+00:00",
   "config": {
     "shapes": [
       [
@@ -44,7 +44,23 @@
         1e-06
       ]
     },
+    "tdmpc2_default": {
+      "source": "tdmpc2 e9f59321, torch 2.14.0",
+      "H": 256,
+      "k": [
+        16,
+        24
+      ],
+      "std": 0.02,
+      "bounds": [
+        -2.0,
+        2.0
+      ],
+      "eps": [
+        1e-05
+      ]
+    },
     "out_dir": "results/initial_lens/"
   },
-  "finished": "2026-09-24T18:09:43.925988+00:00"
+  "finished": "2026-09-24T19:47:46.244511+00:00"
 }
