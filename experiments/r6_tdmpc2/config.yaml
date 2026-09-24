@@ -43,11 +43,22 @@ layer:
 data:
   episodes_per_task: 50
   env_seeds: [0, 1, 2, 3, 4]
-  policy: released agent, planning as in the repo's evaluate.py
+  policy: policy prior only, a_t = tanh(mu(enc(o_t))), position 0 = identity (deviation D4)
+  steps: 500              # agent steps per episode (public Timeout)
+  action_repeat: 2        # public DMControlWrapper.step
+consistency:              # deviation D3
+  seed: 1
+  candidates: [identity, symlog, layernorm]
+  pos0_layernorm_eps: 1.0e-5
+  simnorm_dim: 8          # checkpoint metadata
+  rng_seed: 0             # j = default_rng(0).integers(0, n, size=n)
+  accept_ratio: 0.1       # identity accepted iff lowest e and e <= 0.1 * e0
+  tie_ratio: 1.1          # candidates with e <= 1.1 * e_identity: report R6 under both
 paths:
   checkpoints: checkpoints/tdmpc2/
   weights_out: results/r6/weights/
   lens_out: results/r6/lens/
   data_out: data/r6/
+  tdmpc2_src: checkpoints/tdmpc2_src/   # clone at repo_commit; results/tdmpc2/<task>.csv
   results_out: results/r6/
 
