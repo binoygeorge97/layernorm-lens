@@ -1,0 +1,11 @@
+# large artefacts: never committed (see CLAUDE.md)
+results/
+checkpoints/
+data/
+# lens/core.py outdir() writes here
+kink_out/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/

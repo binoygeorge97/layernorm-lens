@@ -139,6 +139,9 @@ choices the code must make.
    of the median of r*(d) over random unit d, the principal widths, and ‖z*‖.
 5. ε is the value the model actually uses (PyTorch nn.LayerNorm defaults to 1e-5).
    Read it from kink_core.py or the checkpoint; never assume it.
+6. lens/core.py's `r_star` is not r*_ℓ but r_eff = √(‖c⊥,ℓ‖² + Hε) / ‖A d‖ =
+   r*_ℓ · √(1 + κ_ℓ) exactly (since ‖c⊥,ℓ‖²(1 + κ_ℓ) = ‖c⊥,ℓ‖² + Hε), the width of the
+   normalised output's profile along the line; lens/geometry.py exposes it as `r_eff`.
 
 ## Differences in the v2 draft (paste the exact v2 statements here)
 

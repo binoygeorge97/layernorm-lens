@@ -1,0 +1,22 @@
+{
+  "versions": {
+    "jax": "0.10.2",
+    "jaxlib": "0.10.2",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "x64": true,
+    "backend": "cpu"
+  },
+  "commit": "420fbc995652865cb82c5c44f154d5c605326af4",
+  "core_py_blob": "461aa2e642d1aeeea797c679385656b18acf9a69",
+  "cases": {
+    "norm": 15,
+    "init": 55,
+    "block_fwd": 39,
+    "stack": 32,
+    "geometry": 89,
+    "evaluate": 560,
+    "data": 15,
+    "train": 25
+  }
+}

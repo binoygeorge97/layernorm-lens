@@ -1,4 +1,9 @@
-jax==0.4.33
-jaxlib==0.4.33
-numpy==1.26.4
-pytest==8.3.3
+# CPU pins. JAX 0.10.2 also ships CUDA 12 wheels; on TACC GPU nodes install
+#   pip install "jax[cuda12]==0.10.2"
+# (pulls jax-cuda12-plugin==0.10.2 and jax-cuda12-pjrt==0.10.2).
+jax==0.10.2
+jaxlib==0.10.2
+numpy==2.4.6
+scipy==1.17.1
+PyYAML==6.0.1
+pytest==9.1.1
