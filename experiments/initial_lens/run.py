@@ -9,6 +9,8 @@ docs/theory.md implementation convention 4:
                  estimate sqrt(1 - (k + 1)/H).
   zero_bias:     every draw must be degenerate (c_perp = 0); the eps-limited
                  principal widths sqrt(H eps)/s_i are reported instead of r* (= 0).
+  flax_default:  Flax's Dense init (lecun_normal kernel, zero bias) at Flax's
+                 LayerNorm eps only; degenerate like zero_bias, reported the same way.
 
 Writes to out_dir: summary.csv, draws.npz (per-draw values), hist_H{H}_k{k}.png,
 config.yaml and meta.json (git commit, versions).
@@ -27,6 +29,7 @@ import sys
 import jax
 
 jax.config.update("jax_enable_x64", True)
+import jax.numpy as jnp
 import numpy as np
 import yaml
 
@@ -48,28 +51,46 @@ def draw(seed, H, k, i, n_dir):
     return E, b, d
 
 
+def draw_flax(seed, H, k, i):
+    """Flax Dense(H) on k inputs: kernel (k, H) from lecun_normal() (Flax's
+    default_kernel_init is exactly jax.nn.initializers.lecun_normal()), zero bias.
+    Flax computes y = x @ kernel, so E = kernel^T."""
+    key = jax.random.PRNGKey(seed)
+    for x in (H, k, i):
+        key = jax.random.fold_in(key, x)
+    kernel = jax.nn.initializers.lecun_normal()(key, (k, H), jnp.float64)
+    return np.asarray(kernel).T, np.zeros(H)
+
+
+def runs(cfg):
+    """(eps, init) pairs: inits (a), (b) at every eps; (c) at Flax's own eps only."""
+    pairs = [(e, init) for e in cfg["eps"] for init in cfg["inits"]]
+    return pairs + [(e, "flax_default") for e in cfg["flax_default"]["eps"]]
+
+
 def run_shape(cfg, H, k):
     """Per-draw values for every (eps, init) of one (H, k)."""
     n, n_dir, seed = cfg["n_draws"], cfg["n_directions"], cfg["seed"]
     out = {}
-    for eps in cfg["eps"]:
-        for init in cfg["inits"]:
-            rec = dict(degenerate=np.zeros(n, bool), median_r_star=np.full(n, np.nan),
-                       principal_widths=np.full((n, k), np.nan),
-                       principal_widths_eff=np.full((n, k), np.nan),
-                       norm_z_star=np.full(n, np.nan), kappa=np.full(n, np.nan))
-            for i in range(n):
-                E, b, d = draw(seed, H, k, i, n_dir)
-                if init == "zero_bias":
-                    b = np.zeros(H)
-                L = geo.lens(E, b, eps)
-                rec["degenerate"][i] = L.degenerate
-                rec["median_r_star"][i] = np.median([geo.width(L, dj) for dj in d])
-                rec["principal_widths"][i] = L.principal_widths
-                rec["principal_widths_eff"][i] = L.principal_widths_eff
-                rec["norm_z_star"][i] = np.linalg.norm(L.z_star)
-                rec["kappa"][i] = L.kappa
-            out[(eps, init)] = rec
+    for eps, init in runs(cfg):
+        rec = dict(degenerate=np.zeros(n, bool), median_r_star=np.full(n, np.nan),
+                   principal_widths=np.full((n, k), np.nan),
+                   principal_widths_eff=np.full((n, k), np.nan),
+                   norm_z_star=np.full(n, np.nan), kappa=np.full(n, np.nan))
+        for i in range(n):
+            E, b, d = draw(seed, H, k, i, n_dir)
+            if init == "zero_bias":
+                b = np.zeros(H)
+            elif init == "flax_default":
+                E, b = draw_flax(seed, H, k, i)
+            L = geo.lens(E, b, eps)
+            rec["degenerate"][i] = L.degenerate
+            rec["median_r_star"][i] = np.median([geo.width(L, dj) for dj in d])
+            rec["principal_widths"][i] = L.principal_widths
+            rec["principal_widths_eff"][i] = L.principal_widths_eff
+            rec["norm_z_star"][i] = np.linalg.norm(L.z_star)
+            rec["kappa"][i] = L.kappa
+        out[(eps, init)] = rec
     return out
 
 
@@ -113,7 +134,7 @@ def plot_shape(H, k, res, cfg, path):
     import matplotlib.ticker
 
     ink, muted, grid = "#0b0b0b", "#52514e", "#e4e3df"
-    c1, c2 = "#2a78d6", "#eb6834"  # categorical slots 1, 2 (validated pair)
+    c1, c2, c3 = "#2a78d6", "#eb6834", "#1baf7a"  # categorical slots 1-3 (validated)
     plt.rcParams.update({"font.size": 9, "axes.edgecolor": muted, "axes.labelcolor": ink,
                          "xtick.color": muted, "ytick.color": muted,
                          "axes.spines.top": False, "axes.spines.right": False})
@@ -151,14 +172,20 @@ def plot_shape(H, k, res, cfg, path):
         x = np.concatenate([res[(e, init)][key].ravel() for e in cfg["eps"]])
         return np.geomspace(x.min(), x.max(), 81)
 
-    bk, bw = logbins("kappa", "torch_default"), logbins("principal_widths_eff", "zero_bias")
+    bk = logbins("kappa", "torch_default")
+    xw = np.concatenate([res[r]["principal_widths_eff"].ravel() for r in res
+                         if r[1] != "torch_default"])
+    bw = np.geomspace(xw.min(), xw.max(), 81)
     for eps, c in zip(cfg["eps"], (c1, c2)):
         hist(ax[1, 0], res[(eps, "torch_default")]["kappa"], c, label=f"ε = {eps:g}",
              bins=bk, logx=True)
         hist(ax[1, 1], res[(eps, "zero_bias")]["principal_widths_eff"], c,
-             label=f"ε = {eps:g}", bins=bw, logx=True)
+             label=f"zero bias, ε = {eps:g}", bins=bw, logx=True)
+    for eps in cfg["flax_default"]["eps"]:
+        hist(ax[1, 1], res[(eps, "flax_default")]["principal_widths_eff"], c3,
+             label=f"(c) Flax, ε = {eps:g}", bins=bw, logx=True)
     ax[1, 0].set_title("(b) κ = Hε/|c⊥|²", color=ink, loc="left")
-    ax[1, 1].set_title("(a) ε-limited principal widths √(Hε)/sᵢ", color=ink, loc="left")
+    ax[1, 1].set_title("(a), (c) ε-limited principal widths √(Hε)/sᵢ", color=ink, loc="left")
     ax[1, 1].set_xlabel("input units")
     for a in (ax[1, 0], ax[1, 1]):
         a.legend(frameon=False, labelcolor=ink)
@@ -167,11 +194,10 @@ def plot_shape(H, k, res, cfg, path):
     a.axis("off")
     lines = [f"H = {H}, k = {k}, {cfg['n_draws']} draws per init,",
              f"{cfg['n_directions']} unit directions per draw", ""]
-    for eps in cfg["eps"]:
-        for init in cfg["inits"]:
-            r = res[(eps, init)]
-            lines.append(f"{init}, ε = {eps:g}: degenerate "
-                         f"{int(r['degenerate'].sum())}/{r['degenerate'].size}")
+    for eps, init in runs(cfg):
+        r = res[(eps, init)]
+        lines.append(f"{init}, ε = {eps:g}: degenerate "
+                     f"{int(r['degenerate'].sum())}/{r['degenerate'].size}")
     lines += ["", "(b) r*, widths and |z*| do not depend on ε;", "κ does."]
     a.text(0, 1, "\n".join(lines), va="top", color=muted, family="monospace", fontsize=8.5)
     for a in ax.flat[:5]:
@@ -214,7 +240,7 @@ def main():
             for name, x in r.items():
                 arrays[f"H{H}_k{k}/eps{eps:g}/{init}/{name}"] = x
         plot_shape(H, k, res, cfg, os.path.join(out, f"hist_H{H}_k{k}.png"))
-        if not all(res[(e, "zero_bias")]["degenerate"].all() for e in cfg["eps"]):
+        if not all(r["degenerate"].all() for (e, i), r in res.items() if i != "torch_default"):
             print(f"WARNING: a zero-bias draw at H={H}, k={k} is not degenerate")
         print(f"H={H} k={k} done")
 
