@@ -75,6 +75,14 @@ consistency:              # deviations D3, D5
   rng_seed: 0             # j = default_rng(0).integers(0, n, size=n)
   accept_ratio: 0.1       # identity accepted iff lowest e and e <= 0.1 * e0
   tie_ratio: 1.1          # candidates with e <= 1.1 * e_identity: report R6 under both
+planner_check:           # step-1 feasibility (planner through the public TDMPC2 class)
+  checkpoints:
+    - {task: cartpole-swingup, seed: 2}
+    - {task: humanoid-run, seed: 1}
+  episodes: 5
+  eval_seed: 1            # evaluate.py default (config.yaml seed)
+  eval_modes: [true, false]   # true: as the published curves (trainer); false: as evaluate.py
+  compile: true           # config.yaml default; the first episode includes compilation
 paths:
   checkpoints: checkpoints/tdmpc2/
   weights_out: results/r6/weights/
