@@ -225,7 +225,9 @@ def main():
 
     import matplotlib
     meta = dict(git_commit=git("rev-parse", "HEAD"),
-                git_dirty=bool(git("status", "--porcelain", "--untracked-files=no")),
+                # tracked changes outside out_dir (its committed outputs don't count)
+                git_dirty=bool(git("status", "--porcelain", "--untracked-files=no", "--",
+                                   ".", f":!{cfg['out_dir']}")),
                 jax=jax.__version__, numpy=np.__version__, matplotlib=matplotlib.__version__,
                 torch=None, python=platform.python_version(),
                 x64=bool(jax.config.read("jax_enable_x64")),
