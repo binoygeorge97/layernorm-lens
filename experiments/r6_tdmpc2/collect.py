@@ -3,14 +3,14 @@
     python experiments/r6_tdmpc2/collect.py --config experiments/r6_tdmpc2/config.yaml collect
     python experiments/r6_tdmpc2/collect.py --config experiments/r6_tdmpc2/config.yaml consistency
 
-Refuses to run unless the annotated tags prereg-r6 and prereg-r6-d1 exist and
-prereg/r6.md and prereg/r6-deviations.md match their tagged versions.
+Refuses to run unless the annotated tags prereg-r6, prereg-r6-d1 and prereg-r6-d2
+exist and prereg/r6.md, r6-deviations.md and r6-deviations-2.md match them.
 
 Nothing here computes a criterion quantity (Inside, Populated, Sharp) or the gate.
 
 collect      For each task and seed: load the released checkpoint (downloaded by
              extract.py), act with the policy prior alone, a_t = tanh(mu(enc(o_t))),
-             with encoder position 0 = identity (D4), in stock DMControl with the
+             with identity at the encoder's input (D4, D5), in stock DMControl with the
              public TD-MPC2 conventions: suite.load(domain, task,
              task_kwargs={'random': env_seed}), actions scaled to [-1, 1],
              observation dict flattened in spec order as float32, action repeat 2,
@@ -18,14 +18,17 @@ collect      For each task and seed: load the released checkpoint (downloaded by
              observation (501 per episode, reset included), action and reward to
              data_out, and returns.csv (policy-only returns vs the published
              return; flag below 50%, no gate).
-consistency  Seed 1 per task: e_c for each position-0 candidate and e0, and the D3
-             decision. Writes consistency.csv / consistency.json; exits with status
-             2 and prints STOP if identity is rejected for any task.
+consistency  D3 on the pre-release checkpoints (config consistency.targets: the
+             gate checkpoint and the reported one), and the same computation on
+             the public-layout calibration checkpoints as a reference (D5). Writes
+             consistency.csv / consistency.json; exits with status 2 and prints
+             STOP if identity is rejected where consistency.stop_on_reject says so.
 
-Networks are evaluated in float64 numpy from the float32 checkpoint weights.
-Parameter-free positions follow the public code (D3): Mish after every LayerNorm
-except a network's last, SimNorm (simnorm_dim) after the last LayerNorm of the
-encoder and the dynamics model, nothing after the policy's final Linear.
+Each checkpoint's layout is detected from its keys (layouts.py, D5) and must agree
+with the config's survey. Networks are evaluated in float64 numpy from the float32
+checkpoint weights, following the public code for both layouts: Mish after every
+LayerNorm except a network's last, SimNorm (simnorm_dim) after the last LayerNorm of
+the encoder and the dynamics model, nothing after the policy's final Linear.
 """
 
 import argparse
@@ -45,7 +48,10 @@ import numpy as np
 import yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-TAGS = [("prereg-r6", "prereg/r6.md"), ("prereg-r6-d1", "prereg/r6-deviations.md")]
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import layouts  # noqa: E402
+TAGS = [("prereg-r6", "prereg/r6.md"), ("prereg-r6-d1", "prereg/r6-deviations.md"),
+        ("prereg-r6-d2", "prereg/r6-deviations-2.md")]
 
 
 # --------------------------------------------------------------------------- #
@@ -115,109 +121,21 @@ def load_checkpoint(cfg, task, seed):
     return arrays, (None if mods is None else sorted(mods.keys())), hits[0]
 
 
-def _path_key(p):
-    return tuple(int(x) for x in p.split("."))
-
-
-def build_net(sd, prefix, final, eps, simnorm_dim, module_names=None, pos0=None):
-    """Sequential network from the parametrised modules under `prefix`.
-
-    A module with a 2-D weight is a Linear; a 1-D weight with a bias is a
-    LayerNorm (eps). After each LayerNorm: Mish, or `final` ('simnorm') after the
-    network's last module. Index gaps must be exactly the parameter-free
-    positions this rule implies (plus position 0 for the encoder, `pos0`); if the
-    state_dict carries module names they must agree too. Anything else stops.
-    """
-    keys = [k for k in sd if k.startswith(prefix + ".")]
-    paths = sorted({k[len(prefix) + 1:].rsplit(".", 1)[0] for k in keys}, key=_path_key)
-    ops, errs = [], []
-    for p in paths:
-        w, b = sd.get(f"{prefix}.{p}.weight"), sd.get(f"{prefix}.{p}.bias")
-        extra = sorted(k for k in keys if k.startswith(f"{prefix}.{p}.")
-                       and k.rsplit(".", 1)[1] not in ("weight", "bias"))
-        if w is None or b is None or extra:
-            errs.append(f"{prefix}.{p}: keys {sorted(k for k in keys if k.startswith(prefix + '.' + p + '.'))}")
-            continue
-        ops.append(("linear" if w.ndim == 2 else "ln", p, w, b))
-    # parameter-free positions implied by the rule
-    implied = []
-    for i, (kind, p, _, _) in enumerate(ops):
-        if kind == "ln":
-            parent, idx = (p.rsplit(".", 1) if "." in p else ("", p))
-            nxt = f"{parent}.{int(idx) + 1}" if parent else str(int(idx) + 1)
-            implied.append(nxt)
-    if pos0 is not None:
-        implied.append("0")
-    present = {p for _, p, _, _ in ops}
-    for q in implied:
-        if q in present:
-            errs.append(f"{prefix}.{q}: rule implies a parameter-free module, found parameters")
-    # gaps within each Sequential level must be exactly the implied positions
-    for kind, p, _, _ in ops:
-        parent, idx = (p.rsplit(".", 1) if "." in p else ("", p))
-        for j in range(int(idx)):
-            q = f"{parent}.{j}" if parent else str(j)
-            if q not in present and q not in implied and not any(
-                    x.startswith(q + ".") for x in present):
-                errs.append(f"{prefix}.{q}: unexplained parameter-free position")
-    if module_names is not None:
-        named = {m[len(prefix) + 1:] for m in module_names if m.startswith(prefix + ".")}
-        leaves = {m for m in named if not any(o.startswith(m + ".") for o in named)}
-        free = leaves - present
-        if free != set(implied):
-            errs.append(f"{prefix}: parameter-free modules {sorted(free, key=_path_key)} "
-                        f"!= implied {sorted(set(implied), key=_path_key)}")
-    if errs:
-        sys.exit("layout check failed:\n  " + "\n  ".join(errs))
-
-    def f(x):
-        x = np.asarray(x, np.float64)
-        if pos0 is not None:
-            x = pos0(x)
-        for i, (kind, p, w, b) in enumerate(ops):
-            if kind == "linear":
-                x = x @ w.T + b
-            else:
-                m = x.mean(-1, keepdims=True)
-                v = ((x - m) ** 2).mean(-1, keepdims=True)
-                x = (x - m) / np.sqrt(v + eps) * w + b
-                x = simnorm(x, simnorm_dim) if (i == len(ops) - 1 and final == "simnorm") else mish(x)
-        return x
-
-    f.ops = [(k, p, tuple(w.shape)) for k, p, w, _ in ops]
-    f.implied_free = sorted(set(implied), key=_path_key)
-    return f
-
-
-def mish(x):
-    return x * np.tanh(np.logaddexp(0.0, x))
-
-
-def simnorm(x, dim):
-    s = x.shape
-    x = x.reshape(*s[:-1], -1, dim)
-    x = np.exp(x - x.max(-1, keepdims=True))
-    return (x / x.sum(-1, keepdims=True)).reshape(s)
-
-
-def pos0_candidates(eps):
-    def layernorm(o):
-        m = o.mean(-1, keepdims=True)
-        return (o - m) / np.sqrt(((o - m) ** 2).mean(-1, keepdims=True) + eps)
-    return {"identity": lambda o: o,
-            "symlog": lambda o: np.sign(o) * np.log1p(np.abs(o)),
-            "layernorm": layernorm}
-
-
-def agent(cfg, task, seed, pos0="identity"):
+def agent(cfg, task, seed, cand="identity"):
+    """Encoder, dynamics and policy of one checkpoint, read according to its detected
+    layout (D5), with D3 candidate `cand` at the encoder's input."""
     sd, mods, path = load_checkpoint(cfg, task, seed)
+    where = f"{task} seed {seed}"
+    layout = layouts.detect_layout(sd, where)
+    expected = cfg["survey"][task][seed]
+    if layout != expected:
+        sys.exit(f"{where}: detected layout {layout}, survey (D5) says {expected}.")
+    layouts.check_first_layer(sd, layout, cfg["layer"]["layouts"], where)
     c = cfg["consistency"]
     eps, sdim = float(cfg["layer"]["layernorm_eps"]), int(c["simnorm_dim"])
-    enc = build_net(sd, "_encoder.state", "simnorm", eps, sdim, mods,
-                    pos0=pos0_candidates(float(c["pos0_layernorm_eps"]))[pos0])
-    dyn = build_net(sd, "_dynamics", "simnorm", eps, sdim, mods)
-    pi = build_net(sd, "_pi", None, eps, sdim, mods)
-    return dict(enc=enc, dyn=dyn, pi=pi, path=path, sd_keys=sorted(sd), modules=mods)
+    inp = layouts.input_candidates(float(c["pos0_layernorm_eps"]))[cand]
+    enc, dyn, pi = layouts.build_networks(sd, layout, eps, sdim, mods, input_fn=inp)
+    return dict(enc=enc, dyn=dyn, pi=pi, layout=layout, path=path, modules=mods)
 
 
 # --------------------------------------------------------------------------- #
@@ -273,7 +191,7 @@ def stage_collect(cfg):
     rows, record = [], {}
     for task in cfg["tasks"]:
         for seed in cfg["seeds"]:
-            ag = agent(cfg, task, seed, pos0="identity")
+            ag = agent(cfg, task, seed, cand="identity")
             enc, pi, dyn = ag["enc"], ag["pi"], ag["dyn"]
             n_act = int(np.prod(make_env(task, 0).action_spec().shape))
             lat = enc.ops[-1][2][0]
@@ -298,15 +216,17 @@ def stage_collect(cfg):
             ret = R.sum(1)
             pub, pub_step = published_return(cfg, task, seed)
             frac = ret.mean() / pub if np.isfinite(pub) and pub else np.nan
-            rows.append(dict(task=task, seed=seed, k=O.shape[-1], episodes=len(ret),
+            rows.append(dict(task=task, seed=seed, layout=ag["layout"], k=O.shape[-1],
+                             episodes=len(ret),
                              return_mean=ret.mean(), return_std=ret.std(ddof=1),
                              published=pub, published_step=pub_step, fraction=frac,
                              flag_below_half=bool(np.isfinite(frac) and frac < 0.5)))
-            record[f"{task}/{seed}"] = dict(checkpoint=ag["path"], enc=ag["enc"].ops,
+            record[f"{task}/{seed}"] = dict(checkpoint=ag["path"], layout=ag["layout"],
+                                            enc=ag["enc"].ops,
                                             dyn=ag["dyn"].ops, pi=ag["pi"].ops,
                                             parameter_free={n: ag[n].implied_free
                                                             for n in ("enc", "dyn", "pi")})
-            print(f"{task} seed {seed}: k = {O.shape[-1]}, return {ret.mean():.1f} "
+            print(f"{task} seed {seed} [{ag['layout']}]: k = {O.shape[-1]}, return {ret.mean():.1f} "
                   f"(published {pub}, fraction {frac:.2f}){'  FLAG < 50%' if rows[-1]['flag_below_half'] else ''}")
     _csv(os.path.join(ROOT, cfg["paths"]["results_out"], "returns.csv"), rows)
     write_meta(cfg, "collect", dict(networks=record))
@@ -346,31 +266,53 @@ def decide(err, accept_ratio, tie_ratio):
 
 
 def stage_consistency(cfg):
+    """D3 on the pre-release targets (D5); the same computation on the public-layout
+    calibration checkpoints, reported as a reference only."""
     c = cfg["consistency"]
-    seed = int(c["seed"])
-    rows, verdicts = [], {}
-    for task in cfg["tasks"]:
+    jobs = ([(t["task"], int(t["seed"]), t["role"], layouts.PRERELEASE) for t in c["targets"]]
+            + [(t["task"], int(t["seed"]), "calibration", layouts.PUBLIC) for t in c["calibration"]])
+    rows, verdicts, stop = [], {}, []
+    for task, seed, role, want in jobs:
         data = np.load(os.path.join(ROOT, cfg["paths"]["data_out"], f"{task}-seed{seed}.npz"))
-        ags = {cand: agent(cfg, task, seed, pos0=cand) for cand in c["candidates"]}
+        ags = {cand: agent(cfg, task, seed, cand=cand) for cand in c["candidates"]}
+        layout = ags["identity"]["layout"]
+        if layout != want:
+            sys.exit(f"{task} seed {seed}: {role} requires the {want} layout, detected {layout}.")
         err = consistency_errors(ags, data["obs"], data["actions"], int(c["rng_seed"]))
         v = decide(err, float(c["accept_ratio"]), float(c["tie_ratio"]))
-        verdicts[task] = dict(errors=err, **v)
+        if role == "calibration":  # reference only: no decision is applied
+            v = dict(lowest=v["lowest"], accepted=None, report_under_both=[])
+        # D5: a rejected checkpoint that does not stop the analysis is unidentified,
+        # and its R6 results are reported under every candidate
+        v["identified"] = None if v["accepted"] is None else bool(v["accepted"])
+        v["report_r6_under"] = (["identity"] + v["report_under_both"] if v["accepted"]
+                                else list(err) if v["accepted"] is False else [])
+        verdicts[f"{task}/{seed}"] = dict(role=role, layout=layout, errors=err, **v)
         for cand, x in err.items():
-            rows.append(dict(task=task, seed=seed, candidate=cand, e=x["e"], e0=x["e0"],
-                             e_over_e0=x["e"] / x["e0"], n=x["n"],
-                             lowest=(cand == v["lowest"]), identity_accepted=v["accepted"],
-                             report_under_both=";".join(v["report_under_both"])))
-        print(f"{task}: " + ", ".join(f"{k} e={x['e']:.4g} (e0 {x['e0']:.4g})" for k, x in err.items())
-              + f"  -> identity {'ACCEPTED' if v['accepted'] else 'REJECTED'}"
+            rows.append(dict(task=task, seed=seed, role=role, layout=layout, candidate=cand,
+                             e=x["e"], e0=x["e0"], e_over_e0=x["e"] / x["e0"], n=x["n"],
+                             lowest=(cand == v["lowest"]),
+                             identity_accepted="" if v["accepted"] is None else v["accepted"],
+                             identified="" if v["identified"] is None else v["identified"],
+                             report_under_both=";".join(v["report_under_both"]),
+                             report_r6_under=";".join(v["report_r6_under"])))
+        verdict = ("reference only" if role == "calibration"
+                   else "identity ACCEPTED" if v["accepted"]
+                   else "identity REJECTED" + ("" if c["stop_on_reject"][role]
+                                               else ": checkpoint UNIDENTIFIED, R6 under each candidate"))
+        print(f"{task} seed {seed} [{role}, {layout}]: "
+              + ", ".join(f"{k} e/e0={x['e'] / x['e0']:.4g}" for k, x in err.items())
+              + f"  -> {verdict}"
               + (f"; report under both with {v['report_under_both']}" if v["report_under_both"] else ""))
+        if role != "calibration" and not v["accepted"] and c["stop_on_reject"][role]:
+            stop.append(f"{task} seed {seed} ({role})")
     res = os.path.join(ROOT, cfg["paths"]["results_out"])
     _csv(os.path.join(res, "consistency.csv"), rows)
     with open(os.path.join(res, "consistency.json"), "w") as f:
         json.dump(verdicts, f, indent=2)
     write_meta(cfg, "consistency", {})
-    rejected = [t for t, v in verdicts.items() if not v["accepted"]]
-    if rejected:
-        print(f"\nSTOP: identity rejected for {rejected}. Consult the author (D3).")
+    if stop:
+        print(f"\nSTOP: identity rejected for {stop}. Consult the author (D3, D5).")
         sys.exit(2)
 
 
