@@ -1,2 +1,26 @@
-seed: 0
-epochs: 10
+# R6: TD-MPC2 encoder lens. Evaluation only.
+# Tasks chosen to span state dimension: the exact theory needs k <= H - 1 = 255
+# for the 5M encoder (first layer S -> 256). Claude Code: read each state
+# dimension from the checkpoint's weight shape; the numbers below are unverified.
+source:
+  repo: https://github.com/nicklashansen/tdmpc2
+  checkpoints: https://huggingface.co/nicklashansen/tdmpc2
+  # Claude Code: list the files actually available and report before downloading.
+model_size: 5          # all single-task checkpoints are 5M
+tasks:                 # approximate state dimension, to verify
+  - cartpole-swingup   # ~5
+  - cheetah-run        # ~17
+  - walker-run         # ~24
+  - humanoid-run       # ~67
+  - dog-run            # ~220, close to the k <= 255 limit
+seeds: [1]             # add more if several seeds are released per task
+data:
+  episodes_per_task: 50
+  env_seeds: [0, 1, 2, 3, 4]
+  policy: released agent, planning as in the repo's evaluate.py
+paths:
+  checkpoints: checkpoints/tdmpc2/
+  weights_out: results/r6/weights/
+  data_out: data/r6/
+  results_out: results/r6/
+
