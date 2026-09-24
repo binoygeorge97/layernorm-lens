@@ -9,7 +9,10 @@ magnitude, so entries that are rounding noise around zero do not fail) and skips
 the full-array hashes. Use it to check other machines. In that mode only, outputs
 that are themselves rounding-noise diagnostics also pass when both values are at
 noise level: *_max_abs, *_relerr, *_orth if both |golden| and |new| <= 1e-12;
-*_sf (= -log10 of a relerr) if both are >= 12.
+*_sf (= -log10 of a relerr) if both are >= 12. *_relerr outputs also pass within
+an absolute 1e-14: they are relative errors, so rtol against their own small values
+(e.g. hwhm_ratio_relerr ~ 6e-7, which differs by ~2.2e-16 across platforms) is
+stricter than the quantity warrants.
 """
 
 import json
@@ -29,6 +32,7 @@ TOL = os.environ.get("LENS_TOL", "0") == "1"
 RTOL = 1e-12
 NOISE_ABS = 1e-12  # *_max_abs, *_relerr, *_orth: both at or below this
 NOISE_SF = 12.0    # *_sf: both at or above this (significant figures)
+RELERR_ATOL = 1e-14  # *_relerr: absolute tolerance (in addition to rtol)
 
 
 def _tol_close(key, g, n):
@@ -38,6 +42,8 @@ def _tol_close(key, g, n):
     fin = np.abs(g[np.isfinite(g)])
     scale = float(fin.max()) if fin.size else 0.0  # all-NaN/inf golden: no atol
     if np.allclose(n, g, rtol=RTOL, atol=RTOL * scale, equal_nan=True):
+        return True
+    if key.endswith("_relerr") and np.allclose(n, g, rtol=0.0, atol=RELERR_ATOL, equal_nan=True):
         return True
     with np.errstate(invalid="ignore"):
         if key.endswith(("_max_abs", "_relerr", "_orth")):
