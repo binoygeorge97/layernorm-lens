@@ -38,11 +38,13 @@ flax_default:
 #   nn.init.constant_(m.bias, 0)
 #   nn.LayerNorm(out_features)                  # eps = 1e-5
 # Own shapes: H = 256 (enc_dim of the 5M model); k = the R6 tasks' state
-# dimensions once R6 step 3 records them. Until then k = 16 and 24.
+# dimensions from the checkpoint survey (prereg/r6-deviations-2.md, D5):
+# cartpole-swingup 5, cheetah-run 17, walker-run 24, humanoid-run 67, dog-run 223.
+# 16 is the earlier placeholder, kept so the summary only gains rows.
 tdmpc2_default:
   source: tdmpc2 e9f59321, torch 2.14.0
   H: 256
-  k: [16, 24]
+  k: [16, 24, 5, 17, 67, 223]
   std: 0.02
   bounds: [-2.0, 2.0]
   eps: [1.0e-5]
