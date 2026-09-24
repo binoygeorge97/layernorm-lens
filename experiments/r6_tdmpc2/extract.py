@@ -144,7 +144,7 @@ def stage_extract(cfg):
     record = {}
     for task in cfg["tasks"]:
         for seed in cfg["seeds"]:
-            hits = [h for h in match(files, task) if h["seed"] == seed]
+            hits = [{"path": f, "seed": seed} for f in files if os.path.basename(f) == f"{task}-{seed}.pt"]
             if len(hits) != 1:
                 sys.exit(f"{task} seed {seed}: expected exactly one file, found {hits}.")
             path = hits[0]["path"]
