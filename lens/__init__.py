@@ -1,1 +1,1 @@
-from .core import kink_core
+from . import core

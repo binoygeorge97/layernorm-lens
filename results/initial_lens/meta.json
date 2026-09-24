@@ -1,0 +1,50 @@
+{
+  "git_commit": "f558059fb69312cb64ccea94051cffa0b14f113d",
+  "git_dirty": false,
+  "jax": "0.10.2",
+  "numpy": "2.4.6",
+  "matplotlib": "3.11.2",
+  "torch": null,
+  "python": "3.11.15",
+  "x64": true,
+  "started": "2026-09-24T18:09:01.823266+00:00",
+  "config": {
+    "shapes": [
+      [
+        128,
+        16
+      ],
+      [
+        16,
+        2
+      ],
+      [
+        64,
+        2
+      ],
+      [
+        256,
+        16
+      ]
+    ],
+    "eps": [
+      1e-06,
+      1e-05
+    ],
+    "n_draws": 1000,
+    "n_directions": 64,
+    "seed": 20260924,
+    "inits": [
+      "zero_bias",
+      "torch_default"
+    ],
+    "flax_default": {
+      "source": "flax 0.12.8",
+      "eps": [
+        1e-06
+      ]
+    },
+    "out_dir": "results/initial_lens/"
+  },
+  "finished": "2026-09-24T18:09:43.925988+00:00"
+}

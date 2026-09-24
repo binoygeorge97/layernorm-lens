@@ -1,0 +1,35 @@
+# Initial-lens check (docs/plan.md "Initial-lens check"; docs/theory.md
+# "Proposition (the lens at initialisation)" and implementation convention 4).
+# Not pre-registered: plan.md schedules prereg/p1.md after this check.
+
+shapes:            # (H, k) pairs; k counts every encoder input
+  - [128, 16]
+  - [16, 2]
+  - [64, 2]
+  - [256, 16]
+eps: [1.0e-6, 1.0e-5]
+n_draws: 1000
+n_directions: 64   # random unit d per draw for the median of r*(d)
+seed: 20260924     # base seed; draw i of (H, k) uses default_rng([seed, H, k, i])
+
+# PyTorch's default nn.Linear(k, H) init, reproduced in numpy (torch not used):
+# weight ~ U(-1/sqrt(k), 1/sqrt(k)) (kaiming_uniform, a = sqrt(5)),
+# bias   ~ U(-1/sqrt(k), 1/sqrt(k)).
+# (a) zero_bias: that weight, b = 0.  (b) torch_default: that weight and bias.
+# Both inits use the SAME E for a given draw, and the same draws for every eps.
+inits: [zero_bias, torch_default]
+
+# (c) Flax defaults, read from the flax 0.12.8 wheel (linen/linear.py, linen/
+# normalization.py; nnx/nn/* agree) and jax 0.10.2 (_src/nn/initializers.py):
+#   Dense.kernel_init = lecun_normal() = variance_scaling(1.0, "fan_in",
+#     "truncated_normal"): N(0, 1)/0.87962566103423978 truncated to (-2, 2),
+#     times sqrt(1/fan_in), fan_in = k (kernel shape (k, H); y = x @ kernel)
+#   Dense.bias_init   = zeros_init()
+#   LayerNorm.epsilon = 1e-6
+# Run at its own eps only. Flax's param_dtype default is float32; we sample in
+# float64 (CLAUDE.md), which does not change the distribution beyond rounding.
+flax_default:
+  source: flax 0.12.8
+  eps: [1.0e-6]
+
+out_dir: results/initial_lens/
