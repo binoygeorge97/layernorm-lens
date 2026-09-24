@@ -110,6 +110,7 @@ def plot_shape(H, k, res, cfg, path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import matplotlib.ticker
 
     ink, muted, grid = "#0b0b0b", "#52514e", "#e4e3df"
     c1, c2 = "#2a78d6", "#eb6834"  # categorical slots 1, 2 (validated pair)
@@ -121,13 +122,12 @@ def plot_shape(H, k, res, cfg, path):
     est = np.sqrt(1.0 - (k + 1) / H)
     fig, ax = plt.subplots(2, 3, figsize=(11, 6.2), facecolor="#fcfcfb")
 
-    def hist(a, x, color, label=None, logx=False):
-        x = np.asarray(x).ravel()
-        bins = (np.geomspace(x.min(), x.max(), 41) if logx else 40)
-        a.hist(x, bins=bins, color=color, alpha=0.75 if label else 1.0, label=label,
-               edgecolor="#fcfcfb", linewidth=0.6)
+    def hist(a, x, color, label=None, bins=40, logx=False):
+        a.hist(np.asarray(x).ravel(), bins=bins, color=color, alpha=0.75 if label else 1.0,
+               label=label, edgecolor="#fcfcfb", linewidth=0.6)
         if logx:
             a.set_xscale("log")
+            a.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         a.grid(axis="y", color=grid, linewidth=0.6)
         a.set_axisbelow(True)
         a.set_facecolor("#fcfcfb")
@@ -140,17 +140,23 @@ def plot_shape(H, k, res, cfg, path):
     a.set_xlabel("input units")
 
     hist(ax[0, 1], tb["principal_widths"], c1)
-    ax[0, 1].set_title(f"(b) principal widths |c⊥|/sᵢ (all {k} per draw)", color=ink, loc="left")
+    ax[0, 1].set_title(f"(b) principal widths |c⊥|/sᵢ ({k} per draw)", color=ink, loc="left")
     ax[0, 1].set_xlabel("input units")
 
     hist(ax[0, 2], tb["norm_z_star"], c1)
     ax[0, 2].set_title("(b) |z*|", color=ink, loc="left")
     ax[0, 2].set_xlabel("input units")
 
+    def logbins(key, init):  # one shared set of log bins for all eps series
+        x = np.concatenate([res[(e, init)][key].ravel() for e in cfg["eps"]])
+        return np.geomspace(x.min(), x.max(), 81)
+
+    bk, bw = logbins("kappa", "torch_default"), logbins("principal_widths_eff", "zero_bias")
     for eps, c in zip(cfg["eps"], (c1, c2)):
-        hist(ax[1, 0], res[(eps, "torch_default")]["kappa"], c, label=f"ε = {eps:g}", logx=True)
+        hist(ax[1, 0], res[(eps, "torch_default")]["kappa"], c, label=f"ε = {eps:g}",
+             bins=bk, logx=True)
         hist(ax[1, 1], res[(eps, "zero_bias")]["principal_widths_eff"], c,
-             label=f"ε = {eps:g}", logx=True)
+             label=f"ε = {eps:g}", bins=bw, logx=True)
     ax[1, 0].set_title("(b) κ = Hε/|c⊥|²", color=ink, loc="left")
     ax[1, 1].set_title("(a) ε-limited principal widths √(Hε)/sᵢ", color=ink, loc="left")
     ax[1, 1].set_xlabel("input units")
