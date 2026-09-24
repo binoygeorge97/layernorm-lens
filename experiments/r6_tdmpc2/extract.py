@@ -12,7 +12,10 @@ list     print every file in the Hugging Face repo that matches a configured tas
          the seeds found and the repo revision. Downloads nothing.
 extract  download the configured seeds (pinned to source.hf_revision), load each
          with torch.load(weights_only=True) on CPU, print the encoder's state_dict
-         keys, save E, b, LayerNorm gamma/beta and eps (float64) to weights_out.
+         keys, check the released layout (config `layer`), save E, b, LayerNorm
+         gamma/beta and eps with its source (float64) to weights_out, and record
+         the encoder keys and shapes, the state_dict's per-module _metadata and the
+         checkpoint's metadata dict in meta_extract.json.
 lens     lens/geometry.py on each saved layer: z*, principal widths, kappa,
          degenerate; per-task .npz in lens_out and lens_summary.csv.
 
@@ -125,23 +128,47 @@ def sha256(path):
     return h.hexdigest()
 
 
+def check_layout(task, sd, lin, nrm, param_free):
+    """Stop unless the checkpoint has the released layout named in config `layer`:
+    <lin>.{weight (H, k), bias (H,)}, <nrm>.{weight (H,), bias (H,)} and nothing
+    under any param_free position."""
+    def under(prefix):
+        return sorted(k[len(prefix) + 1:] for k in sd if k.startswith(prefix + "."))
+    errs = []
+    if under(lin) != ["bias", "weight"]:
+        errs.append(f"{lin}: keys {under(lin)}, expected bias, weight")
+    if under(nrm) != ["bias", "weight"]:
+        errs.append(f"{nrm}: keys {under(nrm)}, expected bias, weight")
+    if not errs:
+        W, b = sd[f"{lin}.weight"], sd[f"{lin}.bias"]
+        g, be = sd[f"{nrm}.weight"], sd[f"{nrm}.bias"]
+        H = W.shape[0]
+        if W.ndim != 2 or tuple(b.shape) != (H,):
+            errs.append(f"{lin}: weight {tuple(W.shape)}, bias {tuple(b.shape)}")
+        if tuple(g.shape) != (H,) or tuple(be.shape) != (H,):
+            errs.append(f"{nrm}: weight {tuple(g.shape)}, bias {tuple(be.shape)}, expected ({H},)")
+    for p in param_free:
+        if under(p):
+            errs.append(f"{p}: expected no parameters or buffers, found {under(p)}")
+    if errs:
+        sys.exit(f"{task}: checkpoint does not have the configured layout:\n  " + "\n  ".join(errs))
+
+
 def stage_extract(cfg):
     import torch
 
     rev = cfg["source"].get("hf_revision")
     if not rev:
         sys.exit("set source.hf_revision in config.yaml from the `list` stage first.")
-    eps = float(cfg["layer"]["layernorm_eps"])
-    torch_eps = torch.nn.LayerNorm(8).eps
-    if torch_eps != eps:
-        sys.exit(f"installed torch's LayerNorm default eps {torch_eps} != config {eps}.")
+    lay = cfg["layer"]
+    eps = float(lay["layernorm_eps"])
+    lin, nrm = lay["linear"], lay["norm"]
     info = http_json(HF_API.format(repo=hf_repo(cfg)) + f"/revision/{rev}")
     files = [s["rfilename"] for s in info.get("siblings", [])]
     ck_dir = os.path.join(ROOT, cfg["paths"]["checkpoints"])
     w_dir = os.path.join(ROOT, cfg["paths"]["weights_out"])
     os.makedirs(ck_dir, exist_ok=True)
     os.makedirs(w_dir, exist_ok=True)
-    pre = cfg["layer"]["key_prefix"]
     record = {}
     for task in cfg["tasks"]:
         for seed in cfg["seeds"]:
@@ -155,27 +182,33 @@ def stage_extract(cfg):
                 url = HF_FILE.format(repo=hf_repo(cfg), rev=rev, path=path)
                 urllib.request.urlretrieve(url, local)
             digest = sha256(local)
-            sd = torch.load(local, map_location="cpu", weights_only=True)
-            sd = sd["model"] if "model" in sd else sd
+            ck = torch.load(local, map_location="cpu", weights_only=True)
+            sd = ck["model"] if "model" in ck else ck
             enc_keys = [k for k in sd if k.startswith("_encoder.")]
             print(f"\n{task} seed {seed}  ({path}, sha256 {digest[:12]})")
             for k in enc_keys:
                 print(f"  {k:40s} {tuple(sd[k].shape)} {sd[k].dtype}")
-            need = [f"{pre}.weight", f"{pre}.bias", f"{pre}.ln.weight", f"{pre}.ln.bias"]
-            missing = [k for k in need if k not in sd]
-            if missing:
-                sys.exit(f"{task}: missing keys {missing}")
-            t = {k: sd[k].detach().cpu().numpy().astype(np.float64) for k in need}
-            E = t[f"{pre}.weight"]  # nn.Linear weight: (out, in) = (H, k)
+            check_layout(task, sd, lin, nrm, lay["param_free"])
+            t = {k: sd[k].detach().cpu().numpy().astype(np.float64) for k in
+                 (f"{lin}.weight", f"{lin}.bias", f"{nrm}.weight", f"{nrm}.bias")}
+            E = t[f"{lin}.weight"]  # nn.Linear weight: (out, in) = (H, k)
             H, k = E.shape
             out = os.path.join(w_dir, f"{task}-seed{seed}.npz")
-            np.savez(out, E=E, b=t[f"{pre}.bias"], ln_gamma=t[f"{pre}.ln.weight"],
-                     ln_beta=t[f"{pre}.ln.bias"], eps=eps,
-                     source_dtype=str(sd[f"{pre}.weight"].dtype))
+            np.savez(out, E=E, b=t[f"{lin}.bias"], ln_gamma=t[f"{nrm}.weight"],
+                     ln_beta=t[f"{nrm}.bias"], eps=eps, eps_source=lay["layernorm_eps_source"],
+                     layout=lay["layout"], source_dtype=str(sd[f"{lin}.weight"].dtype))
             print(f"  -> H = {H}, k = {k}, saved {os.path.relpath(out, ROOT)}")
-            record[f"{task}/{seed}"] = dict(file=path, sha256=digest, H=H, k=k,
-                                            encoder_keys=enc_keys)
-    meta(cfg, "extract", dict(torch=torch.__version__, hf_revision=rev, checkpoints=record))
+            modmeta = getattr(sd, "_metadata", None)
+            record[f"{task}/{seed}"] = dict(
+                file=path, sha256=digest, H=H, k=k,
+                encoder_keys={kk: list(sd[kk].shape) for kk in enc_keys},
+                encoder_module_metadata=(None if modmeta is None else
+                                         {kk: dict(v) for kk, v in modmeta.items()
+                                          if kk.startswith("_encoder")}),
+                checkpoint_metadata=json.loads(json.dumps(ck.get("metadata"), default=str)))
+    meta(cfg, "extract", dict(torch=torch.__version__, hf_revision=rev, layout=lay["layout"],
+                              layernorm_eps=eps, layernorm_eps_source=lay["layernorm_eps_source"],
+                              checkpoints=record))
 
 
 def stage_lens(cfg):
