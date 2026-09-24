@@ -6,6 +6,8 @@ source:
   repo: https://github.com/nicklashansen/tdmpc2
   checkpoints: https://huggingface.co/nicklashansen/tdmpc2
   # Claude Code: list the files actually available and report before downloading.
+  repo_commit: e9f59321933cbc8e11a002b842adc7d4ffae8ff1   # cloned 24 Sep 2026
+  hf_revision: null    # pinned from the `list` stage before any download
 model_size: 5          # all single-task checkpoints are 5M
 tasks:                 # approximate state dimension, to verify
   - cartpole-swingup   # ~5
@@ -14,6 +16,18 @@ tasks:                 # approximate state dimension, to verify
   - humanoid-run       # ~67
   - dog-run            # ~220, close to the k <= 255 limit
 seeds: [1]             # add more if several seeds are released per task
+
+# First encoder layer, read from the tdmpc2 code at repo_commit (step 1):
+#   layers.enc: mlp(obs_dim + task_dim, [enc_dim], latent_dim, act=SimNorm)
+#   NormedLinear.forward: Linear -> (dropout, off for the encoder) -> LayerNorm -> Mish
+#   self.ln = nn.LayerNorm(self.out_features): torch default eps = 1e-5
+#   (torch v2.14.0 torch/nn/modules/normalization.py:191, eps: float = 1e-5)
+#   single-task: cfg.task_dim = 0, encode() adds no task embedding
+#   observation: DMControl dict values flattened and concatenated in spec order,
+#   cast to float32; no normalisation before the encoder.
+layer:
+  key_prefix: _encoder.state.0     # .weight (H, k), .bias, .ln.weight, .ln.bias
+  layernorm_eps: 1.0e-5
 data:
   episodes_per_task: 50
   env_seeds: [0, 1, 2, 3, 4]
@@ -21,6 +35,7 @@ data:
 paths:
   checkpoints: checkpoints/tdmpc2/
   weights_out: results/r6/weights/
+  lens_out: results/r6/lens/
   data_out: data/r6/
   results_out: results/r6/
 

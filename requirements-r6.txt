@@ -1,0 +1,6 @@
+# R6 only (loading TD-MPC2 checkpoints). The core environment stays JAX-only.
+# CPU build of torch:
+#   pip install -r requirements.txt -r requirements-r6.txt
+# with the CPU index, e.g.
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.0
+torch==2.14.0
