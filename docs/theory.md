@@ -124,7 +124,7 @@ H = 128, k = 16: r* ≈ 0.93. These are estimates until the sampling check
   slope at the centre.
 - Total variation and J-error only where ground truth exists.
 
-## Implementation conventions (proposed; confirm before relying on them)
+## Implementation conventions (confirmed 24 Sep 2026)
 
 These follow from the definitions above but are not stated in the source; they fix
 choices the code must make.
@@ -136,7 +136,9 @@ choices the code must make.
 3. Constant inputs fold into the bias. For a multi-task TD-MPC2 model with a fixed
    task embedding e, use b′ = b + E_task e and the state columns of E.
 4. The initial-lens sampling check reports, for each initialisation, the distribution
-   of the median of r*(d) over random unit d, the principal widths, and ‖z*‖.
+   of the median of r*(d) over random unit d, the principal widths, and ‖z*‖. For
+   degenerate (zero-bias) draws, where c⊥ = 0 and r* = 0, report the ε-limited widths
+   √(Hε)/sᵢ instead of r* (and √(Hε)/‖A d‖ for the median over d).
 5. ε is the value the model actually uses (PyTorch nn.LayerNorm defaults to 1e-5).
    Read it from kink_core.py or the checkpoint; never assume it.
 6. lens/core.py's `r_star` is not r*_ℓ but r_eff = √(‖c⊥,ℓ‖² + Hε) / ‖A d‖ =
