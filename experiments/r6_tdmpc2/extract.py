@@ -73,13 +73,14 @@ def http_json(url):
 
 
 def match(files, task):
-    """Checkpoint files for a task: name contains the task, ends in .pt; seed = trailing int."""
+    """Checkpoint files named exactly <task>-<seed>.pt (as the extract stage requires:
+    basename == f"{task}-{seed}.pt"), so variants such as <task>-sparse-1.pt or
+    <task>-backwards-1.pt are excluded."""
     out = []
     for f in files:
-        base = os.path.basename(f)
-        if task in f and base.endswith(".pt"):
-            m = re.search(r"-(\d+)\.pt$", base)
-            out.append(dict(path=f, seed=int(m.group(1)) if m else None))
+        m = re.fullmatch(rf"{re.escape(task)}-(0|[1-9]\d*)\.pt", os.path.basename(f))
+        if m:
+            out.append(dict(path=f, seed=int(m.group(1))))
     return out
 
 
