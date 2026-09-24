@@ -1,0 +1,22 @@
+# Initial-lens check (docs/plan.md "Initial-lens check"; docs/theory.md
+# "Proposition (the lens at initialisation)" and implementation convention 4).
+# Not pre-registered: plan.md schedules prereg/p1.md after this check.
+
+shapes:            # (H, k) pairs; k counts every encoder input
+  - [128, 16]
+  - [16, 2]
+  - [64, 2]
+  - [256, 16]
+eps: [1.0e-6, 1.0e-5]
+n_draws: 1000
+n_directions: 64   # random unit d per draw for the median of r*(d)
+seed: 20260924     # base seed; draw i of (H, k) uses default_rng([seed, H, k, i])
+
+# PyTorch's default nn.Linear(k, H) init, reproduced in numpy (torch not used):
+# weight ~ U(-1/sqrt(k), 1/sqrt(k)) (kaiming_uniform, a = sqrt(5)),
+# bias   ~ U(-1/sqrt(k), 1/sqrt(k)).
+# (a) zero_bias: that weight, b = 0.  (b) torch_default: that weight and bias.
+# Both inits use the SAME E for a given draw, and the same draws for every eps.
+inits: [zero_bias, torch_default]
+
+out_dir: results/initial_lens/
