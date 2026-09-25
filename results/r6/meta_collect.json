@@ -1,0 +1,1459 @@
+{
+  "stage": "collect",
+  "git_commit": "4c3f129475adceb0c6e90e56df6696b0565d4986",
+  "git_dirty": false,
+  "prereg_tags": {
+    "prereg-r6": "086fbdd5c2aef676a6bfe438f9fcda714c153274",
+    "prereg-r6-d1": "3a0bb105b2b42223a1cafa9912514ad5246edafd",
+    "prereg-r6-d2": "df32edce53bcf0c541a285acc1383eb15c1ac4da"
+  },
+  "jax": "0.10.2",
+  "numpy": "2.4.6",
+  "torch": "2.14.0+cpu",
+  "python": "3.13.15",
+  "time": "2026-09-24T22:13:18.970245+00:00",
+  "config": {
+    "source": {
+      "repo": "https://github.com/nicklashansen/tdmpc2",
+      "checkpoints": "https://huggingface.co/nicklashansen/tdmpc2",
+      "repo_commit": "e9f59321933cbc8e11a002b842adc7d4ffae8ff1",
+      "hf_revision": "8fb2a82efb3bae96941da440128fe1332e4394fd",
+      "eval_repo": "https://github.com/tdmpc2/tdmpc2-eval",
+      "eval_repo_commit": "ab776b65a88465c5b2265938bcbc516a7ff2a40a"
+    },
+    "model_size": 5,
+    "tasks": [
+      "cartpole-swingup",
+      "cheetah-run",
+      "walker-run",
+      "humanoid-run",
+      "dog-run"
+    ],
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "layer": {
+      "layernorm_eps": 1e-05,
+      "layouts": {
+        "public": {
+          "description": "NormedLinear, as built by tdmpc2 e9f59321 common/layers.py",
+          "linear": "_encoder.state.0",
+          "norm": "_encoder.state.0.ln",
+          "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps"
+        },
+        "prerelease": {
+          "description": "pre-release layout (D1-D3); built by neither tdmpc2 e9f59321 nor tdmpc2-eval ab776b65",
+          "linear": "_encoder.state.1",
+          "norm": "_encoder.state.2",
+          "param_free": [
+            "_encoder.state.0",
+            "_encoder.state.3",
+            "_encoder.state.6"
+          ],
+          "layernorm_eps_source": "assumed (torch default); not in the checkpoint or any public code (D2)"
+        }
+      }
+    },
+    "survey": {
+      "cartpole-swingup": {
+        "1": "prerelease",
+        "2": "public",
+        "3": "public"
+      },
+      "cheetah-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "walker-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "humanoid-run": {
+        "1": "public",
+        "2": "public",
+        "3": "prerelease"
+      },
+      "dog-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      }
+    },
+    "data": {
+      "episodes_per_task": 50,
+      "env_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "policy": "policy prior only, a_t = tanh(mu(enc(o_t))), position 0 = identity (deviation D4)",
+      "steps": 500,
+      "action_repeat": 2
+    },
+    "consistency": {
+      "targets": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 1,
+          "role": "gate"
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 3,
+          "role": "reported"
+        }
+      ],
+      "stop_on_reject": {
+        "gate": true,
+        "reported": false
+      },
+      "calibration": [
+        {
+          "task": "cheetah-run",
+          "seed": 1
+        },
+        {
+          "task": "walker-run",
+          "seed": 1
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 1
+        }
+      ],
+      "candidates": [
+        "identity",
+        "symlog",
+        "layernorm"
+      ],
+      "pos0_layernorm_eps": 1e-05,
+      "simnorm_dim": 8,
+      "rng_seed": 0,
+      "accept_ratio": 0.1,
+      "tie_ratio": 1.1
+    },
+    "paths": {
+      "checkpoints": "checkpoints/tdmpc2/",
+      "weights_out": "results/r6/weights/",
+      "lens_out": "results/r6/lens/",
+      "data_out": "data/r6/",
+      "tdmpc2_src": "checkpoints/tdmpc2_src/",
+      "results_out": "results/r6/"
+    }
+  },
+  "dm_control": "unknown",
+  "mujoco": "3.14.0",
+  "networks": {
+    "cartpole-swingup/1": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/cartpole-swingup-1.pt",
+      "layout": "prerelease",
+      "enc": [
+        [
+          "linear",
+          "1",
+          [
+            256,
+            5
+          ]
+        ],
+        [
+          "ln",
+          "2",
+          [
+            256
+          ]
+        ],
+        [
+          "linear",
+          "4",
+          [
+            512,
+            256
+          ]
+        ],
+        [
+          "ln",
+          "5",
+          [
+            512
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "linear",
+          "0.0",
+          [
+            512,
+            513
+          ]
+        ],
+        [
+          "ln",
+          "0.1",
+          [
+            512
+          ]
+        ],
+        [
+          "linear",
+          "0.3",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "ln",
+          "0.4",
+          [
+            512
+          ]
+        ],
+        [
+          "linear",
+          "0.6",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "ln",
+          "1",
+          [
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "linear",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "ln",
+          "1",
+          [
+            512
+          ]
+        ],
+        [
+          "linear",
+          "3",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "ln",
+          "4",
+          [
+            512
+          ]
+        ],
+        [
+          "linear",
+          "6",
+          [
+            2,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [
+          "0",
+          "3",
+          "6"
+        ],
+        "dyn": [
+          "0.2",
+          "0.5",
+          "2"
+        ],
+        "pi": [
+          "2",
+          "5"
+        ]
+      }
+    },
+    "cartpole-swingup/2": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/cartpole-swingup-2.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            5
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            513
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            2,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "cartpole-swingup/3": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/cartpole-swingup-3.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            5
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            513
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            2,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "cheetah-run/1": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/cheetah-run-1.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            17
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            518
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            12,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "cheetah-run/2": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/cheetah-run-2.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            17
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            518
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            12,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "cheetah-run/3": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/cheetah-run-3.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            17
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            518
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            12,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "walker-run/1": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/walker-run-1.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            24
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            518
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            12,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "walker-run/2": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/walker-run-2.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            24
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            518
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            12,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "walker-run/3": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/walker-run-3.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            24
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            518
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            12,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "humanoid-run/1": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/humanoid-run-1.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            67
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            533
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            42,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "humanoid-run/2": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/humanoid-run-2.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            67
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            533
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            42,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "humanoid-run/3": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/humanoid-run-3.pt",
+      "layout": "prerelease",
+      "enc": [
+        [
+          "linear",
+          "1",
+          [
+            256,
+            67
+          ]
+        ],
+        [
+          "ln",
+          "2",
+          [
+            256
+          ]
+        ],
+        [
+          "linear",
+          "4",
+          [
+            512,
+            256
+          ]
+        ],
+        [
+          "ln",
+          "5",
+          [
+            512
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "linear",
+          "0.0",
+          [
+            512,
+            533
+          ]
+        ],
+        [
+          "ln",
+          "0.1",
+          [
+            512
+          ]
+        ],
+        [
+          "linear",
+          "0.3",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "ln",
+          "0.4",
+          [
+            512
+          ]
+        ],
+        [
+          "linear",
+          "0.6",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "ln",
+          "1",
+          [
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "linear",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "ln",
+          "1",
+          [
+            512
+          ]
+        ],
+        [
+          "linear",
+          "3",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "ln",
+          "4",
+          [
+            512
+          ]
+        ],
+        [
+          "linear",
+          "6",
+          [
+            42,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [
+          "0",
+          "3",
+          "6"
+        ],
+        "dyn": [
+          "0.2",
+          "0.5",
+          "2"
+        ],
+        "pi": [
+          "2",
+          "5"
+        ]
+      }
+    },
+    "dog-run/1": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/dog-run-1.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            223
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            550
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            76,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "dog-run/2": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/dog-run-2.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            223
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            550
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            76,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    },
+    "dog-run/3": {
+      "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/dog-run-3.pt",
+      "layout": "public",
+      "enc": [
+        [
+          "normed",
+          "0",
+          [
+            256,
+            223
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            256
+          ]
+        ]
+      ],
+      "dyn": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            550
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "2",
+          [
+            512,
+            512
+          ]
+        ]
+      ],
+      "pi": [
+        [
+          "normed",
+          "0",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "normed",
+          "1",
+          [
+            512,
+            512
+          ]
+        ],
+        [
+          "linear",
+          "2",
+          [
+            76,
+            512
+          ]
+        ]
+      ],
+      "parameter_free": {
+        "enc": [],
+        "dyn": [],
+        "pi": []
+      }
+    }
+  }
+}

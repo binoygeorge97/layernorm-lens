@@ -23,7 +23,10 @@ for what each experiment must do.
 - Do not compute an experiment's outcome metric before its pre-registration is
   tagged. Pipeline checks (training converges, tests pass) are fine.
 - Large files (checkpoints, raw data, raw results) go in `checkpoints/`, `data/` and
-  `results/`, which are git-ignored. Commit only small summary CSVs.
+  `results/`, which are git-ignored. Commit (with `git add -f`) only summary CSVs,
+  metadata JSON and small derived arrays, each under 1 MB. Observation data is never
+  committed: it stays on Drive, and a manifest of its file names and SHA-256 hashes
+  is committed instead.
 - Plan first for any task touching more than one file; wait for approval.
 
 ## Layout
