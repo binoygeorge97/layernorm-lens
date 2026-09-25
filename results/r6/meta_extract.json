@@ -1,0 +1,1403 @@
+{
+  "stage": "extract",
+  "git_commit": "4c3f129475adceb0c6e90e56df6696b0565d4986",
+  "git_dirty": false,
+  "prereg_tag_object": "086fbdd5c2aef676a6bfe438f9fcda714c153274",
+  "jax": "0.10.2",
+  "numpy": "2.4.6",
+  "python": "3.13.15",
+  "x64": true,
+  "time": "2026-09-24T21:58:22.901538+00:00",
+  "config": {
+    "source": {
+      "repo": "https://github.com/nicklashansen/tdmpc2",
+      "checkpoints": "https://huggingface.co/nicklashansen/tdmpc2",
+      "repo_commit": "e9f59321933cbc8e11a002b842adc7d4ffae8ff1",
+      "hf_revision": "8fb2a82efb3bae96941da440128fe1332e4394fd",
+      "eval_repo": "https://github.com/tdmpc2/tdmpc2-eval",
+      "eval_repo_commit": "ab776b65a88465c5b2265938bcbc516a7ff2a40a"
+    },
+    "model_size": 5,
+    "tasks": [
+      "cartpole-swingup",
+      "cheetah-run",
+      "walker-run",
+      "humanoid-run",
+      "dog-run"
+    ],
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "layer": {
+      "layernorm_eps": 1e-05,
+      "layouts": {
+        "public": {
+          "description": "NormedLinear, as built by tdmpc2 e9f59321 common/layers.py",
+          "linear": "_encoder.state.0",
+          "norm": "_encoder.state.0.ln",
+          "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps"
+        },
+        "prerelease": {
+          "description": "pre-release layout (D1-D3); built by neither tdmpc2 e9f59321 nor tdmpc2-eval ab776b65",
+          "linear": "_encoder.state.1",
+          "norm": "_encoder.state.2",
+          "param_free": [
+            "_encoder.state.0",
+            "_encoder.state.3",
+            "_encoder.state.6"
+          ],
+          "layernorm_eps_source": "assumed (torch default); not in the checkpoint or any public code (D2)"
+        }
+      }
+    },
+    "survey": {
+      "cartpole-swingup": {
+        "1": "prerelease",
+        "2": "public",
+        "3": "public"
+      },
+      "cheetah-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "walker-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "humanoid-run": {
+        "1": "public",
+        "2": "public",
+        "3": "prerelease"
+      },
+      "dog-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      }
+    },
+    "data": {
+      "episodes_per_task": 50,
+      "env_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "policy": "policy prior only, a_t = tanh(mu(enc(o_t))), position 0 = identity (deviation D4)",
+      "steps": 500,
+      "action_repeat": 2
+    },
+    "consistency": {
+      "targets": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 1,
+          "role": "gate"
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 3,
+          "role": "reported"
+        }
+      ],
+      "stop_on_reject": {
+        "gate": true,
+        "reported": false
+      },
+      "calibration": [
+        {
+          "task": "cheetah-run",
+          "seed": 1
+        },
+        {
+          "task": "walker-run",
+          "seed": 1
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 1
+        }
+      ],
+      "candidates": [
+        "identity",
+        "symlog",
+        "layernorm"
+      ],
+      "pos0_layernorm_eps": 1e-05,
+      "simnorm_dim": 8,
+      "rng_seed": 0,
+      "accept_ratio": 0.1,
+      "tie_ratio": 1.1
+    },
+    "paths": {
+      "checkpoints": "checkpoints/tdmpc2/",
+      "weights_out": "results/r6/weights/",
+      "lens_out": "results/r6/lens/",
+      "data_out": "data/r6/",
+      "tdmpc2_src": "checkpoints/tdmpc2_src/",
+      "results_out": "results/r6/"
+    }
+  },
+  "tdmpc2_clone_commit": "e9f59321933cbc8e11a002b842adc7d4ffae8ff1",
+  "torch": "2.14.0+cpu",
+  "hf_revision": "8fb2a82efb3bae96941da440128fe1332e4394fd",
+  "layernorm_eps": 1e-05,
+  "checkpoints": {
+    "cartpole-swingup/1": {
+      "file": "dmcontrol/cartpole-swingup-1.pt",
+      "sha256": "e22aa7500efabafcb2b58f99134bb6e9fc42ca81ed032c6c90a921e393b3af4a",
+      "H": 256,
+      "k": 5,
+      "layout": "prerelease",
+      "first_layer": {
+        "linear": "_encoder.state.1",
+        "norm": "_encoder.state.2"
+      },
+      "layernorm_eps_source": "assumed (torch default); not in the checkpoint or any public code (D2)",
+      "encoder_keys": {
+        "_encoder.state.1.weight": [
+          256,
+          5
+        ],
+        "_encoder.state.1.bias": [
+          256
+        ],
+        "_encoder.state.2.weight": [
+          256
+        ],
+        "_encoder.state.2.bias": [
+          256
+        ],
+        "_encoder.state.4.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.4.bias": [
+          512
+        ],
+        "_encoder.state.5.weight": [
+          512
+        ],
+        "_encoder.state.5.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.2": {
+          "version": 1
+        },
+        "_encoder.state.3": {
+          "version": 1
+        },
+        "_encoder.state.4": {
+          "version": 1
+        },
+        "_encoder.state.5": {
+          "version": 1
+        },
+        "_encoder.state.6": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "cartpole-swingup",
+        "seed": 1,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "cartpole-swingup/2": {
+      "file": "dmcontrol/cartpole-swingup-2.pt",
+      "sha256": "4a81773b6136844c89f4ab0981e979758ead83aab163a64fa0151f142b004c0a",
+      "H": 256,
+      "k": 5,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          5
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "cartpole-swingup",
+        "seed": 2,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "cartpole-swingup/3": {
+      "file": "dmcontrol/cartpole-swingup-3.pt",
+      "sha256": "621b20b008a0b03b4266a118f9d7140707c8eadb52bca70984e77218575e06a3",
+      "H": 256,
+      "k": 5,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          5
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "cartpole-swingup",
+        "seed": 3,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "cheetah-run/1": {
+      "file": "dmcontrol/cheetah-run-1.pt",
+      "sha256": "906924fee08bf43743b01f187db5cd9f355d717395c399f754c5ee4e4782b059",
+      "H": 256,
+      "k": 17,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          17
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "cheetah-run",
+        "seed": 1,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "cheetah-run/2": {
+      "file": "dmcontrol/cheetah-run-2.pt",
+      "sha256": "aa18d1ca1feaad68f503b267e6de7bdfe7b1cf46213c0aa90ed0985d1d1fdb67",
+      "H": 256,
+      "k": 17,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          17
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "cheetah-run",
+        "seed": 2,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "cheetah-run/3": {
+      "file": "dmcontrol/cheetah-run-3.pt",
+      "sha256": "6ed9ba2730f75743ae27532a8e270c9de4769b2047855e32af565200fed74605",
+      "H": 256,
+      "k": 17,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          17
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "cheetah-run",
+        "seed": 3,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "walker-run/1": {
+      "file": "dmcontrol/walker-run-1.pt",
+      "sha256": "7e825a2210ede7085a71f98893fe3f89a1acb9eedf234a7c43815c68ecc0150c",
+      "H": 256,
+      "k": 24,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          24
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "walker-run",
+        "seed": 1,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "walker-run/2": {
+      "file": "dmcontrol/walker-run-2.pt",
+      "sha256": "0c45b6a5c3f7387a30b5e3ce2c57b8c4101b33affaae582204c2dbe451ce0caf",
+      "H": 256,
+      "k": 24,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          24
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "walker-run",
+        "seed": 2,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "walker-run/3": {
+      "file": "dmcontrol/walker-run-3.pt",
+      "sha256": "d8d0a635c5f49d951cd98a89125ee3ef205e01e631856a2d72a1288583d01089",
+      "H": 256,
+      "k": 24,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          24
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "walker-run",
+        "seed": 3,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "humanoid-run/1": {
+      "file": "dmcontrol/humanoid-run-1.pt",
+      "sha256": "57f2c7e509d9efb677ae3f150e3e162c8f1a44ce2dfd34b7f4eb04a489e05c20",
+      "H": 256,
+      "k": 67,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          67
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "humanoid-run",
+        "seed": 1,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "humanoid-run/2": {
+      "file": "dmcontrol/humanoid-run-2.pt",
+      "sha256": "7f6514a9519cbaec6f52f1319446fc74f74b1cda000ccf60026ce1663cd83db3",
+      "H": 256,
+      "k": 67,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          67
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "humanoid-run",
+        "seed": 2,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "humanoid-run/3": {
+      "file": "dmcontrol/humanoid-run-3.pt",
+      "sha256": "c262c177d9b748ef4f56397e334b8424cb0a1446c723f7b84526c09a8e106ffa",
+      "H": 256,
+      "k": 67,
+      "layout": "prerelease",
+      "first_layer": {
+        "linear": "_encoder.state.1",
+        "norm": "_encoder.state.2"
+      },
+      "layernorm_eps_source": "assumed (torch default); not in the checkpoint or any public code (D2)",
+      "encoder_keys": {
+        "_encoder.state.1.weight": [
+          256,
+          67
+        ],
+        "_encoder.state.1.bias": [
+          256
+        ],
+        "_encoder.state.2.weight": [
+          256
+        ],
+        "_encoder.state.2.bias": [
+          256
+        ],
+        "_encoder.state.4.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.4.bias": [
+          512
+        ],
+        "_encoder.state.5.weight": [
+          512
+        ],
+        "_encoder.state.5.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.2": {
+          "version": 1
+        },
+        "_encoder.state.3": {
+          "version": 1
+        },
+        "_encoder.state.4": {
+          "version": 1
+        },
+        "_encoder.state.5": {
+          "version": 1
+        },
+        "_encoder.state.6": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "humanoid-run",
+        "seed": 3,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "dog-run/1": {
+      "file": "dmcontrol/dog-run-1.pt",
+      "sha256": "c5bc235f6aa605a0f4de99ae39848d9619b7a846527bd97152a5c3a39b249940",
+      "H": 256,
+      "k": 223,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          223
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "dog-run",
+        "seed": 1,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "dog-run/2": {
+      "file": "dmcontrol/dog-run-2.pt",
+      "sha256": "25e1453434aeba04e523b332f99d54e542772eb272565ef0cca241c60df4b491",
+      "H": 256,
+      "k": 223,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          223
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "dog-run",
+        "seed": 2,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    },
+    "dog-run/3": {
+      "file": "dmcontrol/dog-run-3.pt",
+      "sha256": "348c9ce6f8c864a751ff5666443b216539e1d505ab77c8849df86621fd02e497",
+      "H": 256,
+      "k": 223,
+      "layout": "public",
+      "first_layer": {
+        "linear": "_encoder.state.0",
+        "norm": "_encoder.state.0.ln"
+      },
+      "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps",
+      "encoder_keys": {
+        "_encoder.state.0.weight": [
+          256,
+          223
+        ],
+        "_encoder.state.0.bias": [
+          256
+        ],
+        "_encoder.state.0.ln.weight": [
+          256
+        ],
+        "_encoder.state.0.ln.bias": [
+          256
+        ],
+        "_encoder.state.1.weight": [
+          512,
+          256
+        ],
+        "_encoder.state.1.bias": [
+          512
+        ],
+        "_encoder.state.1.ln.weight": [
+          512
+        ],
+        "_encoder.state.1.ln.bias": [
+          512
+        ]
+      },
+      "encoder_module_metadata": {
+        "_encoder": {
+          "version": 1
+        },
+        "_encoder.state": {
+          "version": 1
+        },
+        "_encoder.state.0": {
+          "version": 1
+        },
+        "_encoder.state.0.ln": {
+          "version": 1
+        },
+        "_encoder.state.0.act": {
+          "version": 1
+        },
+        "_encoder.state.1": {
+          "version": 1
+        },
+        "_encoder.state.1.ln": {
+          "version": 1
+        },
+        "_encoder.state.1.act": {
+          "version": 1
+        }
+      },
+      "checkpoint_metadata": {
+        "task": "dog-run",
+        "seed": 3,
+        "num_enc_layers": 2,
+        "enc_dim": 256,
+        "mlp_dim": 512,
+        "latent_dim": 512,
+        "num_q": 5,
+        "dropout": 0.01,
+        "simnorm_dim": 8,
+        "num_bins": 101,
+        "vmin": -10,
+        "vmax": 10,
+        "algorithm": "tdmpc2",
+        "author": "Nicklas Hansen",
+        "date": "2023-06-03"
+      }
+    }
+  }
+}
