@@ -122,3 +122,35 @@ d4_regeneration:         # regenerate_d4.py: the lost D4 observations, by rerunn
   summaries: [returns.csv, consistency.csv, consistency.json, lens_summary.csv,
               meta_list.json, meta_extract.json, meta_lens.json, meta_collect.json,
               meta_consistency.json]
+planner_collect:         # planner_collect.py: D6 (a), (b), (e)
+  env_seeds: [0, 1, 2, 3, 4]     # make_env with seed = s; set_seed(s) once before its episodes
+  episodes_per_env_seed: 10      # 50 episodes per checkpoint
+  steps: 500                     # agent steps (tdmpc2 Timeout); action repeat 2 (DMControlWrapper)
+  eval_mode: true                # D6 (a): the planner's noise-free mean action
+  compile: true                  # torch.compile as in tdmpc2's config.yaml
+  flag_below: 0.5                # D6 (a): mean return < 0.5 x published is flagged
+  positive_control: {task: cartpole-swingup, seed: 2}
+  negative_control: {task: cartpole-swingup, seed: 1}
+  prerelease:                    # run after the 13 public-layout checkpoints, once the gate passes
+    - {task: cartpole-swingup, seed: 1}
+    - {task: humanoid-run, seed: 3}
+  gate:                          # D6 (b) encoder agreement gate
+    median_max: 1.0e-5
+    max_max: 1.0e-3
+    negative_min_max: 1.0e-2     # the negative control must exceed this maximum on every set
+    n_random: 1000               # set (i): default_rng(rng_seed).standard_normal((n_random, k))
+    rng_seed: 0
+    std_ddof: 1                  # per-dimension std of the D4 observations: ddof = 1, as r6.md's C
+                                 # (unspecified in D6; fixed by the author 25 Sep 2026 before any gate data)
+    worst_n: 5
+    batch: 4096                  # planner-side encode batch
+  d4:                            # regenerated D4 observations (PROVENANCE.md addendum, 25 Sep 2026)
+    drive_dir: data/r6           # under --drive (MyDrive/layernorm-lens-r6)
+    manifest: results/r6/d4_obs_manifest.csv
+    meta: results/r6/meta_d4_regeneration.json   # must record match: true
+  dirs:                          # local (under the repo) and on Drive (under --drive)
+    data: data/r6/planner
+    results: results/r6/planner
+    smoke_data: data/r6/planner_smoke
+    smoke_results: results/r6/planner_smoke
+  smoke: {task: cartpole-swingup, seed: 1, env_seed: 0, episodes: 1}
