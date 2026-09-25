@@ -1,0 +1,140 @@
+{
+  "stage": "d4_regeneration_compare",
+  "pass_rule": [
+    "returns.csv",
+    "consistency.csv"
+  ],
+  "files": {
+    "returns.csv": {
+      "reference_blob": "8800d07539e25e61a4c243b56480c5e13ed43f5c",
+      "bytes_equal": true,
+      "header_ref": [
+        "task",
+        "seed",
+        "layout",
+        "k",
+        "episodes",
+        "return_mean",
+        "return_std",
+        "published",
+        "published_step",
+        "fraction",
+        "flag_below_half"
+      ],
+      "header_new": [
+        "task",
+        "seed",
+        "layout",
+        "k",
+        "episodes",
+        "return_mean",
+        "return_std",
+        "published",
+        "published_step",
+        "fraction",
+        "flag_below_half"
+      ],
+      "n_rows_ref": 15,
+      "n_rows_new": 15,
+      "cell_diffs": [],
+      "byte_note": "",
+      "values_equal": true
+    },
+    "consistency.csv": {
+      "reference_blob": "3ab1c0c1aa6d0738ade1219888f7d0f05fd9c7fa",
+      "bytes_equal": true,
+      "header_ref": [
+        "task",
+        "seed",
+        "role",
+        "layout",
+        "candidate",
+        "e",
+        "e0",
+        "e_over_e0",
+        "n",
+        "lowest",
+        "identity_accepted",
+        "identified",
+        "report_under_both",
+        "report_r6_under"
+      ],
+      "header_new": [
+        "task",
+        "seed",
+        "role",
+        "layout",
+        "candidate",
+        "e",
+        "e0",
+        "e_over_e0",
+        "n",
+        "lowest",
+        "identity_accepted",
+        "identified",
+        "report_under_both",
+        "report_r6_under"
+      ],
+      "n_rows_ref": 15,
+      "n_rows_new": 15,
+      "cell_diffs": [],
+      "byte_note": "",
+      "values_equal": true
+    }
+  },
+  "info": {
+    "lens_summary.csv": {
+      "reference_blob": "113fa385ff1ab24e3e7c5d08beba71fd01281bc8",
+      "bytes_equal": false,
+      "header_ref": [
+        "task",
+        "seed",
+        "layout",
+        "H",
+        "k",
+        "eps",
+        "degenerate",
+        "norm_c_perp",
+        "kappa",
+        "norm_z_star",
+        "width_kind",
+        "width_min",
+        "width_median",
+        "width_max"
+      ],
+      "header_new": [
+        "task",
+        "seed",
+        "layout",
+        "H",
+        "k",
+        "eps",
+        "degenerate",
+        "norm_c_perp",
+        "kappa",
+        "norm_z_star",
+        "width_kind",
+        "width_min",
+        "width_median",
+        "width_max"
+      ],
+      "n_rows_ref": 15,
+      "n_rows_new": 15,
+      "cell_diffs": [],
+      "byte_note": "CRLF line endings: ref False, new True",
+      "values_equal": true
+    },
+    "consistency.json": {
+      "reference_blob": "e584fcb35d2ca87891f273cc29a3074457fba7ff",
+      "equal": true,
+      "diffs": [],
+      "n_diffs": 0
+    },
+    "meta_extract.json sha256": {
+      "equal": true,
+      "n": 15
+    }
+  },
+  "match": true,
+  "time": "2026-09-25T19:03:32.220926+00:00"
+}

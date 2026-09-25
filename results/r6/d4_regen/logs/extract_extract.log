@@ -1,0 +1,180 @@
+
+cartpole-swingup seed 1  (dmcontrol/cartpole-swingup-1.pt, sha256 e22aa7500efa)
+  _encoder.state.1.weight                  (256, 5) torch.float32
+  _encoder.state.1.bias                    (256,) torch.float32
+  _encoder.state.2.weight                  (256,) torch.float32
+  _encoder.state.2.bias                    (256,) torch.float32
+  _encoder.state.4.weight                  (512, 256) torch.float32
+  _encoder.state.4.bias                    (512,) torch.float32
+  _encoder.state.5.weight                  (512,) torch.float32
+  _encoder.state.5.bias                    (512,) torch.float32
+  layout: prerelease (first layer _encoder.state.1, LayerNorm _encoder.state.2)
+  -> H = 256, k = 5, saved results/r6/weights/cartpole-swingup-seed1.npz
+
+cartpole-swingup seed 2  (dmcontrol/cartpole-swingup-2.pt, sha256 4a81773b6136)
+  _encoder.state.0.weight                  (256, 5) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 5, saved results/r6/weights/cartpole-swingup-seed2.npz
+
+cartpole-swingup seed 3  (dmcontrol/cartpole-swingup-3.pt, sha256 621b20b008a0)
+  _encoder.state.0.weight                  (256, 5) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 5, saved results/r6/weights/cartpole-swingup-seed3.npz
+
+cheetah-run seed 1  (dmcontrol/cheetah-run-1.pt, sha256 906924fee08b)
+  _encoder.state.0.weight                  (256, 17) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 17, saved results/r6/weights/cheetah-run-seed1.npz
+
+cheetah-run seed 2  (dmcontrol/cheetah-run-2.pt, sha256 aa18d1ca1fea)
+  _encoder.state.0.weight                  (256, 17) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 17, saved results/r6/weights/cheetah-run-seed2.npz
+
+cheetah-run seed 3  (dmcontrol/cheetah-run-3.pt, sha256 6ed9ba2730f7)
+  _encoder.state.0.weight                  (256, 17) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 17, saved results/r6/weights/cheetah-run-seed3.npz
+
+walker-run seed 1  (dmcontrol/walker-run-1.pt, sha256 7e825a2210ed)
+  _encoder.state.0.weight                  (256, 24) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 24, saved results/r6/weights/walker-run-seed1.npz
+
+walker-run seed 2  (dmcontrol/walker-run-2.pt, sha256 0c45b6a5c3f7)
+  _encoder.state.0.weight                  (256, 24) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 24, saved results/r6/weights/walker-run-seed2.npz
+
+walker-run seed 3  (dmcontrol/walker-run-3.pt, sha256 d8d0a635c5f4)
+  _encoder.state.0.weight                  (256, 24) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 24, saved results/r6/weights/walker-run-seed3.npz
+
+humanoid-run seed 1  (dmcontrol/humanoid-run-1.pt, sha256 57f2c7e509d9)
+  _encoder.state.0.weight                  (256, 67) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 67, saved results/r6/weights/humanoid-run-seed1.npz
+
+humanoid-run seed 2  (dmcontrol/humanoid-run-2.pt, sha256 7f6514a9519c)
+  _encoder.state.0.weight                  (256, 67) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 67, saved results/r6/weights/humanoid-run-seed2.npz
+
+humanoid-run seed 3  (dmcontrol/humanoid-run-3.pt, sha256 c262c177d9b7)
+  _encoder.state.1.weight                  (256, 67) torch.float32
+  _encoder.state.1.bias                    (256,) torch.float32
+  _encoder.state.2.weight                  (256,) torch.float32
+  _encoder.state.2.bias                    (256,) torch.float32
+  _encoder.state.4.weight                  (512, 256) torch.float32
+  _encoder.state.4.bias                    (512,) torch.float32
+  _encoder.state.5.weight                  (512,) torch.float32
+  _encoder.state.5.bias                    (512,) torch.float32
+  layout: prerelease (first layer _encoder.state.1, LayerNorm _encoder.state.2)
+  -> H = 256, k = 67, saved results/r6/weights/humanoid-run-seed3.npz
+
+dog-run seed 1  (dmcontrol/dog-run-1.pt, sha256 c5bc235f6aa6)
+  _encoder.state.0.weight                  (256, 223) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 223, saved results/r6/weights/dog-run-seed1.npz
+
+dog-run seed 2  (dmcontrol/dog-run-2.pt, sha256 25e1453434ae)
+  _encoder.state.0.weight                  (256, 223) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 223, saved results/r6/weights/dog-run-seed2.npz
+
+dog-run seed 3  (dmcontrol/dog-run-3.pt, sha256 348c9ce6f8c8)
+  _encoder.state.0.weight                  (256, 223) torch.float32
+  _encoder.state.0.bias                    (256,) torch.float32
+  _encoder.state.0.ln.weight               (256,) torch.float32
+  _encoder.state.0.ln.bias                 (256,) torch.float32
+  _encoder.state.1.weight                  (512, 256) torch.float32
+  _encoder.state.1.bias                    (512,) torch.float32
+  _encoder.state.1.ln.weight               (512,) torch.float32
+  _encoder.state.1.ln.bias                 (512,) torch.float32
+  layout: public (first layer _encoder.state.0, LayerNorm _encoder.state.0.ln)
+  -> H = 256, k = 223, saved results/r6/weights/dog-run-seed3.npz

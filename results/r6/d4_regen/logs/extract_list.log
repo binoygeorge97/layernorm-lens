@@ -1,0 +1,26 @@
+repo nicklashansen/tdmpc2  revision 8fb2a82efb3bae96941da440128fe1332e4394fd  (327 files)
+
+cartpole-swingup: 3 file(s), seeds [1, 2, 3]
+  dmcontrol/cartpole-swingup-1.pt
+  dmcontrol/cartpole-swingup-2.pt
+  dmcontrol/cartpole-swingup-3.pt
+
+cheetah-run: 3 file(s), seeds [1, 2, 3]
+  dmcontrol/cheetah-run-1.pt
+  dmcontrol/cheetah-run-2.pt
+  dmcontrol/cheetah-run-3.pt
+
+walker-run: 3 file(s), seeds [1, 2, 3]
+  dmcontrol/walker-run-1.pt
+  dmcontrol/walker-run-2.pt
+  dmcontrol/walker-run-3.pt
+
+humanoid-run: 3 file(s), seeds [1, 2, 3]
+  dmcontrol/humanoid-run-1.pt
+  dmcontrol/humanoid-run-2.pt
+  dmcontrol/humanoid-run-3.pt
+
+dog-run: 3 file(s), seeds [1, 2, 3]
+  dmcontrol/dog-run-1.pt
+  dmcontrol/dog-run-2.pt
+  dmcontrol/dog-run-3.pt
