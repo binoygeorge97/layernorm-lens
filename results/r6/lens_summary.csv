@@ -1,0 +1,16 @@
+task,seed,layout,H,k,eps,degenerate,norm_c_perp,kappa,norm_z_star,width_kind,width_min,width_median,width_max
+cartpole-swingup,1,prerelease,256,5,1e-05,False,1.75738,0.000828915,1.60744,r_star,0.28125,0.623361,1.15266
+cartpole-swingup,2,public,256,5,1e-05,False,1.98904,0.00064707,0.486758,r_star,0.982429,1.33684,4.59595
+cartpole-swingup,3,public,256,5,1e-05,False,2.77316,0.000332883,1.18213,r_star,0.995427,1.55109,4.9926
+cheetah-run,1,public,256,17,1e-05,False,2.87821,0.000309025,3.74649,r_star,0.162824,1.1289,15.2046
+cheetah-run,2,public,256,17,1e-05,False,3.55901,0.000202107,3.69592,r_star,0.148908,1.22031,20.6595
+cheetah-run,3,public,256,17,1e-05,False,3.81987,0.000175445,3.48844,r_star,0.151673,1.32839,21.5126
+walker-run,1,public,256,24,1e-05,False,1.24487,0.00165194,2.69366,r_star,0.218684,0.502512,16.2624
+walker-run,2,public,256,24,1e-05,False,1.26915,0.00158932,3.00286,r_star,0.234095,0.512761,16.5171
+walker-run,3,public,256,24,1e-05,False,1.74554,0.000840193,3.22845,r_star,0.238586,0.566925,17.6282
+humanoid-run,1,public,256,67,1e-05,False,7.04779,5.15387e-05,6.85369,r_star,0.365915,1.40155,62.8243
+humanoid-run,2,public,256,67,1e-05,False,6.99865,5.2265e-05,5.85295,r_star,0.362569,1.28937,51.0266
+humanoid-run,3,prerelease,256,67,1e-05,False,8.57048,3.48521e-05,1.68649,r_star,0.779025,2.60422,22.0603
+dog-run,1,public,256,223,1e-05,False,10.9019,2.15397e-05,562.523,r_star,0.160761,3.40837,1595.89
+dog-run,2,public,256,223,1e-05,False,16.6504,9.23406e-06,632.799,r_star,0.213318,3.89143,1928.93
+dog-run,3,public,256,223,1e-05,False,13.7641,1.35128e-05,769.184,r_star,0.187748,3.01927,2063.1

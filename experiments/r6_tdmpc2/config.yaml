@@ -91,3 +91,34 @@ paths:
   tdmpc2_src: checkpoints/tdmpc2_src/   # clone at repo_commit; results/tdmpc2/<task>.csv
   results_out: results/r6/
 
+d4_regeneration:         # regenerate_d4.py: the lost D4 observations, by rerunning the recorded run
+  run_commit: 4c3f129475adceb0c6e90e56df6696b0565d4986   # git_commit in all four CPU-run meta files
+  worktree: checkpoints/d4_regen_4c3f129                 # git worktree at run_commit (git-ignored)
+  stages:                # exactly the stages of the original run (r6_colab.ipynb cells 6-10)
+    - extract list
+    - extract extract
+    - extract lens
+    - collect collect
+    - collect consistency
+  expected_exit:         # consistency exits 2 (STOP): D3 rejected identity for cartpole-swingup seed 1
+    extract list: 0
+    extract extract: 0
+    extract lens: 0
+    collect collect: 0
+    collect consistency: 2
+  dm_control:            # notebook cell 3: dm_control==1.0.47 installed with --no-deps
+    allowed_missing: [labmaze]
+    note: >-
+      dm_control 1.0.47 installed with --no-deps and its declared runtime dependencies
+      installed explicitly (4c3f129 pins for mujoco, numpy, scipy), except labmaze:
+      labmaze has no Python 3.13 wheel (1.0.6 stops at cp312) and its sdist needs bazel.
+      labmaze is imported only by dm_control.locomotion, not by dm_control.suite. The
+      4c3f129 notebook installed dm_control with plain pip (dependencies included); how
+      the original run obtained labmaze on Python 3.13, if it did, is not recorded.
+  compare:
+    pass: [returns.csv, consistency.csv]       # every value equal at printed precision
+    info_csv: [lens_summary.csv]               # reported, not part of the pass rule
+    info_json: [consistency.json]              # full float64 precision; reported only
+  summaries: [returns.csv, consistency.csv, consistency.json, lens_summary.csv,
+              meta_list.json, meta_extract.json, meta_lens.json, meta_collect.json,
+              meta_consistency.json]
