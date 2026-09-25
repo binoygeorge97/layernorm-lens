@@ -18,7 +18,10 @@ run      Check out d4_regeneration.run_commit (the commit recorded in all four m
          files of the CPU run) in a separate git worktree. Download the 15
          checkpoints from the pinned Hugging Face revision and refuse any file whose
          SHA-256 differs from D6's table (read from the tag prereg-r6-d3). Record the
-         installed package versions next to those recorded in meta_collect.json.
+         installed package versions next to those recorded in meta_collect.json, and
+         dm_control's declared dependencies: it is installed with --no-deps and
+         without labmaze (no Python 3.13 wheel; imported only by
+         dm_control.locomotion); any other missing dependency stops the run.
          Then run, in the worktree and with that commit's config, exactly the stages
          of the original run: extract.py list, extract, lens; collect.py collect,
          consistency. Logs, exit codes and timings go to results/r6/d4_regen/.
@@ -43,6 +46,7 @@ import importlib.metadata as md
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -87,6 +91,46 @@ def versions():
 
 def all_distributions():
     return sorted(f"{d.metadata['Name']}=={d.version}" for d in md.distributions())
+
+
+def _dist_name(req):
+    """Distribution name of a Requires-Dist entry, or None for an extra's entry."""
+    if "extra ==" in req:
+        return None
+    m = re.match(r"\s*([A-Za-z0-9][A-Za-z0-9._-]*)", req)
+    return m.group(1) if m else None
+
+
+def _normalise(name):
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def dm_control_install(allowed_missing):
+    """dm_control's declared runtime dependencies and which of them are installed.
+
+    dm_control is installed with --no-deps and its dependencies explicitly, without
+    labmaze (no Python 3.13 wheel; used only by dm_control.locomotion).
+    """
+    try:
+        declared = md.requires("dm_control") or []
+    except md.PackageNotFoundError:
+        die("dm_control is not installed.")
+    deps = {}
+    for req in declared:
+        name = _dist_name(req)
+        if name is None:
+            continue
+        try:
+            deps[name] = dict(requirement=req, installed=md.version(name))
+        except md.PackageNotFoundError:
+            deps[name] = dict(requirement=req, installed=None)
+    missing = sorted(n for n, d in deps.items() if d["installed"] is None)
+    allowed = {_normalise(a) for a in allowed_missing}
+    unexpected = [n for n in missing if _normalise(n) not in allowed]
+    return dict(version=md.version("dm_control"), installed_with_no_deps=True,
+                declared_dependencies=deps, missing=missing,
+                labmaze_installed=not any(_normalise(n) == "labmaze" for n in missing),
+                unexpected_missing=unexpected)
 
 
 def recorded_versions():
@@ -191,6 +235,13 @@ def stage_run(cfg):
     print("package versions, installed vs recorded (meta_collect.json):")
     for k in ("python", "torch", "jax", "numpy", "mujoco", "dm_control"):
         print(f"  {k:10s} {str(now.get(k)):22s} recorded {rec.get(k)}")
+    dmc = dm_control_install(rc["dm_control"]["allowed_missing"])
+    dmc["note"] = rc["dm_control"]["note"]
+    print(f"dm_control {dmc['version']} (installed with --no-deps); declared dependencies "
+          f"missing: {dmc['missing'] or 'none'}")
+    if dmc["unexpected_missing"]:
+        die(f"dm_control dependencies missing beyond {rc['dm_control']['allowed_missing']}: "
+            f"{dmc['unexpected_missing']}. Fix the environment (notebook cell 3).")
     print(f"checkpoints -> {os.path.join(wt, wcfg['paths']['checkpoints'])}")
     ck = download_checkpoints(wt, wcfg, table)
     stages = []
@@ -203,21 +254,22 @@ def stage_run(cfg):
         print(f"--- exit {r['exit']} (expected {expected}), {r['seconds']:.0f} s")
         if not r["as_expected"]:
             _write_json(os.path.join(REGEN, "run.json"),
-                        _run_record(cfg, wt, ck, now, rec, stages, complete=False))
+                        _run_record(cfg, wt, ck, now, rec, stages, complete=False, dmc=dmc))
             die(f"{script}.py {stage} exited {r['exit']}, expected {expected}: stopping. "
                 f"See {r['log']}.")
     _write_json(os.path.join(REGEN, "run.json"),
-                _run_record(cfg, wt, ck, now, rec, stages, complete=True))
+                _run_record(cfg, wt, ck, now, rec, stages, complete=True, dmc=dmc))
     print(f"\nrun complete; next: compare.")
 
 
-def _run_record(cfg, wt, ck, now, rec, stages, complete):
+def _run_record(cfg, wt, ck, now, rec, stages, complete, dmc=None):
     return dict(stage="d4_regeneration_run", complete=complete,
                 run_commit=cfg["d4_regeneration"]["run_commit"],
                 worktree=wt, worktree_state=pv.git_state(cwd=wt),
                 python=platform.python_version(), executable=sys.executable,
                 platform=platform.platform(), versions=now, recorded_versions=rec,
-                distributions=all_distributions(), checkpoints=ck, stages=stages,
+                distributions=all_distributions(), dm_control_install=dmc,
+                checkpoints=ck, stages=stages,
                 time=datetime.datetime.now(datetime.timezone.utc).isoformat())
 
 
@@ -365,6 +417,7 @@ def stage_publish(cfg, drive):
                 run_commit=rc["run_commit"], jax=jax.__version__,
                 torch=run["versions"].get("torch"), python=platform.python_version(),
                 versions=run["versions"], recorded_versions=run["recorded_versions"],
+                dm_control_install=run["dm_control_install"],
                 match=cmp["match"],
                 compare={k: dict(values_equal=v["values_equal"], bytes_equal=v["bytes_equal"],
                                  byte_note=v["byte_note"], n_cell_diffs=len(v["cell_diffs"]))

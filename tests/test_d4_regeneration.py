@@ -133,3 +133,25 @@ def test_json_diffs_exact_floats():
     b = {"x": [1.0, 0.3], "y": {"z": 1, "w": 2}}
     d = rd._json_diffs(a, b)
     assert any(s.startswith("/x[1]") for s in d) and any("/y/w" in s for s in d)
+
+
+def test_dm_control_install_record(monkeypatch):
+    import importlib.metadata as md
+    import regenerate_d4 as rd
+    declared = ["absl-py>=0.7.0", "dm-tree!=0.1.2", "labmaze", "mujoco>=3.14.0",
+                'h5py; extra == "hdf5"']
+    installed = {"dm_control": "1.0.47", "absl-py": "2.1.0", "dm-tree": "0.1.8",
+                 "mujoco": "3.14.0"}
+
+    def version(name):
+        if name not in installed:
+            raise md.PackageNotFoundError(name)
+        return installed[name]
+
+    monkeypatch.setattr(rd.md, "requires", lambda name: declared)
+    monkeypatch.setattr(rd.md, "version", version)
+    r = rd.dm_control_install(["labmaze"])
+    assert r["missing"] == ["labmaze"] and r["unexpected_missing"] == []
+    assert r["labmaze_installed"] is False and "h5py" not in r["declared_dependencies"]
+    del installed["mujoco"]
+    assert rd.dm_control_install(["labmaze"])["unexpected_missing"] == ["mujoco"]

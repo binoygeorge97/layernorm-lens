@@ -106,6 +106,15 @@ d4_regeneration:         # regenerate_d4.py: the lost D4 observations, by rerunn
     extract lens: 0
     collect collect: 0
     collect consistency: 2
+  dm_control:            # notebook cell 3: dm_control==1.0.47 installed with --no-deps
+    allowed_missing: [labmaze]
+    note: >-
+      dm_control 1.0.47 installed with --no-deps and its declared runtime dependencies
+      installed explicitly (4c3f129 pins for mujoco, numpy, scipy), except labmaze:
+      labmaze has no Python 3.13 wheel (1.0.6 stops at cp312) and its sdist needs bazel.
+      labmaze is imported only by dm_control.locomotion, not by dm_control.suite. The
+      4c3f129 notebook installed dm_control with plain pip (dependencies included); how
+      the original run obtained labmaze on Python 3.13, if it did, is not recorded.
   compare:
     pass: [returns.csv, consistency.csv]       # every value equal at printed precision
     info_csv: [lens_summary.csv]               # reported, not part of the pass rule
