@@ -11,12 +11,12 @@ source:
   eval_repo: https://github.com/tdmpc2/tdmpc2-eval
   eval_repo_commit: ab776b65a88465c5b2265938bcbc516a7ff2a40a  # cloned 24 Sep 2026
 model_size: 5          # all single-task checkpoints are 5M
-tasks:                 # approximate state dimension, to verify
-  - cartpole-swingup   # ~5
-  - cheetah-run        # ~17
-  - walker-run         # ~24
-  - humanoid-run       # ~67
-  - dog-run            # ~220, close to the k <= 255 limit
+tasks:                 # k = input dimension of the first Linear (survey, D5)
+  - cartpole-swingup   # 5
+  - cheetah-run        # 17
+  - walker-run         # 24
+  - humanoid-run       # 67
+  - dog-run            # 223, close to the k <= 255 limit
 seeds: [1, 2, 3]             # add more if several seeds are released per task
 
 # First encoder layer. The released checkpoints (HF revision above; metadata date
@@ -34,20 +34,60 @@ seeds: [1, 2, 3]             # add more if several seeds are released per task
 # Single-task public code: task_dim = 0 (no task embedding); DMControl observation
 # dict flattened and concatenated in spec order as float32.
 layer:
-  layout: pre-release (checkpoint metadata date 2023-06-03); matched by neither tdmpc2 e9f59321 nor tdmpc2-eval ab776b65
-  linear: _encoder.state.1        # weight (H, k), bias (H,)
-  norm: _encoder.state.2          # weight (H,), bias (H,): LayerNorm-shaped
-  param_free: [_encoder.state.0, _encoder.state.3, _encoder.state.6]   # identity of state.0 unresolved
   layernorm_eps: 1.0e-5
-  layernorm_eps_source: assumed (torch default); not in the checkpoint or any public code
+  layouts:                          # detected per checkpoint from its keys (D5)
+    public:
+      description: NormedLinear, as built by tdmpc2 e9f59321 common/layers.py
+      linear: _encoder.state.0        # weight (H, k), bias (H,)
+      norm: _encoder.state.0.ln       # weight (H,), bias (H,)
+      layernorm_eps_source: tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps
+    prerelease:
+      description: pre-release layout (D1-D3); built by neither tdmpc2 e9f59321 nor tdmpc2-eval ab776b65
+      linear: _encoder.state.1        # weight (H, k), bias (H,)
+      norm: _encoder.state.2          # weight (H,), bias (H,): LayerNorm-shaped
+      param_free: [_encoder.state.0, _encoder.state.3, _encoder.state.6]
+      layernorm_eps_source: assumed (torch default); not in the checkpoint or any public code (D2)
+survey:                             # D5: layout per checkpoint; detection must agree
+  cartpole-swingup: {1: prerelease, 2: public, 3: public}
+  cheetah-run: {1: public, 2: public, 3: public}
+  walker-run: {1: public, 2: public, 3: public}
+  humanoid-run: {1: public, 2: public, 3: prerelease}
+  dog-run: {1: public, 2: public, 3: public}
 data:
   episodes_per_task: 50
   env_seeds: [0, 1, 2, 3, 4]
-  policy: released agent, planning as in the repo's evaluate.py
+  policy: policy prior only, a_t = tanh(mu(enc(o_t))), position 0 = identity (deviation D4)
+  steps: 500              # agent steps per episode (public Timeout)
+  action_repeat: 2        # public DMControlWrapper.step
+consistency:              # deviations D3, D5
+  targets:                # pre-release checkpoints: D3 decision rule
+    - {task: cartpole-swingup, seed: 1, role: gate}
+    - {task: humanoid-run, seed: 3, role: reported}
+  stop_on_reject: {gate: true, reported: false}  # D5: a rejected `reported` checkpoint is
+                                                 # marked unidentified; R6 under each candidate
+  calibration:            # public-layout reference; changes neither rule nor threshold
+    - {task: cheetah-run, seed: 1}
+    - {task: walker-run, seed: 1}
+    - {task: humanoid-run, seed: 1}
+  candidates: [identity, symlog, layernorm]
+  pos0_layernorm_eps: 1.0e-5
+  simnorm_dim: 8          # checkpoint metadata
+  rng_seed: 0             # j = default_rng(0).integers(0, n, size=n)
+  accept_ratio: 0.1       # identity accepted iff lowest e and e <= 0.1 * e0
+  tie_ratio: 1.1          # candidates with e <= 1.1 * e_identity: report R6 under both
+planner_check:           # step-1 feasibility (planner through the public TDMPC2 class)
+  checkpoints:
+    - {task: cartpole-swingup, seed: 2}
+    - {task: humanoid-run, seed: 1}
+  episodes: 5
+  eval_seed: 1            # evaluate.py default (config.yaml seed)
+  eval_modes: [true, false]   # true: as the published curves (trainer); false: as evaluate.py
+  compile: true           # config.yaml default; the first episode includes compilation
 paths:
   checkpoints: checkpoints/tdmpc2/
   weights_out: results/r6/weights/
   lens_out: results/r6/lens/
   data_out: data/r6/
+  tdmpc2_src: checkpoints/tdmpc2_src/   # clone at repo_commit; results/tdmpc2/<task>.csv
   results_out: results/r6/
 

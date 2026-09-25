@@ -1,6 +1,8 @@
-# R6 only (loading TD-MPC2 checkpoints). The core environment stays JAX-only.
-# CPU build of torch:
+# R6 only (loading TD-MPC2 checkpoints, DMControl data collection).
+# The core environment stays JAX-only. Install torch's CPU build from its own
+# index first, so pip cannot pick PyPI's CUDA build of the same version:
+#   pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
 #   pip install -r requirements.txt -r requirements-r6.txt
-# with the CPU index, e.g.
-#   pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.0
 torch==2.14.0
+dm_control==1.0.47
+mujoco==3.14.0

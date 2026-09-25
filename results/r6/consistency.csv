@@ -1,0 +1,16 @@
+task,seed,role,layout,candidate,e,e0,e_over_e0,n,lowest,identity_accepted,identified,report_under_both,report_r6_under
+cartpole-swingup,1,gate,prerelease,identity,1.46426,40.3816,0.0362606,25000,False,False,False,symlog,identity;symlog;layernorm
+cartpole-swingup,1,gate,prerelease,symlog,0.790219,38.7591,0.0203879,25000,True,False,False,symlog,identity;symlog;layernorm
+cartpole-swingup,1,gate,prerelease,layernorm,1.78315,38.9332,0.0458003,25000,False,False,False,symlog,identity;symlog;layernorm
+humanoid-run,3,reported,prerelease,identity,27.2234,27.5292,0.988895,25000,False,False,False,symlog;layernorm,identity;symlog;layernorm
+humanoid-run,3,reported,prerelease,symlog,0.39033,3.39571,0.114948,25000,True,False,False,symlog;layernorm,identity;symlog;layernorm
+humanoid-run,3,reported,prerelease,layernorm,4.89877,5.07816,0.964674,25000,False,False,False,symlog;layernorm,identity;symlog;layernorm
+cheetah-run,1,calibration,public,identity,0.253809,18.3198,0.0138544,25000,True,,,,
+cheetah-run,1,calibration,public,symlog,1.01109,16.0366,0.0630488,25000,False,,,,
+cheetah-run,1,calibration,public,layernorm,6.96322,19.4293,0.358388,25000,False,,,,
+walker-run,1,calibration,public,identity,0.188596,14.8843,0.0126708,25000,True,,,,
+walker-run,1,calibration,public,symlog,6.17551,12.703,0.486145,25000,False,,,,
+walker-run,1,calibration,public,layernorm,24.6943,25.4731,0.969423,25000,False,,,,
+humanoid-run,1,calibration,public,identity,0.382425,3.26869,0.116997,25000,True,,,,
+humanoid-run,1,calibration,public,symlog,1.43535,3.41148,0.42074,25000,False,,,,
+humanoid-run,1,calibration,public,layernorm,2.82883,3.82689,0.739196,25000,False,,,,

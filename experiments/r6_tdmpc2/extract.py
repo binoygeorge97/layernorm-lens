@@ -12,10 +12,11 @@ list     print every file in the Hugging Face repo that matches a configured tas
          the seeds found and the repo revision. Downloads nothing.
 extract  download the configured seeds (pinned to source.hf_revision), load each
          with torch.load(weights_only=True) on CPU, print the encoder's state_dict
-         keys, check the released layout (config `layer`), save E, b, LayerNorm
-         gamma/beta and eps with its source (float64) to weights_out, and record
-         the encoder keys and shapes, the state_dict's per-module _metadata and the
-         checkpoint's metadata dict in meta_extract.json.
+         keys, detect its layout (public or pre-release, D5; must agree with
+         the config's survey; anything else stops), save E, b, LayerNorm
+         gamma/beta, eps with its source and the layout (float64) to weights_out,
+         and record the layout, the encoder keys and shapes, the state_dict's
+         per-module _metadata and the checkpoint's metadata in meta_extract.json.
 lens     lens/geometry.py on each saved layer: z*, principal widths, kappa,
          degenerate; per-task .npz in lens_out and lens_summary.csv.
 
@@ -44,6 +45,9 @@ import yaml
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
 from lens import geometry as geo  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import layouts  # noqa: E402
 
 TAG = "prereg-r6"
 HF_API = "https://huggingface.co/api/models/{repo}"
@@ -128,41 +132,14 @@ def sha256(path):
     return h.hexdigest()
 
 
-def check_layout(task, sd, lin, nrm, param_free):
-    """Stop unless the checkpoint has the released layout named in config `layer`:
-    <lin>.{weight (H, k), bias (H,)}, <nrm>.{weight (H,), bias (H,)} and nothing
-    under any param_free position."""
-    def under(prefix):
-        return sorted(k[len(prefix) + 1:] for k in sd if k.startswith(prefix + "."))
-    errs = []
-    if under(lin) != ["bias", "weight"]:
-        errs.append(f"{lin}: keys {under(lin)}, expected bias, weight")
-    if under(nrm) != ["bias", "weight"]:
-        errs.append(f"{nrm}: keys {under(nrm)}, expected bias, weight")
-    if not errs:
-        W, b = sd[f"{lin}.weight"], sd[f"{lin}.bias"]
-        g, be = sd[f"{nrm}.weight"], sd[f"{nrm}.bias"]
-        H = W.shape[0]
-        if W.ndim != 2 or tuple(b.shape) != (H,):
-            errs.append(f"{lin}: weight {tuple(W.shape)}, bias {tuple(b.shape)}")
-        if tuple(g.shape) != (H,) or tuple(be.shape) != (H,):
-            errs.append(f"{nrm}: weight {tuple(g.shape)}, bias {tuple(be.shape)}, expected ({H},)")
-    for p in param_free:
-        if under(p):
-            errs.append(f"{p}: expected no parameters or buffers, found {under(p)}")
-    if errs:
-        sys.exit(f"{task}: checkpoint does not have the configured layout:\n  " + "\n  ".join(errs))
-
-
 def stage_extract(cfg):
     import torch
 
     rev = cfg["source"].get("hf_revision")
     if not rev:
         sys.exit("set source.hf_revision in config.yaml from the `list` stage first.")
-    lay = cfg["layer"]
-    eps = float(lay["layernorm_eps"])
-    lin, nrm = lay["linear"], lay["norm"]
+    eps = float(cfg["layer"]["layernorm_eps"])
+    lays = cfg["layer"]["layouts"]
     info = http_json(HF_API.format(repo=hf_repo(cfg)) + f"/revision/{rev}")
     files = [s["rfilename"] for s in info.get("siblings", [])]
     ck_dir = os.path.join(ROOT, cfg["paths"]["checkpoints"])
@@ -188,26 +165,34 @@ def stage_extract(cfg):
             print(f"\n{task} seed {seed}  ({path}, sha256 {digest[:12]})")
             for k in enc_keys:
                 print(f"  {k:40s} {tuple(sd[k].shape)} {sd[k].dtype}")
-            check_layout(task, sd, lin, nrm, lay["param_free"])
+            where = f"{task} seed {seed}"
+            layout = layouts.detect_layout(sd, where)
+            expected = cfg["survey"][task][seed]
+            if layout != expected:
+                sys.exit(f"{where}: detected layout {layout}, survey (D5) says {expected}.")
+            lin, nrm = layouts.check_first_layer(sd, layout, lays, where)
+            print(f"  layout: {layout} (first layer {lin}, LayerNorm {nrm})")
             t = {k: sd[k].detach().cpu().numpy().astype(np.float64) for k in
                  (f"{lin}.weight", f"{lin}.bias", f"{nrm}.weight", f"{nrm}.bias")}
             E = t[f"{lin}.weight"]  # nn.Linear weight: (out, in) = (H, k)
             H, k = E.shape
             out = os.path.join(w_dir, f"{task}-seed{seed}.npz")
             np.savez(out, E=E, b=t[f"{lin}.bias"], ln_gamma=t[f"{nrm}.weight"],
-                     ln_beta=t[f"{nrm}.bias"], eps=eps, eps_source=lay["layernorm_eps_source"],
-                     layout=lay["layout"], source_dtype=str(sd[f"{lin}.weight"].dtype))
+                     ln_beta=t[f"{nrm}.bias"], eps=eps,
+                     eps_source=lays[layout]["layernorm_eps_source"], layout=layout,
+                     source_dtype=str(sd[f"{lin}.weight"].dtype))
             print(f"  -> H = {H}, k = {k}, saved {os.path.relpath(out, ROOT)}")
             modmeta = getattr(sd, "_metadata", None)
             record[f"{task}/{seed}"] = dict(
-                file=path, sha256=digest, H=H, k=k,
+                file=path, sha256=digest, H=H, k=k, layout=layout,
+                first_layer=dict(linear=lin, norm=nrm),
+                layernorm_eps_source=lays[layout]["layernorm_eps_source"],
                 encoder_keys={kk: list(sd[kk].shape) for kk in enc_keys},
                 encoder_module_metadata=(None if modmeta is None else
                                          {kk: dict(v) for kk, v in modmeta.items()
                                           if kk.startswith("_encoder")}),
                 checkpoint_metadata=json.loads(json.dumps(ck.get("metadata"), default=str)))
-    meta(cfg, "extract", dict(torch=torch.__version__, hf_revision=rev, layout=lay["layout"],
-                              layernorm_eps=eps, layernorm_eps_source=lay["layernorm_eps_source"],
+    meta(cfg, "extract", dict(torch=torch.__version__, hf_revision=rev, layernorm_eps=eps,
                               checkpoints=record))
 
 
@@ -227,7 +212,7 @@ def stage_lens(cfg):
                      norm_c_perp=L.norm_c_perp, kappa=L.kappa, phi=L.phi,
                      degenerate=L.degenerate, Sigma=L.Sigma, H=L.H, k=L.k, eps=L.eps)
             pw = L.principal_widths_eff if L.degenerate else L.principal_widths
-            rows.append(dict(task=task, seed=seed, H=L.H, k=L.k, eps=L.eps,
+            rows.append(dict(task=task, seed=seed, layout=str(w["layout"]), H=L.H, k=L.k, eps=L.eps,
                              degenerate=L.degenerate, norm_c_perp=L.norm_c_perp,
                              kappa=L.kappa, norm_z_star=float(np.linalg.norm(L.z_star)),
                              width_kind="eps_limited" if L.degenerate else "r_star",
