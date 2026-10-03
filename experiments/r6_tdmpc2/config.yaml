@@ -154,3 +154,30 @@ planner_collect:         # planner_collect.py: D6 (a), (b), (e)
     smoke_data: data/r6/planner_smoke
     smoke_results: results/r6/planner_smoke
   smoke: {task: cartpole-swingup, seed: 1, env_seed: 0, episodes: 1}
+criterion:               # criterion.py: r6.md criterion and G1, D6 (b), (c), (g). Values as tagged.
+  results: results/r6/criterion
+  planner_results: results/r6/planner
+  planner_manifest: results/r6/planner/planner_obs_manifest.csv
+  kept_rtol: 1.0e-10             # r6.md: eigenvalue at least 1e-10 times the largest
+  inside_quantile: 0.95          # r6.md Inside: 95% quantile of chi2 with m dof
+  populated: {n_sub: 5000, rng_seed: 0, percentile: 95}   # r6.md Populated
+  sharp_min: 5.0                 # r6.md Sharp: D / r_eff(d1) >= 5
+  rho_levels: [1, 10, 100, 1000] # r6.md, reported regardless
+  identification:                # D6 (b)
+    gate: {task: cartpole-swingup, seed: 1}
+    reported: {task: humanoid-run, seed: 3}
+    candidate: symlog
+    return_ratio: 0.9            # condition (i): mean over 50 episodes >= 0.9 x published
+    e_over_e0_max: 0.1           # condition (ii), cartpole-swingup seed 1 only
+  calibration:                   # D6 (c): D3 on the planner data, reported only
+    - {task: cheetah-run, seed: 1}
+    - {task: walker-run, seed: 1}
+    - {task: humanoid-run, seed: 1}
+    - {task: cartpole-swingup, seed: 2}
+  g1:
+    tasks: [cartpole-swingup, cheetah-run, walker-run, humanoid-run]   # dog-run not counted
+    min_pass: 2
+  susceptibility:                # D6 (g), reported only
+    n_grid: 2001
+    t_range_r_eff: 3.0
+    cor1_rtol: 1.0e-10
