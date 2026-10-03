@@ -1,0 +1,347 @@
+{
+  "stage": "d4_regeneration",
+  "git_commit": "fb4669839d978f544e5939674d65aa77bc26b1ec",
+  "git_dirty": false,
+  "prereg_tags": {
+    "prereg-r6": {
+      "tag_object": "086fbdd5c2aef676a6bfe438f9fcda714c153274",
+      "commit": "66b3a09f09a91e525e7348b065b52d7907b2929b"
+    },
+    "prereg-r6-d1": {
+      "tag_object": "3a0bb105b2b42223a1cafa9912514ad5246edafd",
+      "commit": "e5060cf9813401cd652088186641ad913320baa8"
+    },
+    "prereg-r6-d2": {
+      "tag_object": "df32edce53bcf0c541a285acc1383eb15c1ac4da",
+      "commit": "e20f5a61c98956da46bbb1d1bf5c6ac5aa4db817"
+    },
+    "prereg-r6-d3": {
+      "tag_object": "3dec0649dddb1a2d2125bd22b1a40afd2124beef",
+      "commit": "bc0b23b52baa14ff35f67d3b752c61b4da9a72c9"
+    }
+  },
+  "run_commit": "4c3f129475adceb0c6e90e56df6696b0565d4986",
+  "jax": "0.10.2",
+  "torch": "2.14.0+cpu",
+  "python": "3.13.15",
+  "versions": {
+    "python": "3.13.15",
+    "jax": "0.10.2",
+    "jaxlib": "0.10.2",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "torch": "2.14.0+cpu",
+    "mujoco": "3.14.0",
+    "dm_control": "1.0.47",
+    "PyYAML": "6.0.1",
+    "matplotlib": "3.11.2",
+    "pytest": "9.1.1"
+  },
+  "recorded_versions": {
+    "python": "3.13.15",
+    "torch": "2.14.0+cpu",
+    "jax": "0.10.2",
+    "numpy": "2.4.6",
+    "mujoco": "3.14.0",
+    "dm_control": "unknown",
+    "git_commit": "4c3f129475adceb0c6e90e56df6696b0565d4986",
+    "time": "2026-09-24T22:13:18.970245+00:00"
+  },
+  "dm_control_install": {
+    "version": "1.0.47",
+    "installed_with_no_deps": true,
+    "declared_dependencies": {
+      "absl-py": {
+        "requirement": "absl-py>=0.7.0",
+        "installed": "2.5.0"
+      },
+      "dm-env": {
+        "requirement": "dm-env",
+        "installed": "1.6"
+      },
+      "dm-tree": {
+        "requirement": "dm-tree!=0.1.2",
+        "installed": "0.1.10"
+      },
+      "glfw": {
+        "requirement": "glfw",
+        "installed": "2.10.2"
+      },
+      "labmaze": {
+        "requirement": "labmaze",
+        "installed": null
+      },
+      "lxml": {
+        "requirement": "lxml",
+        "installed": "6.1.3"
+      },
+      "mujoco": {
+        "requirement": "mujoco>=3.14.0",
+        "installed": "3.14.0"
+      },
+      "numpy": {
+        "requirement": "numpy>=1.9.0",
+        "installed": "2.4.6"
+      },
+      "protobuf": {
+        "requirement": "protobuf>=3.19.4",
+        "installed": "7.36.2"
+      },
+      "pyopengl": {
+        "requirement": "pyopengl>=3.1.4",
+        "installed": "3.1.10"
+      },
+      "pyparsing": {
+        "requirement": "pyparsing>=3.0.0",
+        "installed": "3.3.3"
+      },
+      "requests": {
+        "requirement": "requests",
+        "installed": "2.34.2"
+      },
+      "setuptools": {
+        "requirement": "setuptools!=50.0.0",
+        "installed": "78.1.0"
+      },
+      "scipy": {
+        "requirement": "scipy",
+        "installed": "1.17.1"
+      },
+      "tqdm": {
+        "requirement": "tqdm",
+        "installed": "4.70.1"
+      }
+    },
+    "missing": [
+      "labmaze"
+    ],
+    "labmaze_installed": false,
+    "unexpected_missing": [],
+    "note": "dm_control 1.0.47 installed with --no-deps and its declared runtime dependencies installed explicitly (4c3f129 pins for mujoco, numpy, scipy), except labmaze: labmaze has no Python 3.13 wheel (1.0.6 stops at cp312) and its sdist needs bazel. labmaze is imported only by dm_control.locomotion, not by dm_control.suite. The 4c3f129 notebook installed dm_control with plain pip (dependencies included); how the original run obtained labmaze on Python 3.13, if it did, is not recorded."
+  },
+  "match": true,
+  "compare": {
+    "returns.csv": {
+      "values_equal": true,
+      "bytes_equal": true,
+      "byte_note": "",
+      "n_cell_diffs": 0
+    },
+    "consistency.csv": {
+      "values_equal": true,
+      "bytes_equal": true,
+      "byte_note": "",
+      "n_cell_diffs": 0
+    }
+  },
+  "checkpoints": {
+    "repo": "nicklashansen/tdmpc2",
+    "revision": "8fb2a82efb3bae96941da440128fe1332e4394fd",
+    "sha256": {
+      "dmcontrol/cartpole-swingup-1.pt": "e22aa7500efabafcb2b58f99134bb6e9fc42ca81ed032c6c90a921e393b3af4a",
+      "dmcontrol/cartpole-swingup-2.pt": "4a81773b6136844c89f4ab0981e979758ead83aab163a64fa0151f142b004c0a",
+      "dmcontrol/cartpole-swingup-3.pt": "621b20b008a0b03b4266a118f9d7140707c8eadb52bca70984e77218575e06a3",
+      "dmcontrol/cheetah-run-1.pt": "906924fee08bf43743b01f187db5cd9f355d717395c399f754c5ee4e4782b059",
+      "dmcontrol/cheetah-run-2.pt": "aa18d1ca1feaad68f503b267e6de7bdfe7b1cf46213c0aa90ed0985d1d1fdb67",
+      "dmcontrol/cheetah-run-3.pt": "6ed9ba2730f75743ae27532a8e270c9de4769b2047855e32af565200fed74605",
+      "dmcontrol/walker-run-1.pt": "7e825a2210ede7085a71f98893fe3f89a1acb9eedf234a7c43815c68ecc0150c",
+      "dmcontrol/walker-run-2.pt": "0c45b6a5c3f7387a30b5e3ce2c57b8c4101b33affaae582204c2dbe451ce0caf",
+      "dmcontrol/walker-run-3.pt": "d8d0a635c5f49d951cd98a89125ee3ef205e01e631856a2d72a1288583d01089",
+      "dmcontrol/humanoid-run-1.pt": "57f2c7e509d9efb677ae3f150e3e162c8f1a44ce2dfd34b7f4eb04a489e05c20",
+      "dmcontrol/humanoid-run-2.pt": "7f6514a9519cbaec6f52f1319446fc74f74b1cda000ccf60026ce1663cd83db3",
+      "dmcontrol/humanoid-run-3.pt": "c262c177d9b748ef4f56397e334b8424cb0a1446c723f7b84526c09a8e106ffa",
+      "dmcontrol/dog-run-1.pt": "c5bc235f6aa605a0f4de99ae39848d9619b7a846527bd97152a5c3a39b249940",
+      "dmcontrol/dog-run-2.pt": "25e1453434aeba04e523b332f99d54e542772eb272565ef0cca241c60df4b491",
+      "dmcontrol/dog-run-3.pt": "348c9ce6f8c864a751ff5666443b216539e1d505ab77c8849df86621fd02e497"
+    }
+  },
+  "stages": [
+    {
+      "command": "experiments/r6_tdmpc2/extract.py --config experiments/r6_tdmpc2/config.yaml list",
+      "exit": 0,
+      "seconds": 0.9814505577087402,
+      "log": "results/r6/d4_regen/logs/extract_list.log",
+      "expected_exit": 0,
+      "as_expected": true
+    },
+    {
+      "command": "experiments/r6_tdmpc2/extract.py --config experiments/r6_tdmpc2/config.yaml extract",
+      "exit": 0,
+      "seconds": 8.377808332443237,
+      "log": "results/r6/d4_regen/logs/extract_extract.log",
+      "expected_exit": 0,
+      "as_expected": true
+    },
+    {
+      "command": "experiments/r6_tdmpc2/extract.py --config experiments/r6_tdmpc2/config.yaml lens",
+      "exit": 0,
+      "seconds": 0.9220504760742188,
+      "log": "results/r6/d4_regen/logs/extract_lens.log",
+      "expected_exit": 0,
+      "as_expected": true
+    },
+    {
+      "command": "experiments/r6_tdmpc2/collect.py --config experiments/r6_tdmpc2/config.yaml collect",
+      "exit": 0,
+      "seconds": 622.0178611278534,
+      "log": "results/r6/d4_regen/logs/collect_collect.log",
+      "expected_exit": 0,
+      "as_expected": true
+    },
+    {
+      "command": "experiments/r6_tdmpc2/collect.py --config experiments/r6_tdmpc2/config.yaml consistency",
+      "exit": 2,
+      "seconds": 85.32940697669983,
+      "log": "results/r6/d4_regen/logs/collect_consistency.log",
+      "expected_exit": 2,
+      "as_expected": true
+    }
+  ],
+  "data": {
+    "files": [
+      {
+        "file": "cartpole-swingup-seed1.npz",
+        "bytes": 903064,
+        "sha256": "353eb03865dd23f3f4a6e6ce85364b2f88caff5370aed262ca1081522bbb0d50"
+      },
+      {
+        "file": "cartpole-swingup-seed2.npz",
+        "bytes": 903064,
+        "sha256": "816b5103529d443a17cde639a4dbdc7d3bbaed9212235938c010154067f9f681"
+      },
+      {
+        "file": "cartpole-swingup-seed3.npz",
+        "bytes": 903064,
+        "sha256": "820c6a7da9a6acddc9115aa341c410806ab746df270088936ea505197bea1ef7"
+      },
+      {
+        "file": "cheetah-run-seed1.npz",
+        "bytes": 3105444,
+        "sha256": "ddd47832ceb6cdb5823299ede224d7c134c7fb87360e754d4c227f0635528856"
+      },
+      {
+        "file": "cheetah-run-seed2.npz",
+        "bytes": 3105444,
+        "sha256": "35a3e8586a97223309147f95c1c1fe677a1b07dbc36dbf0a2f8e3e6a072281eb"
+      },
+      {
+        "file": "cheetah-run-seed3.npz",
+        "bytes": 3105444,
+        "sha256": "6fda51281a5aaee60978bbb5fd85afef5166cd4c0103b4db9c9ae2a7d0ec9ed4"
+      },
+      {
+        "file": "dog-run-seed1.npz",
+        "bytes": 30146628,
+        "sha256": "b14850d81b64daf02ac77930af191ca5c4b7591d2dc222fabb27cf71d1d9fec5"
+      },
+      {
+        "file": "dog-run-seed2.npz",
+        "bytes": 30146628,
+        "sha256": "21e13c657b4fc47d5c1e4c94b0bb6f69f3cc6beb203afd403b96605ebbbb57de"
+      },
+      {
+        "file": "dog-run-seed3.npz",
+        "bytes": 30146628,
+        "sha256": "8ab26d5cbec29d20c22ffeb00f26a52303668944e77ce2f162651e03e12223aa"
+      },
+      {
+        "file": "humanoid-run-seed1.npz",
+        "bytes": 11115448,
+        "sha256": "1de5faf074599da65862683fe666aba14952e97044876f2e61007df9aba10ddc"
+      },
+      {
+        "file": "humanoid-run-seed2.npz",
+        "bytes": 11115448,
+        "sha256": "95aadbc255117aed614a23dca5c778e1b15741902f0762d51e0e8046cc57334c"
+      },
+      {
+        "file": "humanoid-run-seed3.npz",
+        "bytes": 11115448,
+        "sha256": "2bef6fa0921512fdf1def8a74d903fa2ec23ac5d9d16c364d6f593f846e5ccf6"
+      },
+      {
+        "file": "walker-run-seed1.npz",
+        "bytes": 3806840,
+        "sha256": "f6c0dc280e410b3bfe8f56d448f0999059bfe4327f2ace897d35a21fb32ba5fb"
+      },
+      {
+        "file": "walker-run-seed2.npz",
+        "bytes": 3806840,
+        "sha256": "76465e4dcc880b21ab05391ee913d854009e6c951280f45834e814a4280a25d5"
+      },
+      {
+        "file": "walker-run-seed3.npz",
+        "bytes": 3806840,
+        "sha256": "917bb8fa792f7bd8ec67823800e010d6e1b1a5e5a7102c0077c6c0573e2671b2"
+      }
+    ],
+    "drive": "/content/drive/MyDrive/layernorm-lens-r6/data/r6",
+    "copies": {
+      "cartpole-swingup-seed1.npz": "copied",
+      "cartpole-swingup-seed2.npz": "copied",
+      "cartpole-swingup-seed3.npz": "copied",
+      "cheetah-run-seed1.npz": "copied",
+      "cheetah-run-seed2.npz": "copied",
+      "cheetah-run-seed3.npz": "copied",
+      "dog-run-seed1.npz": "copied",
+      "dog-run-seed2.npz": "copied",
+      "dog-run-seed3.npz": "copied",
+      "humanoid-run-seed1.npz": "copied",
+      "humanoid-run-seed2.npz": "copied",
+      "humanoid-run-seed3.npz": "copied",
+      "walker-run-seed1.npz": "copied",
+      "walker-run-seed2.npz": "copied",
+      "walker-run-seed3.npz": "copied"
+    },
+    "manifest": "results/r6/d4_obs_manifest.csv",
+    "manifest_sha256": "f13b40ae67f2188a6fbda421b7cce872c9b1dc53b8fe3a76940354281652ce50"
+  },
+  "config": {
+    "run_commit": "4c3f129475adceb0c6e90e56df6696b0565d4986",
+    "worktree": "checkpoints/d4_regen_4c3f129",
+    "stages": [
+      "extract list",
+      "extract extract",
+      "extract lens",
+      "collect collect",
+      "collect consistency"
+    ],
+    "expected_exit": {
+      "extract list": 0,
+      "extract extract": 0,
+      "extract lens": 0,
+      "collect collect": 0,
+      "collect consistency": 2
+    },
+    "dm_control": {
+      "allowed_missing": [
+        "labmaze"
+      ],
+      "note": "dm_control 1.0.47 installed with --no-deps and its declared runtime dependencies installed explicitly (4c3f129 pins for mujoco, numpy, scipy), except labmaze: labmaze has no Python 3.13 wheel (1.0.6 stops at cp312) and its sdist needs bazel. labmaze is imported only by dm_control.locomotion, not by dm_control.suite. The 4c3f129 notebook installed dm_control with plain pip (dependencies included); how the original run obtained labmaze on Python 3.13, if it did, is not recorded."
+    },
+    "compare": {
+      "pass": [
+        "returns.csv",
+        "consistency.csv"
+      ],
+      "info_csv": [
+        "lens_summary.csv"
+      ],
+      "info_json": [
+        "consistency.json"
+      ]
+    },
+    "summaries": [
+      "returns.csv",
+      "consistency.csv",
+      "consistency.json",
+      "lens_summary.csv",
+      "meta_list.json",
+      "meta_extract.json",
+      "meta_lens.json",
+      "meta_collect.json",
+      "meta_consistency.json"
+    ]
+  },
+  "time": "2026-09-25T19:11:52.417343+00:00"
+}

@@ -1,0 +1,15 @@
+cartpole-swingup seed 1 [prerelease]: k = 5, return 173.3 (published 866.2, fraction 0.20)  FLAG < 50%
+cartpole-swingup seed 2 [public]: k = 5, return 883.2 (published 882.5, fraction 1.00)
+cartpole-swingup seed 3 [public]: k = 5, return 880.2 (published 883.0, fraction 1.00)
+cheetah-run seed 1 [public]: k = 17, return 326.4 (published 848.3, fraction 0.38)  FLAG < 50%
+cheetah-run seed 2 [public]: k = 17, return 358.6 (published 922.9, fraction 0.39)  FLAG < 50%
+cheetah-run seed 3 [public]: k = 17, return 435.6 (published 916.3, fraction 0.48)  FLAG < 50%
+walker-run seed 1 [public]: k = 24, return 807.0 (published 868.1, fraction 0.93)
+walker-run seed 2 [public]: k = 24, return 808.3 (published 879.3, fraction 0.92)
+walker-run seed 3 [public]: k = 24, return 793.0 (published 884.2, fraction 0.90)
+humanoid-run seed 1 [public]: k = 67, return 2.2 (published 542.2, fraction 0.00)  FLAG < 50%
+humanoid-run seed 2 [public]: k = 67, return 7.3 (published 603.5, fraction 0.01)  FLAG < 50%
+humanoid-run seed 3 [prerelease]: k = 67, return 0.8 (published 664.6, fraction 0.00)  FLAG < 50%
+dog-run seed 1 [public]: k = 223, return 64.5 (published 859.1, fraction 0.08)  FLAG < 50%
+dog-run seed 2 [public]: k = 223, return 58.9 (published 881.1, fraction 0.07)  FLAG < 50%
+dog-run seed 3 [public]: k = 223, return 44.1 (published 862.4, fraction 0.05)  FLAG < 50%

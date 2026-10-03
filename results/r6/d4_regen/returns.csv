@@ -1,0 +1,16 @@
+task,seed,layout,k,episodes,return_mean,return_std,published,published_step,fraction,flag_below_half
+cartpole-swingup,1,prerelease,5,50,173.297,24.601,866.2,4000000,0.200066,True
+cartpole-swingup,2,public,5,50,883.184,0.265131,882.5,4000000,1.00078,False
+cartpole-swingup,3,public,5,50,880.202,0.115988,883,4000000,0.996831,False
+cheetah-run,1,public,17,50,326.377,159.043,848.3,4000000,0.384742,True
+cheetah-run,2,public,17,50,358.626,181.166,922.9,4000000,0.388586,True
+cheetah-run,3,public,17,50,435.646,154.63,916.3,4000000,0.47544,True
+walker-run,1,public,24,50,806.958,97.6967,868.1,4000000,0.929568,False
+walker-run,2,public,24,50,808.336,74.0035,879.3,4000000,0.919295,False
+walker-run,3,public,24,50,792.956,85.4086,884.2,4000000,0.896806,False
+humanoid-run,1,public,67,50,2.19344,2.3574,542.2,14000000,0.00404545,True
+humanoid-run,2,public,67,50,7.26734,6.47333,603.5,14000000,0.012042,True
+humanoid-run,3,prerelease,67,50,0.798301,0.450454,664.6,14000000,0.00120118,True
+dog-run,1,public,223,50,64.4617,8.32549,859.1,14000000,0.075034,True
+dog-run,2,public,223,50,58.9356,9.5644,881.1,14000000,0.0668887,True
+dog-run,3,public,223,50,44.0821,12.5444,862.4,13900000,0.0511155,True

@@ -1,0 +1,302 @@
+# Project state (handoff), 3 October 2026
+
+For a fresh Claude Code session with no other context. Read this, then `CLAUDE.md`
+(rules; they override defaults), `docs/theory.md` (definitions; authoritative) and
+`docs/plan.md` (what each experiment must produce). Pre-registrations are in
+`prereg/`. This file is a summary: where it and a tagged file disagree, the tagged
+file wins.
+
+## 1. The project in brief
+
+Research code for a TMLR paper (submission target 17 Nov 2026; main-text
+experiments frozen 1 Nov). Claim: LayerNorm after an affine map is a gnomonic
+projection (theory.md, Theorem 1). Along any input line, the normalised output
+depends on position only through an angle θ = arctan((s − s*)/r*), so every slope
+through the layer carries a Lorentzian factor r*/(r*² + (s − s*)²) (Corollary 1).
+That gives a "lens": a Cauchy-shaped zone of amplified slopes centred at z*, with
+widths r* computable from the weights alone (theory.md, Diagnostics and conventions
+1–6). Learned dynamics models use LayerNorm early (e.g. TD-MPC2's NormedLinear).
+
+The argument has two halves:
+
+- **Presence (R6):** the lens exists in a deployed model. Test: is the lens of
+  TD-MPC2's first encoder layer sharp, and inside the states the robot actually
+  visits? Pre-registered in `prereg/r6.md`; decision gate G1 (4 Oct 2026).
+- **Harm (quadrotor, P-I / hover check / P-III / P-II):** in quadrotor
+  surrogates, Jacobian error concentrates near the lens, which damages
+  linearisation (LQR) and gradient-based MPC; fixes are compared at equal accuracy.
+  Predictions are to be written in `prereg/p1.md`; gate G2 (18 Oct).
+
+Gate G3 (13 Nov): every main-text claim backed.
+
+## 2. Repository layout
+
+| Path | What it is |
+| --- | --- |
+| `CLAUDE.md` | Rules: float64 everywhere; `lens/core.py` frozen; tagged prereg files never edited; cloud sessions cannot push tags; outcome metrics only after the prereg tag; `git add -f` for small results only; plan first for multi-file tasks |
+| `docs/theory.md` | Definitions, theorems, implementation conventions 1–6 (confirmed 24 Sep) |
+| `docs/plan.md` | Experiment plan v3: tiers, gates, per-experiment requirements |
+| `lens/core.py` | The original kink_core.py. **Frozen**: change only if `tests/test_core_regression.py` still passes bit for bit |
+| `lens/geometry.py` | The lens from weights (numpy float64): `lens(E, b, eps)` → z*, c⊥, κ, principal widths/directions, Σ, degenerate flag; `line()` (r*_ℓ and r_eff along a line), `lens_distance` (ρ), `gnomonic` (Theorem 1) |
+| `lens/__init__.py` | Imports core (and therefore JAX) |
+| `plants/`, `control/` | Empty packages, for the quadrotor plant and LQR/MPC (session 3) |
+| `experiments/initial_lens/` | Initial-lens check: `run.py`, `config.yaml`. 1,000 draws per (H, k, ε, init) for inits (a) zero bias, (b) torch default, (c) Flax, (d) TD-MPC2. Results in `results/initial_lens/` |
+| `experiments/r6_tdmpc2/` | R6 (below) |
+| `prereg/` | `r6.md` and deviations parts 1–3 (all tagged) |
+| `tests/` | pytest suite; `tests/golden/` holds core.py regression outputs |
+| `figures/` | The only source of paper figures (empty so far) |
+| `notebooks/` | Exploration only |
+| `slurm/` | TACC job scripts (empty so far) |
+| `results/`, `data/`, `checkpoints/` | Git-ignored. Small summaries are committed with `git add -f`; `.gitattributes` has `results/** -text` so result files are stored byte for byte |
+
+### `experiments/r6_tdmpc2/`
+
+| File | What it does |
+| --- | --- |
+| `config.yaml` | Tasks (cartpole-swingup, cheetah-run, walker-run, humanoid-run, dog-run), seeds 1–3, tdmpc2 commit e9f59321, HF revision 8fb2a82, layouts survey (D5), consistency (D3), planner_check, d4_regeneration, planner_collect and (WIP) criterion sections |
+| `layouts.py` | The two checkpoint layouts (D5): `detect_layout`, `check_first_layer`, numpy float64 networks `build_public` / `build_prerelease` / `build_networks`, D3 input candidates `input_candidates` (identity, symlog, LayerNorm without affine) |
+| `extract.py` | Stages `list`, `extract`, `lens`: list and download checkpoints, save first-layer E, b, γ, β, ε to `results/r6/weights/`, lens to `results/r6/lens/` and `lens_summary.csv`. Requires tag prereg-r6 |
+| `collect.py` | Stages `collect` (D4 policy-prior data, CPU) and `consistency` (D3 latent-consistency test, plus D5 calibration). `consistency_errors()` is D3's computation |
+| `planner_check.py` | Step-1 feasibility: public `TDMPC2` class with planning on a GPU, 5 episodes, eval_mode True/False |
+| `regenerate_d4.py` | Reruns the recorded CPU run (commit 4c3f129) in a git worktree to regenerate the lost D4 observations; compares with the committed CSVs |
+| `provenance.py` | Standard library only: `require_prereg` (annotated tags + file match), `d6_sha_table` (read from the tag), `sha256`, `download_verified`, `write_manifest`, `compare_csv`, `git_add_command` |
+| `planner_lib.py` | D6 key remap (`PRERELEASE_REMAP`, `remap_keys`), `public_shapes`, planner input (symlog), encoder agreement gate (`random_states`, `relative_errors`, `gate_rule`, `control_outcomes`, `halts`), d₁ and worst-state lens distances |
+| `planner_collect.py` | D6 (a), (b), (e) collector: 15 checkpoints through tdmpc2's `TDMPC2`, controls and gate, 50 episodes each, Drive copy, manifests, `git add -f` summary. `--smoke` for 1 episode |
+| `criterion_lib.py`, `criterion.py` | **WIP (eb8835a), not reviewed, never run on data**: criterion stage (open task (c)) |
+| `r6_colab.ipynb` | Original CPU pipeline notebook (extract, collect, consistency) |
+| `r6_planner_check.ipynb`, `r6_d4_regeneration.ipynb`, `r6_planner_collect.ipynb` | Colab runners for the corresponding scripts |
+
+### Entry points
+
+```
+python experiments/initial_lens/run.py --config experiments/initial_lens/config.yaml
+python experiments/r6_tdmpc2/extract.py --config experiments/r6_tdmpc2/config.yaml {list,extract,lens}
+python experiments/r6_tdmpc2/collect.py --config experiments/r6_tdmpc2/config.yaml {collect,consistency}
+python experiments/r6_tdmpc2/planner_check.py --config experiments/r6_tdmpc2/config.yaml        # GPU, tdmpc2 env
+python experiments/r6_tdmpc2/regenerate_d4.py ...                                               # see its docstring
+python experiments/r6_tdmpc2/planner_collect.py --config experiments/r6_tdmpc2/config.yaml --drive DIR [--smoke]   # GPU, tdmpc2 env
+python experiments/r6_tdmpc2/criterion.py --config experiments/r6_tdmpc2/config.yaml --drive DIR   # WIP: do not run before review
+```
+
+### Tests
+
+`pytest -q` runs everything. On a machine other than the golden one, run the core
+regression in tolerance mode: `LENS_TOL=1 python -m pytest -q tests/test_core_regression.py`.
+
+| Test | Checks |
+| --- | --- |
+| `test_core_regression.py` | `lens/core.py` against `tests/golden/*.npz`, bit-exact in the golden environment (`tests/golden/manifest.json`); `LENS_TOL=1` for rtol 1e-12 elsewhere |
+| `test_lens.py` | `lens/geometry.py`, Theorem 1 |
+| `test_d4_regeneration.py` | `regenerate_d4.py` logic |
+| `test_planner_collect.py` | remap, gate rule, controls, halting, manifests (no checkpoints or GPU needed) |
+| `test_criterion.py` | WIP criterion stage, synthetic arrays only |
+
+## 3. Branches, merge policy, tags
+
+- **Development branch: `claude/new-session-0r0qe0`.** It contains everything,
+  including the planner results (3d52d3d) and the WIP criterion stage (eb8835a).
+  The Colab notebooks clone this branch.
+- `claude/loving-johnson-wk9yb3` (earlier sessions, ends at bc0b23b) is fully
+  merged into `claude/new-session-0r0qe0`. Do not develop on it.
+- `main` is at 64c02c1 (PR #7, up to fb46698). It lags the development branch.
+  Changes reach `main` only through pull requests that the author merges.
+- Policy as practised: a feature branch with pull requests into `main`, merged by
+  the author. Use merge commits, never rebase or force-push shared branches, and
+  never rewrite history. Commit and push only what was asked. A cloud session
+  cannot push tags: commit and push the prereg file, then the author creates and
+  pushes the annotated tag. Every script for a pre-registered test refuses to run
+  unless its annotated tags exist and the prereg files match them.
+
+### Pre-registration tags (all annotated, all on origin)
+
+| Tag | Tag object | Commit | File | Settles |
+| --- | --- | --- | --- | --- |
+| `prereg-r6` | 086fbdd5c2aef676a6bfe438f9fcda714c153274 | 66b3a09f09a91e525e7348b065b52d7907b2929b | `prereg/r6.md` | Question, models (seed 1 counts), data (50 episodes, env seeds 0–4), definitions, the criterion (Inside, Populated, Sharp), G1 (≥ 2 of the 4 non-dog tasks), what is reported regardless |
+| `prereg-r6-d1` | 3a0bb105b2b42223a1cafa9912514ad5246edafd | e5060cf9813401cd652088186641ad913320baa8 | `prereg/r6-deviations.md` | D1 which keys are the layer (pre-release layout); D2 ε = 1e-5 assumed; D3 encoder position 0 decided by a latent-consistency test (identity, symlog, LayerNorm), with an accept rule e ≤ 0.1·e₀ and lowest; D4 data from the policy prior, since the planner could not load the files |
+| `prereg-r6-d2` | df32edce53bcf0c541a285acc1383eb15c1ac4da | e20f5a61c98956da46bbb1d1bf5c6ac5aa4db817 | `prereg/r6-deviations-2.md` | D5 two checkpoint layouts: pre-release for cartpole-swingup s1 and humanoid-run s3, public for the other 13; D1–D3 apply only to the pre-release ones; D3 calibration on public seed-1 checkpoints; layout detection rule |
+| `prereg-r6-d3` | 3dec0649dddb1a2d2125bd22b1a40afd2124beef | bc0b23b52baa14ff35f67d3b752c61b4da9a72c9 | `prereg/r6-deviations-3.md` | D6 planner data (public tdmpc2 planner, eval_mode=True, float32 for acting only); symlog at pre-release position 0; key remap; encoder agreement gate and controls; conditions (i) ≥ 0.9 × published and (ii) for cartpole s1; humanoid s3 labels; (c) calibration; (e) protocol; (g) end-to-end susceptibility (reported only); the 15-checkpoint SHA-256 table |
+
+### Key commits since the tags (on `claude/new-session-0r0qe0`)
+
+| Commit | What |
+| --- | --- |
+| 4bc1a14 | `results/r6/prerelease_keys.json`: all keys and shapes of the two pre-release checkpoints |
+| 00603a8 | CPU-run outputs and metadata recovered from the Drive copy of 24 Sep (`meta_*.json`, `lens/`, `weights/`, `lens_summary.csv`, `consistency.json`); never committed before because `results/` is ignored |
+| 132bb72 | `results/r6/PROVENANCE.md` addendum: the CPU run is recorded at 4c3f129 (not c85262f; the R6 code is identical) |
+| fa6d02d | CLAUDE.md: commit summaries, metadata and arrays < 1 MB; observation data only via SHA-256 manifest |
+| 2ac54e2, fb46698, e739a71 | D4 regeneration: script, then outputs. **MATCH**: the regenerated run reproduces the 4c3f129 CPU run byte for byte (`results/r6/d4_regen/`, `meta_d4_regeneration.json` match: true, `d4_obs_manifest.csv`) |
+| 2f9764c, f4187dc | `.gitattributes` `results/** -text`; `lens_summary.csv` restored to its original (CRLF) bytes |
+| 98bb91e | PROVENANCE.md addendum: D4 observations regenerated, byte for byte |
+| 54a7288, bca1e71 | D6 planner collector, tests and notebook; notebook streams output live |
+| 3d52d3d | D6 planner results, all 15 checkpoints (30 files; see open task (a)) |
+| eb8835a | WIP criterion-stage draft (open task (c)) |
+
+## 4. R6 status
+
+Nothing in R6's criterion (Inside, Populated, Sharp), G1, D6 (c) or D6 (g) has
+been computed for any real checkpoint. Everything below is a pipeline result or a
+quantity D6 itself recorded.
+
+- **Lens from the weights** (`results/r6/lens_summary.csv`, run at 4c3f129): all 15
+  checkpoints are non-degenerate, κ ≤ 0.00165. The r* principal widths are strongly
+  anisotropic: width_max / width_min is 4.1–5.0 (cartpole-swingup), 93–142
+  (cheetah-run), 71–74 (walker-run), 28–172 (humanoid-run) and 9,040–11,000
+  (dog-run). dog-run ‖z*‖ is 563–769. The pre-release lenses are in symlog
+  coordinates (the coordinates the layer receives under D6 (b)).
+- **D3 on the D4 policy-prior data** (`results/r6/consistency.csv`): identity was
+  rejected for both pre-release checkpoints. cartpole-swingup s1 e/e₀: identity
+  0.036, symlog 0.020 (lowest), LayerNorm 0.046. humanoid-run s3: identity 0.989,
+  symlog 0.115 (lowest), LayerNorm 0.965. Public calibration (identity):
+  cheetah-run 0.014, walker-run 0.013, humanoid-run s1 0.117. This led to D6.
+- **D4 regeneration:** the lost D4 observations were regenerated by rerunning
+  4c3f129; `returns.csv` and `consistency.csv` were reproduced byte for byte. The
+  observations are on Drive, verified by `results/r6/d4_obs_manifest.csv`.
+- **Encoder agreement gate and controls** (`results/r6/planner/encoder_gate.csv`;
+  identical values in all four sessions, data and smoke): the positive control
+  (cartpole s2) passed, max relative error 2.3e-7 (random) and 4.5e-7 (D4 states).
+  The negative control (cartpole s1 read with identity) failed as required, max
+  1.35 and 1.25 (> 1e-2). The gate passed for cartpole s1 (median 2.4e-7 / 3.5e-7,
+  max 4.9e-7 / 6.8e-7) and humanoid s3 (median 2.2e-7 / 3.0e-7, max 6.5e-7 /
+  5.2e-7), against the rule median ≤ 1e-5 and max ≤ 1e-3.
+- **Planner returns** (`results/r6/planner/planner_returns.csv`; 50 episodes,
+  eval_mode=True, Tesla T4), as fractions of the published return:
+
+  | Task | Seed 1 | Seed 2 | Seed 3 |
+  | --- | --- | --- | --- |
+  | cartpole-swingup | 1.002 (symlog) | 1.001 | 1.000 |
+  | cheetah-run | 1.004 | 0.987 | 1.010 |
+  | walker-run | 1.025 | 1.009 | 1.008 |
+  | humanoid-run | 1.233 | 1.147 | 1.058 (symlog) |
+  | dog-run | 0.916 | 0.883 | 1.008 |
+
+  No checkpoint is flagged below 0.5. Cartpole s2 was collected in session
+  20260925T214748Z; the other 14 in session 20260927T141627Z.
+- **D6 (b) condition (i) passed** for cartpole-swingup s1 (1.002 ≥ 0.9) and
+  humanoid-run s3 (1.058). Condition (ii) on the planner data, and therefore
+  cartpole s1's identification and humanoid s3's label, has **not** been computed;
+  it is part of task (c).
+
+## 5. Environments and data
+
+| Environment | Where | Versions | Used for |
+| --- | --- | --- | --- |
+| CPU pipeline | Colab CPU | Python 3.13.15, jax/jaxlib 0.10.2, numpy 2.4.6, scipy 1.17.1, torch 2.14.0+cpu, mujoco 3.14.0, dm_control 1.0.47 (installed without labmaze for the regeneration), PyYAML 6.0.1 (`meta_d4_regeneration.json`) | extract, collect (D4), consistency (D3), D4 regeneration; the criterion stage is to run here too |
+| Planner | Colab Tesla T4, CUDA 12.6 | tdmpc2 e9f59321's pinned env (`docker/environment.yaml`) in a Python 3.11.16 uv virtualenv: torch 2.7.1+cu126, tensordict 0.8.3, torchrl 0.8.1, mujoco 3.1.2, dm_control 1.0.16, numpy 1.24.4, gymnasium 0.29.1, hydra-core 1.3.2, omegaconf 2.3.0 (planner metas) | planner_check, planner_collect. No JAX; our float64 work there is numpy |
+| Laptop | Windows, VS Code + Claude Code, `.venv/` (git-ignored) | Not recorded in the repo. Install `requirements.txt` (jax 0.10.2, numpy 2.4.6, scipy 1.17.1, PyYAML 6.0.1, pytest 9.1.1, matplotlib 3.11.2) and, for R6 work, `requirements-r6.txt` (torch 2.14.0 CPU first, from its own index). Record the versions on first use. The core regression is bit-exact only in the golden environment, so use `LENS_TOL=1` | development, tests |
+
+Source code: tdmpc2 is cloned to `checkpoints/tdmpc2_src` at
+e9f59321933cbc8e11a002b842adc7d4ffae8ff1. Checkpoints come from
+huggingface.co/nicklashansen/tdmpc2 at revision
+8fb2a82efb3bae96941da440128fe1332e4394fd, into `checkpoints/tdmpc2/dmcontrol/`,
+each verified against D6's SHA-256 table (read from the tag).
+
+**Google Drive, `MyDrive/layernorm-lens-r6/`:**
+
+| Drive path | Contents | Verified by |
+| --- | --- | --- |
+| `data/r6/<task>-seed<s>.npz` | D4 policy-prior observations (15 files), regenerated | `results/r6/d4_obs_manifest.csv`, plus `meta_d4_regeneration.json` with match: true |
+| `data/r6/planner/<task>-seed<s>.npz` | D6 planner data (15 files): obs (50, 501, k) float32, actions (50, 500, a), rewards, env_seed, episode_in_seed, seconds | `results/r6/planner/planner_obs_manifest.csv` (kind `data`) and each `meta_<task>-seed<s>.json` |
+| `data/r6/planner_smoke/` | 2 smoke episodes (outcome data, never used for any rule) | `planner_obs_manifest.csv` (kind `smoke`) |
+| `results/r6/planner/`, `results/r6/planner_smoke/` | Copies of the result files | the committed copies |
+| (24 Sep copy) | The original CPU run's results, from which 00603a8 was recovered | `results/r6/PROVENANCE.md` |
+
+## 6. Open tasks, in order
+
+**(a) Provenance note** (a dated note under `results/r6/planner/`, in its own
+commit). Read the committed metas; do not guess.
+1. The interrupted session 20260925T214748Z collected cartpole-swingup s2 and left
+   no session file. Confirm from `meta_cartpole-swingup-seed2.json` which code
+   commit it ran. Confirm that `planner_collect.py` and `planner_lib.py` are
+   identical between that commit and the main session's (20260927T141627Z, whose
+   metas record bca1e71, clean).
+2. torch._dynamo hit its recompile limit (8) during walker-run s1 (a guard on
+   `kwargs['t0']`), so `_plan` ran eagerly from then on: walker s1–s3, humanoid,
+   dog and both pre-release runs. Episode times went from about 9 s to 21–29 s.
+   Record which checkpoints ran compiled and which eager, from the per-episode
+   times in the metas (`seconds_per_episode`), and note that the gate tested
+   `encode` eagerly: torch.compile wraps `_plan`, not `encode` (tdmpc2.py:50-51),
+   and D6 (b) says so. No rule
+   depends on this; it is disclosure against D6 (e)'s "torch.compile as in
+   tdmpc2's configuration".
+3. Two smoke sessions exist (20260925T211407Z, 20260927T141335Z). Both are kind
+   `smoke` and unused.
+4. 3d52d3d has 30 files, not 31: `results/r6/planner_smoke/key_mapping_humanoid-run-seed3.json`
+   never reached Drive (only the `planner/` copy did), and the runtime that wrote
+   it is gone. Confirm that the mapping is deterministic: it is a fixed function of
+   the checkpoint's keys (`planner_lib.remap_keys`), so the `planner/` copy should
+   equal what the smoke run wrote. Check this by recomputing it from the verified
+   checkpoint's keys, or from `results/r6/prerelease_keys.json`.
+
+**(b) Drive copy check.** Every stage must check that each file in its
+`git add -f` list exists on Drive, with the same SHA-256, before it reports
+success. This is the likely cause of the missing smoke key mapping (confirm in
+(a)4): `planner_collect.load_agent` writes a pre-release checkpoint's key mapping
+when it loads it, which happens for the gate, but `run_checkpoint` pushes it to
+Drive only for a checkpoint that acts (`planner_collect.py:472-473`). In a smoke
+run only cartpole-swingup s1 acts, so humanoid-run s3's smoke mapping was written
+locally and never copied. Its `planner/` copy reached Drive because humanoid-run
+s3 acted in the full run.
+
+**(c) Criterion stage.** D6 (b) condition (ii) for cartpole s1 on the planner data,
+plus the record-only value on the D4 data; the humanoid s3 label; the D6 (c)
+calibration; Inside, Populated and Sharp for all 15 checkpoints exactly as r6.md
+and the deviations define them (symlog coordinates for the pre-release files); G1
+from the counting checkpoints; D6 (g) susceptibility (reported only). It runs on a
+Colab CPU runtime, reads planner observations from Drive after checking each
+SHA-256 against `planner_obs_manifest.csv`, writes to `results/r6/criterion/` with
+meta, and prints `git add -f`. **The author reviews the code before anything
+runs.** A draft is in eb8835a (`criterion_lib.py`, `criterion.py`,
+`tests/test_criterion.py`, config section). Questions put to the author and not
+yet answered:
+1. D3's "within 10%" rule (count toward G1 only if the criterion holds under both
+   readings) under D6: apply it with symlog in identity's place? The draft reports
+   it but does not apply it.
+2. Condition (ii)'s e₀: symlog's own e₀, as `consistency.csv` computes e/e₀ and D6
+   quotes it (0.020)?
+3. Populated's subsample indexes rows in stored order (env seed, episode, step;
+   n = 25,050), and its 95th percentile uses numpy's default linear method. OK?
+4. r6.md's "Corollary 1 identity check on the real layer along lines through the
+   data": the draft checks only along (g)'s lines through z*. Add lines through μ
+   along d₁ and d₂? Also record TD-MPC2's initialisation code (`common/init.py`)
+   in the meta.
+5. humanoid s3 in symlog only (D6 (b)), rather than under every candidate (D5)?
+6. The recorded-action median uses the 25,000 states that have an executed action;
+   the encoder output has one median. OK?
+7. Eigenvectors' sign: the largest-magnitude component is positive. This affects
+   only the sign of t at the peak.
+
+**(d)** Add the printed `git add -f` listing to `extract.py`, `collect.py` and
+`planner_check.py` (planner_collect, regenerate_d4 and the criterion draft already
+print one).
+
+**(e)** Session 3: the quadrotor simulator (`plants/quadrotor.py`; 12 states, 4
+inputs, exact Jacobians by autodiff; see plan.md P-I). This waits on the author's
+parameter choice. Then `prereg/p1.md`, written and tagged before any P-I outcome is
+computed.
+
+## 7. Known issues
+
+The author's list for this section was cut off in the request that produced this
+file. These are the issues known to the session that wrote it; ask the author for
+anything missing.
+
+- The missing smoke key mapping, and Drive copies that are not verified against
+  the commit list (tasks (a)4 and (b)).
+- torch.compile fell back to eager from walker-run s1 on, so the runs differ from
+  D6 (e)'s wording (task (a)2). GPU execution is not bitwise deterministic anyway;
+  the stored observations are the data of record.
+- The interrupted planner session left no session file (task (a)1).
+- ε = 1e-5 is an assumption for the pre-release checkpoints (D2). κ, ‖c⊥‖ and r*
+  are reported, so any ε-dependent quantity can be recomputed.
+- dog-run (k = 223) is close to the k ≤ 255 limit and does not count toward G1. Its
+  z* lies far outside the data (‖z*‖ 563–769).
+- humanoid-run's calibration e/e₀ (0.117 for a correctly read public network) is
+  above D3's 0.1 threshold, which is why D6 does not apply 0.1 to humanoid-run.
+- The D4 regeneration installed dm_control without labmaze (no Python 3.13 wheel);
+  only `dm_control.locomotion` needs it. The planner env records dm_control 1.0.16.
+- `results/r6/lens_summary.csv` has CRLF line endings, the original bytes. Keep
+  `.gitattributes` (`results/** -text`); on Windows, do not let editors or
+  `core.autocrlf` rewrite result files.
+- `main` lags the development branch: everything since fb46698 is unmerged.
+- `results/r6/PROVENANCE.md`'s original text names c85262f; its addendums
+  correct this. Do not rewrite the original text; add addendums.

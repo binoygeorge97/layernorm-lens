@@ -1,0 +1,152 @@
+{
+  "stage": "consistency",
+  "git_commit": "4c3f129475adceb0c6e90e56df6696b0565d4986",
+  "git_dirty": false,
+  "prereg_tags": {
+    "prereg-r6": "086fbdd5c2aef676a6bfe438f9fcda714c153274",
+    "prereg-r6-d1": "3a0bb105b2b42223a1cafa9912514ad5246edafd",
+    "prereg-r6-d2": "df32edce53bcf0c541a285acc1383eb15c1ac4da"
+  },
+  "jax": "0.10.2",
+  "numpy": "2.4.6",
+  "torch": "2.14.0+cpu",
+  "python": "3.13.15",
+  "time": "2026-09-25T19:03:29.802721+00:00",
+  "config": {
+    "source": {
+      "repo": "https://github.com/nicklashansen/tdmpc2",
+      "checkpoints": "https://huggingface.co/nicklashansen/tdmpc2",
+      "repo_commit": "e9f59321933cbc8e11a002b842adc7d4ffae8ff1",
+      "hf_revision": "8fb2a82efb3bae96941da440128fe1332e4394fd",
+      "eval_repo": "https://github.com/tdmpc2/tdmpc2-eval",
+      "eval_repo_commit": "ab776b65a88465c5b2265938bcbc516a7ff2a40a"
+    },
+    "model_size": 5,
+    "tasks": [
+      "cartpole-swingup",
+      "cheetah-run",
+      "walker-run",
+      "humanoid-run",
+      "dog-run"
+    ],
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "layer": {
+      "layernorm_eps": 1e-05,
+      "layouts": {
+        "public": {
+          "description": "NormedLinear, as built by tdmpc2 e9f59321 common/layers.py",
+          "linear": "_encoder.state.0",
+          "norm": "_encoder.state.0.ln",
+          "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps"
+        },
+        "prerelease": {
+          "description": "pre-release layout (D1-D3); built by neither tdmpc2 e9f59321 nor tdmpc2-eval ab776b65",
+          "linear": "_encoder.state.1",
+          "norm": "_encoder.state.2",
+          "param_free": [
+            "_encoder.state.0",
+            "_encoder.state.3",
+            "_encoder.state.6"
+          ],
+          "layernorm_eps_source": "assumed (torch default); not in the checkpoint or any public code (D2)"
+        }
+      }
+    },
+    "survey": {
+      "cartpole-swingup": {
+        "1": "prerelease",
+        "2": "public",
+        "3": "public"
+      },
+      "cheetah-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "walker-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "humanoid-run": {
+        "1": "public",
+        "2": "public",
+        "3": "prerelease"
+      },
+      "dog-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      }
+    },
+    "data": {
+      "episodes_per_task": 50,
+      "env_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "policy": "policy prior only, a_t = tanh(mu(enc(o_t))), position 0 = identity (deviation D4)",
+      "steps": 500,
+      "action_repeat": 2
+    },
+    "consistency": {
+      "targets": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 1,
+          "role": "gate"
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 3,
+          "role": "reported"
+        }
+      ],
+      "stop_on_reject": {
+        "gate": true,
+        "reported": false
+      },
+      "calibration": [
+        {
+          "task": "cheetah-run",
+          "seed": 1
+        },
+        {
+          "task": "walker-run",
+          "seed": 1
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 1
+        }
+      ],
+      "candidates": [
+        "identity",
+        "symlog",
+        "layernorm"
+      ],
+      "pos0_layernorm_eps": 1e-05,
+      "simnorm_dim": 8,
+      "rng_seed": 0,
+      "accept_ratio": 0.1,
+      "tie_ratio": 1.1
+    },
+    "paths": {
+      "checkpoints": "checkpoints/tdmpc2/",
+      "weights_out": "results/r6/weights/",
+      "lens_out": "results/r6/lens/",
+      "data_out": "data/r6/",
+      "tdmpc2_src": "checkpoints/tdmpc2_src/",
+      "results_out": "results/r6/"
+    }
+  },
+  "dm_control": "unknown",
+  "mujoco": "3.14.0"
+}

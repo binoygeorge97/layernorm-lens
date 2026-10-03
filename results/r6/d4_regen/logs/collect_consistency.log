@@ -1,0 +1,7 @@
+cartpole-swingup seed 1 [gate, prerelease]: identity e/e0=0.03626, symlog e/e0=0.02039, layernorm e/e0=0.0458  -> identity REJECTED; report under both with ['symlog']
+humanoid-run seed 3 [reported, prerelease]: identity e/e0=0.9889, symlog e/e0=0.1149, layernorm e/e0=0.9647  -> identity REJECTED: checkpoint UNIDENTIFIED, R6 under each candidate; report under both with ['symlog', 'layernorm']
+cheetah-run seed 1 [calibration, public]: identity e/e0=0.01385, symlog e/e0=0.06305, layernorm e/e0=0.3584  -> reference only
+walker-run seed 1 [calibration, public]: identity e/e0=0.01267, symlog e/e0=0.4861, layernorm e/e0=0.9694  -> reference only
+humanoid-run seed 1 [calibration, public]: identity e/e0=0.117, symlog e/e0=0.4207, layernorm e/e0=0.7392  -> reference only
+
+STOP: identity rejected for ['cartpole-swingup seed 1 (gate)']. Consult the author (D3, D5).

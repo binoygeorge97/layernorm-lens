@@ -8,7 +8,8 @@ and tdmpc2's pinned Python 3.11 environment.
   pre-registration files match them (CLAUDE.md).
 - d6_sha_table(): the checkpoint SHA-256 table of D6, read from the tag itself
   (git show prereg-r6-d3:prereg/r6-deviations-3.md), never from the working tree.
-- sha256(), verify_sha256(): file hashing; a mismatch refuses the file.
+- sha256(), verify_sha256(), download_verified(): file hashing; a mismatch
+  refuses the file.
 - write_manifest(): file names, sizes and SHA-256s of data files that stay on Drive.
 - compare_csv(): value-by-value comparison of two CSVs at their printed precision,
   with byte-level differences reported separately.
@@ -22,6 +23,7 @@ import os
 import re
 import shlex
 import subprocess
+import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -122,6 +124,25 @@ def verify_sha256(path, expected, what=None):
     if got != expected:
         raise ProvenanceError(f"refusing {what or path}: SHA-256 {got} != expected {expected}.")
     return got
+
+
+HF_FILE = "https://huggingface.co/{repo}/resolve/{rev}/{path}"
+
+
+def download_verified(url, local, expected, what=None):
+    """Download url to local unless present; refuse (and delete a fresh download)
+    unless the file's SHA-256 is `expected`. Returns the SHA-256."""
+    if not os.path.exists(local):
+        os.makedirs(os.path.dirname(local), exist_ok=True)
+        part = local + ".part"
+        urllib.request.urlretrieve(url, part)
+        try:
+            verify_sha256(part, expected, what)
+        except ProvenanceError:
+            os.remove(part)
+            raise
+        os.replace(part, local)
+    return verify_sha256(local, expected, what)
 
 
 def write_manifest(path, files, base):

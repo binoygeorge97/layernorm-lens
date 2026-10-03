@@ -1,0 +1,147 @@
+{
+  "cartpole-swingup/1": {
+    "role": "gate",
+    "layout": "prerelease",
+    "errors": {
+      "identity": {
+        "e": 1.4642628952818877,
+        "e0": 40.381619917988196,
+        "n": 25000
+      },
+      "symlog": {
+        "e": 0.7902188833017262,
+        "e0": 38.75914628917405,
+        "n": 25000
+      },
+      "layernorm": {
+        "e": 1.7831516422208125,
+        "e0": 38.9332252842071,
+        "n": 25000
+      }
+    },
+    "lowest": "symlog",
+    "identity_lowest": false,
+    "accepted": false,
+    "report_under_both": [
+      "symlog"
+    ],
+    "identified": false,
+    "report_r6_under": [
+      "identity",
+      "symlog",
+      "layernorm"
+    ]
+  },
+  "humanoid-run/3": {
+    "role": "reported",
+    "layout": "prerelease",
+    "errors": {
+      "identity": {
+        "e": 27.223443958013057,
+        "e0": 27.529153887157236,
+        "n": 25000
+      },
+      "symlog": {
+        "e": 0.3903302749720041,
+        "e0": 3.395712589046836,
+        "n": 25000
+      },
+      "layernorm": {
+        "e": 4.898767659516478,
+        "e0": 5.0781562580383115,
+        "n": 25000
+      }
+    },
+    "lowest": "symlog",
+    "identity_lowest": false,
+    "accepted": false,
+    "report_under_both": [
+      "symlog",
+      "layernorm"
+    ],
+    "identified": false,
+    "report_r6_under": [
+      "identity",
+      "symlog",
+      "layernorm"
+    ]
+  },
+  "cheetah-run/1": {
+    "role": "calibration",
+    "layout": "public",
+    "errors": {
+      "identity": {
+        "e": 0.25380920505017,
+        "e0": 18.319780565012312,
+        "n": 25000
+      },
+      "symlog": {
+        "e": 1.0110879006996358,
+        "e0": 16.036595838329546,
+        "n": 25000
+      },
+      "layernorm": {
+        "e": 6.963221433010334,
+        "e0": 19.429308252615883,
+        "n": 25000
+      }
+    },
+    "lowest": "identity",
+    "accepted": null,
+    "report_under_both": [],
+    "identified": null,
+    "report_r6_under": []
+  },
+  "walker-run/1": {
+    "role": "calibration",
+    "layout": "public",
+    "errors": {
+      "identity": {
+        "e": 0.18859622071576618,
+        "e0": 14.884285033593654,
+        "n": 25000
+      },
+      "symlog": {
+        "e": 6.175505422405603,
+        "e0": 12.7030077529033,
+        "n": 25000
+      },
+      "layernorm": {
+        "e": 24.694252597907973,
+        "e0": 25.47314773892548,
+        "n": 25000
+      }
+    },
+    "lowest": "identity",
+    "accepted": null,
+    "report_under_both": [],
+    "identified": null,
+    "report_r6_under": []
+  },
+  "humanoid-run/1": {
+    "role": "calibration",
+    "layout": "public",
+    "errors": {
+      "identity": {
+        "e": 0.3824252867681875,
+        "e0": 3.268687383201266,
+        "n": 25000
+      },
+      "symlog": {
+        "e": 1.4353476197505783,
+        "e0": 3.4114802943774434,
+        "n": 25000
+      },
+      "layernorm": {
+        "e": 2.828825077336965,
+        "e0": 3.8268948999868515,
+        "n": 25000
+      }
+    },
+    "lowest": "identity",
+    "accepted": null,
+    "report_under_both": [],
+    "identified": null,
+    "report_r6_under": []
+  }
+}
