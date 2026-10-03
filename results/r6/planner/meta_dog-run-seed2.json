@@ -1,0 +1,504 @@
+{
+  "stage": "planner_collect",
+  "kind": "data",
+  "complete": true,
+  "smoke": false,
+  "smoke_note": null,
+  "task": "dog-run",
+  "seed": 2,
+  "layout": "public",
+  "planner_input": "identity",
+  "eval_mode": true,
+  "env_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "episodes_per_env_seed": 10,
+  "steps": 500,
+  "action_repeat": 2,
+  "returns": {
+    "episodes": 50,
+    "return_mean": 777.8482914166898,
+    "return_std": 32.68997731446257,
+    "return_min": 687.0412113536149,
+    "return_max": 828.758258998394,
+    "published": 881.1,
+    "fraction": 0.8828149942307227,
+    "flag_below_half": false
+  },
+  "published_step": 14000000,
+  "published_source": "tdmpc2 e9f59321933cbc8e11a002b842adc7d4ffae8ff1 results/tdmpc2/dog-run.csv, last logged step, seed 2",
+  "checkpoint": {
+    "file": "dmcontrol/dog-run-2.pt",
+    "sha256": "25e1453434aeba04e523b332f99d54e542772eb272565ef0cca241c60df4b491",
+    "hf_revision": "8fb2a82efb3bae96941da440128fe1332e4394fd"
+  },
+  "data": {
+    "file": "data/r6/planner/dog-run-seed2.npz",
+    "drive": "/content/drive/MyDrive/layernorm-lens-r6/data/r6/planner/dog-run-seed2.npz",
+    "sha256": "011d95c5322630347d3ad3476ebd4029636d2f816df7fc591962a9db844c1274",
+    "bytes": 26247308,
+    "shapes": {
+      "obs": [
+        50,
+        501,
+        223
+      ],
+      "actions": [
+        50,
+        500,
+        38
+      ],
+      "rewards": [
+        50,
+        500
+      ],
+      "env_seed": [
+        50
+      ],
+      "episode_in_seed": [
+        50
+      ],
+      "seconds": [
+        50
+      ]
+    }
+  },
+  "key_mapping": null,
+  "encoder_gate": null,
+  "controls": null,
+  "gate_result": null,
+  "seconds_total": 1465.340383529663,
+  "seconds_per_episode": [
+    28.905676841999593,
+    28.87311328999931,
+    28.821667815000183,
+    28.79454223799985,
+    29.083590185000503,
+    28.917534068999885,
+    28.95246762699935,
+    29.04801030300041,
+    29.045421778000673,
+    29.24871662899932,
+    29.014300114000434,
+    29.245370209000612,
+    28.985018929000944,
+    29.06108832999962,
+    29.19317213299837,
+    29.098735819001377,
+    29.070349212999645,
+    29.18819316400004,
+    29.014051818001462,
+    29.090841602999717,
+    29.46643711700017,
+    29.65147602399884,
+    29.339115243999913,
+    29.202848525999798,
+    29.265994011999283,
+    29.367173661999914,
+    29.061686605000432,
+    29.067810071999702,
+    29.184115803000168,
+    29.119330445999367,
+    29.575853732001633,
+    29.695304986998963,
+    29.636000205000528,
+    29.419580562998817,
+    29.0176688800002,
+    29.340886828000293,
+    29.50052297900038,
+    29.436550270000225,
+    29.15991551499974,
+    29.433909395000228,
+    29.496629428998858,
+    29.3686120830007,
+    29.752420183998765,
+    29.35702352699991,
+    29.30824542099981,
+    29.185518526999658,
+    29.392112997000368,
+    29.260385686999143,
+    29.28611054400062,
+    29.07910749199982
+  ],
+  "tdmpc2_config": {
+    "task": "dog-run",
+    "obs": "state",
+    "episodic": false,
+    "checkpoint": "/content/layernorm-lens/checkpoints/tdmpc2/dmcontrol/dog-run-2.pt",
+    "eval_episodes": 10,
+    "eval_freq": 50000,
+    "steps": 10000000,
+    "batch_size": 256,
+    "reward_coef": 0.1,
+    "value_coef": 0.1,
+    "termination_coef": 1,
+    "consistency_coef": 20,
+    "rho": 0.5,
+    "lr": 0.0003,
+    "enc_lr_scale": 0.3,
+    "grad_clip_norm": 20,
+    "tau": 0.01,
+    "discount_denom": 5,
+    "discount_min": 0.95,
+    "discount_max": 0.995,
+    "buffer_size": 1000000,
+    "exp_name": "default",
+    "data_dir": "???",
+    "mpc": true,
+    "iterations": 8,
+    "num_samples": 512,
+    "num_elites": 64,
+    "num_pi_trajs": 24,
+    "horizon": 3,
+    "min_std": 0.05,
+    "max_std": 2,
+    "temperature": 0.5,
+    "log_std_min": -10,
+    "log_std_max": 2,
+    "entropy_coef": 0.0001,
+    "num_bins": 101,
+    "vmin": -10,
+    "vmax": 10,
+    "model_size": 5,
+    "num_enc_layers": 2,
+    "enc_dim": 256,
+    "num_channels": 32,
+    "mlp_dim": 512,
+    "latent_dim": 512,
+    "task_dim": 0,
+    "num_q": 5,
+    "dropout": 0.01,
+    "simnorm_dim": 8,
+    "wandb_project": "???",
+    "wandb_entity": "???",
+    "wandb_silent": false,
+    "enable_wandb": false,
+    "save_csv": true,
+    "compile": true,
+    "save_video": false,
+    "save_agent": true,
+    "seed": 4,
+    "work_dir": "/content/layernorm-lens/checkpoints/tdmpc2_src/tdmpc2/logs/dog-run/0/default",
+    "task_title": "Dog Run",
+    "multitask": false,
+    "tasks": [
+      "dog-run"
+    ],
+    "obs_shape": {
+      "state": [
+        223
+      ]
+    },
+    "action_dim": 38,
+    "episode_length": 500,
+    "obs_shapes": "???",
+    "action_dims": "???",
+    "episode_lengths": "???",
+    "seed_steps": 2500,
+    "bin_size": 0.2
+  },
+  "git_commit": "bca1e71bf749642f274fcc7a990f22011560ade4",
+  "git_dirty": false,
+  "prereg_tags": {
+    "prereg-r6": {
+      "tag_object": "086fbdd5c2aef676a6bfe438f9fcda714c153274",
+      "commit": "66b3a09f09a91e525e7348b065b52d7907b2929b"
+    },
+    "prereg-r6-d1": {
+      "tag_object": "3a0bb105b2b42223a1cafa9912514ad5246edafd",
+      "commit": "e5060cf9813401cd652088186641ad913320baa8"
+    },
+    "prereg-r6-d2": {
+      "tag_object": "df32edce53bcf0c541a285acc1383eb15c1ac4da",
+      "commit": "e20f5a61c98956da46bbb1d1bf5c6ac5aa4db817"
+    },
+    "prereg-r6-d3": {
+      "tag_object": "3dec0649dddb1a2d2125bd22b1a40afd2124beef",
+      "commit": "bc0b23b52baa14ff35f67d3b752c61b4da9a72c9"
+    }
+  },
+  "tdmpc2_commit": "e9f59321933cbc8e11a002b842adc7d4ffae8ff1",
+  "gpu": "Tesla T4",
+  "cuda": "12.6",
+  "python": "3.11.16",
+  "versions": {
+    "torch": "2.7.1",
+    "tensordict": "0.8.3",
+    "torchrl": "0.8.1",
+    "mujoco": "3.1.2",
+    "dm_control": "1.0.16",
+    "numpy": "1.24.4",
+    "gymnasium": "0.29.1",
+    "hydra-core": "1.3.2",
+    "omegaconf": "2.3.0",
+    "PyYAML": "6.0.3",
+    "torch_runtime": "2.7.1+cu126"
+  },
+  "jax": "not used (tdmpc2 environment; our float64 work is numpy)",
+  "config": {
+    "source": {
+      "repo": "https://github.com/nicklashansen/tdmpc2",
+      "checkpoints": "https://huggingface.co/nicklashansen/tdmpc2",
+      "repo_commit": "e9f59321933cbc8e11a002b842adc7d4ffae8ff1",
+      "hf_revision": "8fb2a82efb3bae96941da440128fe1332e4394fd",
+      "eval_repo": "https://github.com/tdmpc2/tdmpc2-eval",
+      "eval_repo_commit": "ab776b65a88465c5b2265938bcbc516a7ff2a40a"
+    },
+    "model_size": 5,
+    "tasks": [
+      "cartpole-swingup",
+      "cheetah-run",
+      "walker-run",
+      "humanoid-run",
+      "dog-run"
+    ],
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "layer": {
+      "layernorm_eps": 1e-05,
+      "layouts": {
+        "public": {
+          "description": "NormedLinear, as built by tdmpc2 e9f59321 common/layers.py",
+          "linear": "_encoder.state.0",
+          "norm": "_encoder.state.0.ln",
+          "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps"
+        },
+        "prerelease": {
+          "description": "pre-release layout (D1-D3); built by neither tdmpc2 e9f59321 nor tdmpc2-eval ab776b65",
+          "linear": "_encoder.state.1",
+          "norm": "_encoder.state.2",
+          "param_free": [
+            "_encoder.state.0",
+            "_encoder.state.3",
+            "_encoder.state.6"
+          ],
+          "layernorm_eps_source": "assumed (torch default); not in the checkpoint or any public code (D2)"
+        }
+      }
+    },
+    "survey": {
+      "cartpole-swingup": {
+        "1": "prerelease",
+        "2": "public",
+        "3": "public"
+      },
+      "cheetah-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "walker-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "humanoid-run": {
+        "1": "public",
+        "2": "public",
+        "3": "prerelease"
+      },
+      "dog-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      }
+    },
+    "data": {
+      "episodes_per_task": 50,
+      "env_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "policy": "policy prior only, a_t = tanh(mu(enc(o_t))), position 0 = identity (deviation D4)",
+      "steps": 500,
+      "action_repeat": 2
+    },
+    "consistency": {
+      "targets": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 1,
+          "role": "gate"
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 3,
+          "role": "reported"
+        }
+      ],
+      "stop_on_reject": {
+        "gate": true,
+        "reported": false
+      },
+      "calibration": [
+        {
+          "task": "cheetah-run",
+          "seed": 1
+        },
+        {
+          "task": "walker-run",
+          "seed": 1
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 1
+        }
+      ],
+      "candidates": [
+        "identity",
+        "symlog",
+        "layernorm"
+      ],
+      "pos0_layernorm_eps": 1e-05,
+      "simnorm_dim": 8,
+      "rng_seed": 0,
+      "accept_ratio": 0.1,
+      "tie_ratio": 1.1
+    },
+    "planner_check": {
+      "checkpoints": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 2
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 1
+        }
+      ],
+      "episodes": 5,
+      "eval_seed": 1,
+      "eval_modes": [
+        true,
+        false
+      ],
+      "compile": true
+    },
+    "paths": {
+      "checkpoints": "checkpoints/tdmpc2/",
+      "weights_out": "results/r6/weights/",
+      "lens_out": "results/r6/lens/",
+      "data_out": "data/r6/",
+      "tdmpc2_src": "checkpoints/tdmpc2_src/",
+      "results_out": "results/r6/"
+    },
+    "d4_regeneration": {
+      "run_commit": "4c3f129475adceb0c6e90e56df6696b0565d4986",
+      "worktree": "checkpoints/d4_regen_4c3f129",
+      "stages": [
+        "extract list",
+        "extract extract",
+        "extract lens",
+        "collect collect",
+        "collect consistency"
+      ],
+      "expected_exit": {
+        "extract list": 0,
+        "extract extract": 0,
+        "extract lens": 0,
+        "collect collect": 0,
+        "collect consistency": 2
+      },
+      "dm_control": {
+        "allowed_missing": [
+          "labmaze"
+        ],
+        "note": "dm_control 1.0.47 installed with --no-deps and its declared runtime dependencies installed explicitly (4c3f129 pins for mujoco, numpy, scipy), except labmaze: labmaze has no Python 3.13 wheel (1.0.6 stops at cp312) and its sdist needs bazel. labmaze is imported only by dm_control.locomotion, not by dm_control.suite. The 4c3f129 notebook installed dm_control with plain pip (dependencies included); how the original run obtained labmaze on Python 3.13, if it did, is not recorded."
+      },
+      "compare": {
+        "pass": [
+          "returns.csv",
+          "consistency.csv"
+        ],
+        "info_csv": [
+          "lens_summary.csv"
+        ],
+        "info_json": [
+          "consistency.json"
+        ]
+      },
+      "summaries": [
+        "returns.csv",
+        "consistency.csv",
+        "consistency.json",
+        "lens_summary.csv",
+        "meta_list.json",
+        "meta_extract.json",
+        "meta_lens.json",
+        "meta_collect.json",
+        "meta_consistency.json"
+      ]
+    },
+    "planner_collect": {
+      "env_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "episodes_per_env_seed": 10,
+      "steps": 500,
+      "eval_mode": true,
+      "compile": true,
+      "flag_below": 0.5,
+      "positive_control": {
+        "task": "cartpole-swingup",
+        "seed": 2
+      },
+      "negative_control": {
+        "task": "cartpole-swingup",
+        "seed": 1
+      },
+      "prerelease": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 1
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 3
+        }
+      ],
+      "gate": {
+        "median_max": 1e-05,
+        "max_max": 0.001,
+        "negative_min_max": 0.01,
+        "n_random": 1000,
+        "rng_seed": 0,
+        "std_ddof": 1,
+        "worst_n": 5,
+        "batch": 4096
+      },
+      "d4": {
+        "drive_dir": "data/r6",
+        "manifest": "results/r6/d4_obs_manifest.csv",
+        "meta": "results/r6/meta_d4_regeneration.json"
+      },
+      "dirs": {
+        "data": "data/r6/planner",
+        "results": "results/r6/planner",
+        "smoke_data": "data/r6/planner_smoke",
+        "smoke_results": "results/r6/planner_smoke"
+      },
+      "smoke": {
+        "task": "cartpole-swingup",
+        "seed": 1,
+        "env_seed": 0,
+        "episodes": 1
+      }
+    }
+  },
+  "time": "2026-09-27T17:20:25.802840+00:00",
+  "session": "20260927T141627Z"
+}

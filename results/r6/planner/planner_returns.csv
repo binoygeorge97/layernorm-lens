@@ -1,0 +1,18 @@
+kind,task,seed,layout,planner_input,eval_mode,episodes,return_mean,return_std,return_min,return_max,published,published_step,fraction,flag_below_half,gpu,session,data_file
+data,cartpole-swingup,1,prerelease,symlog,True,50,867.925,0.239003,867.419,868.411,866.2,4000000,1.00199,False,Tesla T4,20260927T141627Z,cartpole-swingup-seed1.npz
+data,cartpole-swingup,2,public,identity,True,50,883.341,0.282166,882.634,883.902,882.5,4000000,1.00095,False,Tesla T4,20260925T214748Z,cartpole-swingup-seed2.npz
+data,cartpole-swingup,3,public,identity,True,50,882.642,0.289372,882.005,883.279,883,4000000,0.999595,False,Tesla T4,20260927T141627Z,cartpole-swingup-seed3.npz
+data,cheetah-run,1,public,identity,True,50,851.75,56.0173,479.442,879.382,848.3,4000000,1.00407,False,Tesla T4,20260927T141627Z,cheetah-run-seed1.npz
+data,cheetah-run,2,public,identity,True,50,910.765,38.4391,651.36,927.637,922.9,4000000,0.986852,False,Tesla T4,20260927T141627Z,cheetah-run-seed2.npz
+data,cheetah-run,3,public,identity,True,50,925.413,5.10638,901.351,928.689,916.3,4000000,1.00995,False,Tesla T4,20260927T141627Z,cheetah-run-seed3.npz
+data,dog-run,1,public,identity,True,50,786.835,27.2151,721.8,828.585,859.1,14000000,0.915882,False,Tesla T4,20260927T141627Z,dog-run-seed1.npz
+data,dog-run,2,public,identity,True,50,777.848,32.69,687.041,828.758,881.1,14000000,0.882815,False,Tesla T4,20260927T141627Z,dog-run-seed2.npz
+data,dog-run,3,public,identity,True,50,869.528,36.2401,700.406,906.594,862.4,13900000,1.00827,False,Tesla T4,20260927T141627Z,dog-run-seed3.npz
+data,humanoid-run,1,public,identity,True,50,668.451,18.0982,613.373,692.234,542.2,14000000,1.23285,False,Tesla T4,20260927T141627Z,humanoid-run-seed1.npz
+data,humanoid-run,2,public,identity,True,50,692.012,30.2215,521.799,709.852,603.5,14000000,1.14666,False,Tesla T4,20260927T141627Z,humanoid-run-seed2.npz
+data,humanoid-run,3,prerelease,symlog,True,50,703.178,42.3187,607.268,753.029,664.6,14000000,1.05805,False,Tesla T4,20260927T141627Z,humanoid-run-seed3.npz
+data,walker-run,1,public,identity,True,50,889.584,6.96359,874.521,900.689,868.1,4000000,1.02475,False,Tesla T4,20260927T141627Z,walker-run-seed1.npz
+data,walker-run,2,public,identity,True,50,887.395,7.39546,864.514,898.567,879.3,4000000,1.00921,False,Tesla T4,20260927T141627Z,walker-run-seed2.npz
+data,walker-run,3,public,identity,True,50,891.022,6.61897,870.316,900.711,884.2,4000000,1.00772,False,Tesla T4,20260927T141627Z,walker-run-seed3.npz
+smoke,cartpole-swingup,1,prerelease,symlog,True,1,867.488,nan,867.488,867.488,866.2,4000000,1.00149,False,Tesla T4,20260925T211407Z,cartpole-swingup-seed1-smoke-20260925T211407Z.npz
+smoke,cartpole-swingup,1,prerelease,symlog,True,1,867.486,nan,867.486,867.486,866.2,4000000,1.00149,False,Tesla T4,20260927T141335Z,cartpole-swingup-seed1-smoke-20260927T141335Z.npz
