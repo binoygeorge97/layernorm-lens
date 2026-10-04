@@ -39,13 +39,13 @@ tag `prereg-p1` exists. The one exception is a runtime benchmark on random targe
 - `config.yaml`: the sampling design (all of its choices open, listed in the p1
   draft), the grid (2 architectures × 2 initialisations × H 128 × {1, 3} blocks ×
   5 seeds), training, logging, analysis and hover-check settings, and the benchmark.
-- `data.py`:
+- `p1_data.py`:
   - sampling of states and inputs around hover, and the target
     y = (x_{t+1} − x_t)/dt with RK4 at dt;
   - standardisation from the training split, and ground-truth Jacobians of the
     standardised target map by autodiff;
   - `.npz` storage outside the repo (`data/p1/`), with a committed SHA-256 manifest.
-- `hover.py`, the hover linearisation check: the surrogate's (A, B) at hover in
+- `p1_hover.py`, the hover linearisation check: the surrogate's (A, B) at hover in
   physical units against the truth's. Reported:
   - relative Frobenius errors and sign agreement;
   - the LQR gains (fixed Q, R) and the closed-loop eigenvalues on the true

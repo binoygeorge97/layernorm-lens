@@ -21,14 +21,25 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 P1 = os.path.join(ROOT, "experiments", "p1_quadrotor")
 sys.path.insert(0, ROOT)
 sys.path.insert(0, P1)
-import data as pdata  # noqa: E402
-import hover as phover  # noqa: E402
-import run as prun  # noqa: E402
+import p1_data as pdata  # noqa: E402
+import p1_hover as phover  # noqa: E402
 from control import lqr  # noqa: E402
 from lens import analysis as an  # noqa: E402
 from lens import geometry as geo  # noqa: E402
 from lens import models  # noqa: E402
 
+
+def _load(name, path):
+    """Import experiments/p1_quadrotor/run.py under a unique name (other experiments
+    have a run.py too)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+prun = _load("p1_run", os.path.join(P1, "run.py"))
 CFG = yaml.safe_load(open(os.path.join(P1, "config.yaml"), encoding="utf-8"))
 
 

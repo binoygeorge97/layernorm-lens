@@ -8,7 +8,7 @@
 - benchmark: not gated; times every grid configuration on RANDOM targets (no quadrotor
   data) to estimate the cost of the 40-model grid.
 
-The stage functions take a `Plant` (data.py), so tests drive them with synthetic plants.
+The stage functions take a `Plant` (p1_data.py), so tests drive them with synthetic plants.
 Every stage writes its config, the git commit and the package versions next to its
 results, and prints the `git add -f` command for its small outputs.
 """
@@ -34,8 +34,8 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 for p_ in (ROOT, HERE, os.path.join(ROOT, "experiments", "r6_tdmpc2")):
     if p_ not in sys.path:
         sys.path.insert(0, p_)
-import data as pdata  # noqa: E402
-import hover as phover  # noqa: E402
+import p1_data as pdata  # noqa: E402
+import p1_hover as phover  # noqa: E402
 import provenance as pv  # noqa: E402
 from lens import analysis as an  # noqa: E402
 from lens import geometry as geo  # noqa: E402

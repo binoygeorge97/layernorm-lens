@@ -42,7 +42,7 @@ Gate G3 (13 Nov): every main-text claim backed.
 | `plants/quadrotor.py` | The P-I quadrotor (JAX float64, 12 states, 4 rotor thrusts; approved cf2x.urdf parameters; X-mixer; `f`, `rk4_step`, `hover_equilibrium`, `linearize`, `linearize_step`) |
 | `control/lqr.py` | Continuous and discrete LQR, closed-loop eigenvalues, spectral abscissa and radius |
 | `lens/models.py`, `lens/train.py`, `lens/analysis.py` | P-I surrogates (pre-norm residual block; NormedLinear stack; zero-bias and PyTorch-default inits), training with early stopping and lens logging, and analysis (Jacobian error against lens distance, coverage and sharpness, Corollary 1 on trained models, attenuation) |
-| `experiments/p1_quadrotor/` | P-I: `config.yaml`, `data.py` (sampling, target, standardisation, Jacobians, manifest), `hover.py` (hover linearisation check), `run.py` (stages generate/train/analyse/hover gated on `prereg-p1`; benchmark on random targets) |
+| `experiments/p1_quadrotor/` | P-I: `config.yaml`, `p1_data.py` (sampling, target, standardisation, Jacobians, manifest), `p1_hover.py` (hover linearisation check), `run.py` (stages generate/train/analyse/hover gated on `prereg-p1`; benchmark on random targets) |
 | `docs/DECISIONS.md`, `docs/plans/` | The decision log for choices the specs leave open, and per-task plans |
 | `experiments/initial_lens/` | Initial-lens check: `run.py`, `config.yaml`. 1,000 draws per (H, k, ε, init) for inits (a) zero bias, (b) torch default, (c) Flax, (d) TD-MPC2. Results in `results/initial_lens/` |
 | `experiments/r6_tdmpc2/` | R6 (below) |
