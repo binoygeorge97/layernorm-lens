@@ -1,0 +1,434 @@
+{
+  "stage": "r6_exploratory",
+  "pre_registered": false,
+  "note": "Not pre-registered; computed after G1 was decided (3 Oct 2026).",
+  "git_commit": "7249b6890f50342a5a60471c0ce10c269dd19032",
+  "git_dirty": false,
+  "versions": {
+    "python": "3.12.1",
+    "jax": "0.10.2",
+    "jaxlib": "0.10.2",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "torch": "2.14.0",
+    "PyYAML": "6.0.1"
+  },
+  "platform": "Windows-11-10.0.26200-SP0",
+  "time_start": "2026-10-04T05:30:36.246987+00:00",
+  "time_end": "2026-10-04T05:39:03.933301+00:00",
+  "inputs": {
+    "checkpoints": {
+      "dmcontrol/cartpole-swingup-1.pt": "e22aa7500efabafcb2b58f99134bb6e9fc42ca81ed032c6c90a921e393b3af4a",
+      "dmcontrol/cartpole-swingup-2.pt": "4a81773b6136844c89f4ab0981e979758ead83aab163a64fa0151f142b004c0a",
+      "dmcontrol/cartpole-swingup-3.pt": "621b20b008a0b03b4266a118f9d7140707c8eadb52bca70984e77218575e06a3",
+      "dmcontrol/cheetah-run-1.pt": "906924fee08bf43743b01f187db5cd9f355d717395c399f754c5ee4e4782b059",
+      "dmcontrol/cheetah-run-2.pt": "aa18d1ca1feaad68f503b267e6de7bdfe7b1cf46213c0aa90ed0985d1d1fdb67",
+      "dmcontrol/cheetah-run-3.pt": "6ed9ba2730f75743ae27532a8e270c9de4769b2047855e32af565200fed74605",
+      "dmcontrol/walker-run-1.pt": "7e825a2210ede7085a71f98893fe3f89a1acb9eedf234a7c43815c68ecc0150c",
+      "dmcontrol/walker-run-2.pt": "0c45b6a5c3f7387a30b5e3ce2c57b8c4101b33affaae582204c2dbe451ce0caf",
+      "dmcontrol/walker-run-3.pt": "d8d0a635c5f49d951cd98a89125ee3ef205e01e631856a2d72a1288583d01089",
+      "dmcontrol/humanoid-run-1.pt": "57f2c7e509d9efb677ae3f150e3e162c8f1a44ce2dfd34b7f4eb04a489e05c20",
+      "dmcontrol/humanoid-run-2.pt": "7f6514a9519cbaec6f52f1319446fc74f74b1cda000ccf60026ce1663cd83db3",
+      "dmcontrol/humanoid-run-3.pt": "c262c177d9b748ef4f56397e334b8424cb0a1446c723f7b84526c09a8e106ffa",
+      "dmcontrol/dog-run-1.pt": "c5bc235f6aa605a0f4de99ae39848d9619b7a846527bd97152a5c3a39b249940",
+      "dmcontrol/dog-run-2.pt": "25e1453434aeba04e523b332f99d54e542772eb272565ef0cca241c60df4b491",
+      "dmcontrol/dog-run-3.pt": "348c9ce6f8c864a751ff5666443b216539e1d505ab77c8849df86621fd02e497"
+    },
+    "planner": {
+      "manifest": "results/r6/planner/planner_obs_manifest.csv",
+      "manifest_sha256": "3d72cec6da49023ebb68e75016afde75de5d3a60f08122a141a8cb4f731f7c84",
+      "files": {
+        "data/r6/planner/cartpole-swingup-seed1.npz": "0e47fa8ae7b2bc884549d991f146dfdc69365d012d90683e6333183a4ac3df96",
+        "data/r6/planner/cartpole-swingup-seed2.npz": "96956a2908dc886f70c994b43a9c1ee4929dd20e5157eb6cab356ee1802ab003",
+        "data/r6/planner/cartpole-swingup-seed3.npz": "3b594d2fc3d485ae0c388bfc1947b04c99f92c3bc4d617e3e95190c02e9626bb",
+        "data/r6/planner/cheetah-run-seed1.npz": "dc8005cee4990d6f85b79715db58959d849233b88e96d865b20d8115ffc0ebd4",
+        "data/r6/planner/cheetah-run-seed2.npz": "d3fae0f3763974a09f4d31fd88d1f2533aaf94f06f21f1b5d6582a228ad8bf0b",
+        "data/r6/planner/cheetah-run-seed3.npz": "796e2d60f17740356ebe36a7d3367ff0a89ff2469ac19bc1898432ae72a06706",
+        "data/r6/planner/walker-run-seed1.npz": "baaab87fd82db8dc04f9dc1bf3b0fb99254f8e62519bee64b157e508cbb8febc",
+        "data/r6/planner/walker-run-seed2.npz": "a0101c5e859f15feaf46e80fd25242e47601ee09119ce65c4cea17423008717e",
+        "data/r6/planner/walker-run-seed3.npz": "54747c2804450bbea614d834d70d14d1180d8f63bdaf15c2f63e15946cf83674",
+        "data/r6/planner/humanoid-run-seed1.npz": "f12bc5deb1fd3412dace181537e8da94cd005873f2aa7d9b4015aa8359bf5060",
+        "data/r6/planner/humanoid-run-seed2.npz": "95b3700b6cd9ee5ae9af4e94e7882c34777fa883405a24be51a7a122d9f1ebfa",
+        "data/r6/planner/humanoid-run-seed3.npz": "e15ddb265e638ff61a0fb2e8dcfd21c36a8ae4b2163103f97402623425ea7664",
+        "data/r6/planner/dog-run-seed1.npz": "e12289e179c77c4911771283c9836ef5a023d41ecab6beb97c695e78aa17ae6e",
+        "data/r6/planner/dog-run-seed2.npz": "011d95c5322630347d3ad3476ebd4029636d2f816df7fc591962a9db844c1274",
+        "data/r6/planner/dog-run-seed3.npz": "7748dd521f563c8044dd7c7a153c82f24dcfd0d3701b3c7fce8572be19b6578f"
+      },
+      "metas": {
+        "results/r6/planner/meta_cartpole-swingup-seed1.json": "3b468f9cace2ada491106163178876e18c881d77f8667f22618d62d0df885a38",
+        "results/r6/planner/meta_cartpole-swingup-seed2.json": "6eb1c60bff84ad02b637f3e648c28968e2fffca0cb9fba1912acea7ef1bf8721",
+        "results/r6/planner/meta_cartpole-swingup-seed3.json": "b3fbc8b93ec561a6401637c8980ab2dbeb3df1569da5d20c12b8033cc01caa37",
+        "results/r6/planner/meta_cheetah-run-seed1.json": "5d6f60cf5d220e49adc4cb777b4e0e6e41608c00f6f496b4d778b5b4de7b5f6c",
+        "results/r6/planner/meta_cheetah-run-seed2.json": "2c6129b7c5767bd5afa24a1fe5d68868425434f68db5493029d879a7857ba49b",
+        "results/r6/planner/meta_cheetah-run-seed3.json": "30b36683eca39dc0d7fbb957da9d5135baba55aa27c8f40a51d0f3b4dc08215e",
+        "results/r6/planner/meta_walker-run-seed1.json": "3bdae1b3e30adade3fe395d5be9ada94c2e91eb3c13ea4f77fc74da5985629bb",
+        "results/r6/planner/meta_walker-run-seed2.json": "deeee7ce9d92ad59f53934d456b4aef60b4d7e3a9efa947b9699921b8b9c0617",
+        "results/r6/planner/meta_walker-run-seed3.json": "0b9f87ce98432bbb3366e0b6259f35144c33889adbb46baf27bc327b4b800ad1",
+        "results/r6/planner/meta_humanoid-run-seed1.json": "e12b6104873615801950dd379a028899adcc268bca3b70bb67a49a99804d36fb",
+        "results/r6/planner/meta_humanoid-run-seed2.json": "7ed10aa392cc9f78ab85b219bbf2642bec9e5b2e25e3cf08835097bbd6521dbf",
+        "results/r6/planner/meta_humanoid-run-seed3.json": "ed8b01cce612059a58eae65fc54d0f0d976c5a3829bce218af12ca5e3da67e99",
+        "results/r6/planner/meta_dog-run-seed1.json": "f3236974549a7f3cd6e36c4a1b8b1ccccc0b8f1ce892ac29b0e9da2130b59af9",
+        "results/r6/planner/meta_dog-run-seed2.json": "eef0ce297b900ca21006d30e7bfe59313a9953a740e71e1fded6f0277669338c",
+        "results/r6/planner/meta_dog-run-seed3.json": "cd47e81a718d66385df5142b924923cc427899d629e4ff6d53b0dc00990d1029"
+      }
+    }
+  },
+  "config": {
+    "criterion_config": "experiments/r6_tdmpc2/config.yaml",
+    "results": "results/r6/exploratory",
+    "data_quantiles": [
+      2.5,
+      97.5
+    ],
+    "e3_init": {
+      "H": 256,
+      "std": 0.02,
+      "trunc": [
+        -2.0,
+        2.0
+      ],
+      "eps": 1e-05,
+      "n_draws": 1000,
+      "rng_seed": 0,
+      "summary_quantiles": [
+        5,
+        50,
+        95
+      ]
+    }
+  },
+  "criterion_config": {
+    "source": {
+      "repo": "https://github.com/nicklashansen/tdmpc2",
+      "checkpoints": "https://huggingface.co/nicklashansen/tdmpc2",
+      "repo_commit": "e9f59321933cbc8e11a002b842adc7d4ffae8ff1",
+      "hf_revision": "8fb2a82efb3bae96941da440128fe1332e4394fd",
+      "eval_repo": "https://github.com/tdmpc2/tdmpc2-eval",
+      "eval_repo_commit": "ab776b65a88465c5b2265938bcbc516a7ff2a40a"
+    },
+    "model_size": 5,
+    "tasks": [
+      "cartpole-swingup",
+      "cheetah-run",
+      "walker-run",
+      "humanoid-run",
+      "dog-run"
+    ],
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "layer": {
+      "layernorm_eps": 1e-05,
+      "layouts": {
+        "public": {
+          "description": "NormedLinear, as built by tdmpc2 e9f59321 common/layers.py",
+          "linear": "_encoder.state.0",
+          "norm": "_encoder.state.0.ln",
+          "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps"
+        },
+        "prerelease": {
+          "description": "pre-release layout (D1-D3); built by neither tdmpc2 e9f59321 nor tdmpc2-eval ab776b65",
+          "linear": "_encoder.state.1",
+          "norm": "_encoder.state.2",
+          "param_free": [
+            "_encoder.state.0",
+            "_encoder.state.3",
+            "_encoder.state.6"
+          ],
+          "layernorm_eps_source": "assumed (torch default); not in the checkpoint or any public code (D2)"
+        }
+      }
+    },
+    "survey": {
+      "cartpole-swingup": {
+        "1": "prerelease",
+        "2": "public",
+        "3": "public"
+      },
+      "cheetah-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "walker-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "humanoid-run": {
+        "1": "public",
+        "2": "public",
+        "3": "prerelease"
+      },
+      "dog-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      }
+    },
+    "data": {
+      "episodes_per_task": 50,
+      "env_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "policy": "policy prior only, a_t = tanh(mu(enc(o_t))), position 0 = identity (deviation D4)",
+      "steps": 500,
+      "action_repeat": 2
+    },
+    "consistency": {
+      "targets": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 1,
+          "role": "gate"
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 3,
+          "role": "reported"
+        }
+      ],
+      "stop_on_reject": {
+        "gate": true,
+        "reported": false
+      },
+      "calibration": [
+        {
+          "task": "cheetah-run",
+          "seed": 1
+        },
+        {
+          "task": "walker-run",
+          "seed": 1
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 1
+        }
+      ],
+      "candidates": [
+        "identity",
+        "symlog",
+        "layernorm"
+      ],
+      "pos0_layernorm_eps": 1e-05,
+      "simnorm_dim": 8,
+      "rng_seed": 0,
+      "accept_ratio": 0.1,
+      "tie_ratio": 1.1
+    },
+    "planner_check": {
+      "checkpoints": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 2
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 1
+        }
+      ],
+      "episodes": 5,
+      "eval_seed": 1,
+      "eval_modes": [
+        true,
+        false
+      ],
+      "compile": true
+    },
+    "paths": {
+      "checkpoints": "checkpoints/tdmpc2/",
+      "weights_out": "results/r6/weights/",
+      "lens_out": "results/r6/lens/",
+      "data_out": "data/r6/",
+      "tdmpc2_src": "checkpoints/tdmpc2_src/",
+      "results_out": "results/r6/"
+    },
+    "d4_regeneration": {
+      "run_commit": "4c3f129475adceb0c6e90e56df6696b0565d4986",
+      "worktree": "checkpoints/d4_regen_4c3f129",
+      "stages": [
+        "extract list",
+        "extract extract",
+        "extract lens",
+        "collect collect",
+        "collect consistency"
+      ],
+      "expected_exit": {
+        "extract list": 0,
+        "extract extract": 0,
+        "extract lens": 0,
+        "collect collect": 0,
+        "collect consistency": 2
+      },
+      "dm_control": {
+        "allowed_missing": [
+          "labmaze"
+        ],
+        "note": "dm_control 1.0.47 installed with --no-deps and its declared runtime dependencies installed explicitly (4c3f129 pins for mujoco, numpy, scipy), except labmaze: labmaze has no Python 3.13 wheel (1.0.6 stops at cp312) and its sdist needs bazel. labmaze is imported only by dm_control.locomotion, not by dm_control.suite. The 4c3f129 notebook installed dm_control with plain pip (dependencies included); how the original run obtained labmaze on Python 3.13, if it did, is not recorded."
+      },
+      "compare": {
+        "pass": [
+          "returns.csv",
+          "consistency.csv"
+        ],
+        "info_csv": [
+          "lens_summary.csv"
+        ],
+        "info_json": [
+          "consistency.json"
+        ]
+      },
+      "summaries": [
+        "returns.csv",
+        "consistency.csv",
+        "consistency.json",
+        "lens_summary.csv",
+        "meta_list.json",
+        "meta_extract.json",
+        "meta_lens.json",
+        "meta_collect.json",
+        "meta_consistency.json"
+      ]
+    },
+    "planner_collect": {
+      "env_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "episodes_per_env_seed": 10,
+      "steps": 500,
+      "eval_mode": true,
+      "compile": true,
+      "flag_below": 0.5,
+      "positive_control": {
+        "task": "cartpole-swingup",
+        "seed": 2
+      },
+      "negative_control": {
+        "task": "cartpole-swingup",
+        "seed": 1
+      },
+      "prerelease": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 1
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 3
+        }
+      ],
+      "gate": {
+        "median_max": 1e-05,
+        "max_max": 0.001,
+        "negative_min_max": 0.01,
+        "n_random": 1000,
+        "rng_seed": 0,
+        "std_ddof": 1,
+        "worst_n": 5,
+        "batch": 4096
+      },
+      "d4": {
+        "drive_dir": "data/r6",
+        "manifest": "results/r6/d4_obs_manifest.csv",
+        "meta": "results/r6/meta_d4_regeneration.json"
+      },
+      "dirs": {
+        "data": "data/r6/planner",
+        "results": "results/r6/planner",
+        "smoke_data": "data/r6/planner_smoke",
+        "smoke_results": "results/r6/planner_smoke"
+      },
+      "smoke": {
+        "task": "cartpole-swingup",
+        "seed": 1,
+        "env_seed": 0,
+        "episodes": 1
+      }
+    },
+    "criterion": {
+      "results": "results/r6/criterion",
+      "planner_results": "results/r6/planner",
+      "planner_manifest": "results/r6/planner/planner_obs_manifest.csv",
+      "d4_manifest": "results/r6/d4_obs_manifest.csv",
+      "d4_meta": "results/r6/meta_d4_regeneration.json",
+      "d4_drive_dir": "data/r6",
+      "tdmpc2_init": "tdmpc2/common/init.py",
+      "kept_rtol": 1e-10,
+      "inside_quantile": 0.95,
+      "populated": {
+        "n_sub": 5000,
+        "rng_seed": 0,
+        "percentile": 95
+      },
+      "sharp_min": 5.0,
+      "rho_levels": [
+        1,
+        10,
+        100,
+        1000
+      ],
+      "identification": {
+        "gate": {
+          "task": "cartpole-swingup",
+          "seed": 1
+        },
+        "reported": {
+          "task": "humanoid-run",
+          "seed": 3
+        },
+        "candidate": "symlog",
+        "return_ratio": 0.9,
+        "e_over_e0_max": 0.1
+      },
+      "tie_ratio": 1.1,
+      "borderline_band": 0.01,
+      "corollary1": {
+        "rtol": 1e-10,
+        "n_state_lines": 10,
+        "rng_seed": 0
+      },
+      "calibration": [
+        {
+          "task": "cheetah-run",
+          "seed": 1
+        },
+        {
+          "task": "walker-run",
+          "seed": 1
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 1
+        },
+        {
+          "task": "cartpole-swingup",
+          "seed": 2
+        }
+      ],
+      "g1": {
+        "tasks": [
+          "cartpole-swingup",
+          "cheetah-run",
+          "walker-run",
+          "humanoid-run"
+        ],
+        "min_pass": 2
+      },
+      "susceptibility": {
+        "n_grid": 2001,
+        "t_range_r_eff": 3.0
+      }
+    }
+  }
+}
