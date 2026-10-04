@@ -24,6 +24,8 @@ Read the project state: @docs/STATE.md
   seems wrong, stop and ask. Never change a definition to make numbers agree.
 - Do not compute an experiment's outcome metric before its pre-registration is
   tagged. Pipeline checks (training converges, tests pass) are fine.
+- If any check fails, stop and ask the author. Never change a threshold,
+  tolerance or check on your own, even before results exist.
 - Large files (checkpoints, raw data, raw results) go in `checkpoints/`, `data/` and
   `results/`, which are git-ignored. Commit (with `git add -f`) only summary CSVs,
   metadata JSON and small derived arrays, each under 1 MB. Observation data is never
