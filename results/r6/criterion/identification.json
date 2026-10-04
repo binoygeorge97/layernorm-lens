@@ -1,0 +1,52 @@
+{
+  "cartpole-swingup-seed1": {
+    "condition_i": true,
+    "fraction": 1.0019918826887058,
+    "condition_ii": true,
+    "identified": true,
+    "condition_ii_detail": {
+      "lowest": true,
+      "e_over_e0": 3.686417674872564e-05,
+      "threshold": 0.1,
+      "holds": true
+    },
+    "tie_rule": {
+      "symlog_lowest": true,
+      "ratios": {
+        "identity": 2903.344414317605,
+        "layernorm": 2984.3972771977224
+      },
+      "threshold": 1.1,
+      "within": [],
+      "ambiguous": false
+    },
+    "e_over_e0_planner": {
+      "identity": 0.10480384724447575,
+      "symlog": 3.686417674872564e-05,
+      "layernorm": 0.1106381967547328
+    },
+    "condition_ii_on_d4_record_only": {
+      "lowest": true,
+      "e_over_e0": 0.020387933145019885,
+      "threshold": 0.1,
+      "holds": true
+    }
+  },
+  "humanoid-run-seed3": {
+    "condition_i": true,
+    "fraction": 1.0580472238412,
+    "symlog_lowest": true,
+    "label": "confirmed",
+    "e_over_e0_planner": {
+      "identity": 0.9899518973863707,
+      "symlog": 0.006760147450450566,
+      "layernorm": 0.9477443775129968
+    },
+    "symlog_lowest_on_d4_record_only": true,
+    "humanoid_run_seed1_calibration_e_over_e0": {
+      "identity": 0.0035313493473485267,
+      "symlog": 0.4816738401041893,
+      "layernorm": 0.9818052005251923
+    }
+  }
+}

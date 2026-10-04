@@ -1,0 +1,5 @@
+task,counting_seed,why,criterion,flagged_below_half,counts
+cartpole-swingup,1,"seed 1, identified under D6 (b)",False,False,True
+cheetah-run,1,seed 1,False,False,True
+walker-run,1,seed 1,False,False,True
+humanoid-run,1,seed 1,False,False,True

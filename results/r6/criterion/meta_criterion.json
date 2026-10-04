@@ -1,0 +1,637 @@
+{
+  "stage": "criterion",
+  "status": "complete",
+  "git_commit": "8bcba37289a1b7e6b1a6ce6e54f2cca1c73d8c2c",
+  "git_dirty": false,
+  "prereg_tags": {
+    "prereg-r6": {
+      "tag_object": "086fbdd5c2aef676a6bfe438f9fcda714c153274",
+      "commit": "66b3a09f09a91e525e7348b065b52d7907b2929b"
+    },
+    "prereg-r6-d1": {
+      "tag_object": "3a0bb105b2b42223a1cafa9912514ad5246edafd",
+      "commit": "e5060cf9813401cd652088186641ad913320baa8"
+    },
+    "prereg-r6-d2": {
+      "tag_object": "df32edce53bcf0c541a285acc1383eb15c1ac4da",
+      "commit": "e20f5a61c98956da46bbb1d1bf5c6ac5aa4db817"
+    },
+    "prereg-r6-d3": {
+      "tag_object": "3dec0649dddb1a2d2125bd22b1a40afd2124beef",
+      "commit": "bc0b23b52baa14ff35f67d3b752c61b4da9a72c9"
+    },
+    "prereg-r6-d4": {
+      "tag_object": "b87cac0e2c604ee3a879fd39567db8b32ac64d6e",
+      "commit": "66bd7174ec0202051cce41ae6d47e10e0d7f4e48"
+    }
+  },
+  "prereg_tags_on_origin": {
+    "prereg-r6": "086fbdd5c2aef676a6bfe438f9fcda714c153274",
+    "prereg-r6-d1": "3a0bb105b2b42223a1cafa9912514ad5246edafd",
+    "prereg-r6-d2": "df32edce53bcf0c541a285acc1383eb15c1ac4da",
+    "prereg-r6-d3": "3dec0649dddb1a2d2125bd22b1a40afd2124beef",
+    "prereg-r6-d4": "b87cac0e2c604ee3a879fd39567db8b32ac64d6e"
+  },
+  "versions": {
+    "python": "3.12.1",
+    "jax": "0.10.2",
+    "jaxlib": "0.10.2",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "torch": "2.14.0",
+    "PyYAML": "6.0.1"
+  },
+  "platform": "Windows-11-10.0.26200-SP0",
+  "time_start": "2026-10-04T01:53:04.429589+00:00",
+  "time_end": "2026-10-04T02:02:20.878286+00:00",
+  "d6_table_source": "git show prereg-r6-d3:prereg/r6-deviations-3.md",
+  "tdmpc2_init": {
+    "repo": "https://github.com/nicklashansen/tdmpc2",
+    "commit": "e9f59321933cbc8e11a002b842adc7d4ffae8ff1",
+    "path": "tdmpc2/common/init.py",
+    "sha256": "3f085f2d11439312ce765bc0c4332048147d6540d7ca30cdeddacf2d70180ea4",
+    "text": "import torch.nn as nn\n\n\ndef weight_init(m):\n\t\"\"\"Custom weight initialization for TD-MPC2.\"\"\"\n\tif isinstance(m, nn.Linear):\n\t\tnn.init.trunc_normal_(m.weight, std=0.02)\n\t\tif m.bias is not None:\n\t\t\tnn.init.constant_(m.bias, 0)\n\telif isinstance(m, nn.Embedding):\n\t\tnn.init.uniform_(m.weight, -0.02, 0.02)\n\n\ndef zero_(params):\n\t\"\"\"Initialize parameters to zero.\"\"\"\n\tfor p in params:\n\t\tp.data.fill_(0)\n"
+  },
+  "inputs": {
+    "checkpoints": {
+      "dmcontrol/cartpole-swingup-1.pt": "e22aa7500efabafcb2b58f99134bb6e9fc42ca81ed032c6c90a921e393b3af4a",
+      "dmcontrol/cartpole-swingup-2.pt": "4a81773b6136844c89f4ab0981e979758ead83aab163a64fa0151f142b004c0a",
+      "dmcontrol/cartpole-swingup-3.pt": "621b20b008a0b03b4266a118f9d7140707c8eadb52bca70984e77218575e06a3",
+      "dmcontrol/cheetah-run-1.pt": "906924fee08bf43743b01f187db5cd9f355d717395c399f754c5ee4e4782b059",
+      "dmcontrol/cheetah-run-2.pt": "aa18d1ca1feaad68f503b267e6de7bdfe7b1cf46213c0aa90ed0985d1d1fdb67",
+      "dmcontrol/cheetah-run-3.pt": "6ed9ba2730f75743ae27532a8e270c9de4769b2047855e32af565200fed74605",
+      "dmcontrol/walker-run-1.pt": "7e825a2210ede7085a71f98893fe3f89a1acb9eedf234a7c43815c68ecc0150c",
+      "dmcontrol/walker-run-2.pt": "0c45b6a5c3f7387a30b5e3ce2c57b8c4101b33affaae582204c2dbe451ce0caf",
+      "dmcontrol/walker-run-3.pt": "d8d0a635c5f49d951cd98a89125ee3ef205e01e631856a2d72a1288583d01089",
+      "dmcontrol/humanoid-run-1.pt": "57f2c7e509d9efb677ae3f150e3e162c8f1a44ce2dfd34b7f4eb04a489e05c20",
+      "dmcontrol/humanoid-run-2.pt": "7f6514a9519cbaec6f52f1319446fc74f74b1cda000ccf60026ce1663cd83db3",
+      "dmcontrol/humanoid-run-3.pt": "c262c177d9b748ef4f56397e334b8424cb0a1446c723f7b84526c09a8e106ffa",
+      "dmcontrol/dog-run-1.pt": "c5bc235f6aa605a0f4de99ae39848d9619b7a846527bd97152a5c3a39b249940",
+      "dmcontrol/dog-run-2.pt": "25e1453434aeba04e523b332f99d54e542772eb272565ef0cca241c60df4b491",
+      "dmcontrol/dog-run-3.pt": "348c9ce6f8c864a751ff5666443b216539e1d505ab77c8849df86621fd02e497"
+    },
+    "planner": {
+      "manifest": "results/r6/planner/planner_obs_manifest.csv",
+      "manifest_sha256": "3d72cec6da49023ebb68e75016afde75de5d3a60f08122a141a8cb4f731f7c84",
+      "files": {
+        "data/r6/planner/cartpole-swingup-seed1.npz": "0e47fa8ae7b2bc884549d991f146dfdc69365d012d90683e6333183a4ac3df96",
+        "data/r6/planner/cartpole-swingup-seed2.npz": "96956a2908dc886f70c994b43a9c1ee4929dd20e5157eb6cab356ee1802ab003",
+        "data/r6/planner/cartpole-swingup-seed3.npz": "3b594d2fc3d485ae0c388bfc1947b04c99f92c3bc4d617e3e95190c02e9626bb",
+        "data/r6/planner/cheetah-run-seed1.npz": "dc8005cee4990d6f85b79715db58959d849233b88e96d865b20d8115ffc0ebd4",
+        "data/r6/planner/cheetah-run-seed2.npz": "d3fae0f3763974a09f4d31fd88d1f2533aaf94f06f21f1b5d6582a228ad8bf0b",
+        "data/r6/planner/cheetah-run-seed3.npz": "796e2d60f17740356ebe36a7d3367ff0a89ff2469ac19bc1898432ae72a06706",
+        "data/r6/planner/walker-run-seed1.npz": "baaab87fd82db8dc04f9dc1bf3b0fb99254f8e62519bee64b157e508cbb8febc",
+        "data/r6/planner/walker-run-seed2.npz": "a0101c5e859f15feaf46e80fd25242e47601ee09119ce65c4cea17423008717e",
+        "data/r6/planner/walker-run-seed3.npz": "54747c2804450bbea614d834d70d14d1180d8f63bdaf15c2f63e15946cf83674",
+        "data/r6/planner/humanoid-run-seed1.npz": "f12bc5deb1fd3412dace181537e8da94cd005873f2aa7d9b4015aa8359bf5060",
+        "data/r6/planner/humanoid-run-seed2.npz": "95b3700b6cd9ee5ae9af4e94e7882c34777fa883405a24be51a7a122d9f1ebfa",
+        "data/r6/planner/humanoid-run-seed3.npz": "e15ddb265e638ff61a0fb2e8dcfd21c36a8ae4b2163103f97402623425ea7664",
+        "data/r6/planner/dog-run-seed1.npz": "e12289e179c77c4911771283c9836ef5a023d41ecab6beb97c695e78aa17ae6e",
+        "data/r6/planner/dog-run-seed2.npz": "011d95c5322630347d3ad3476ebd4029636d2f816df7fc591962a9db844c1274",
+        "data/r6/planner/dog-run-seed3.npz": "7748dd521f563c8044dd7c7a153c82f24dcfd0d3701b3c7fce8572be19b6578f"
+      },
+      "metas": {
+        "results/r6/planner/meta_cartpole-swingup-seed1.json": "3b468f9cace2ada491106163178876e18c881d77f8667f22618d62d0df885a38",
+        "results/r6/planner/meta_cartpole-swingup-seed2.json": "6eb1c60bff84ad02b637f3e648c28968e2fffca0cb9fba1912acea7ef1bf8721",
+        "results/r6/planner/meta_cartpole-swingup-seed3.json": "b3fbc8b93ec561a6401637c8980ab2dbeb3df1569da5d20c12b8033cc01caa37",
+        "results/r6/planner/meta_cheetah-run-seed1.json": "5d6f60cf5d220e49adc4cb777b4e0e6e41608c00f6f496b4d778b5b4de7b5f6c",
+        "results/r6/planner/meta_cheetah-run-seed2.json": "2c6129b7c5767bd5afa24a1fe5d68868425434f68db5493029d879a7857ba49b",
+        "results/r6/planner/meta_cheetah-run-seed3.json": "30b36683eca39dc0d7fbb957da9d5135baba55aa27c8f40a51d0f3b4dc08215e",
+        "results/r6/planner/meta_walker-run-seed1.json": "3bdae1b3e30adade3fe395d5be9ada94c2e91eb3c13ea4f77fc74da5985629bb",
+        "results/r6/planner/meta_walker-run-seed2.json": "deeee7ce9d92ad59f53934d456b4aef60b4d7e3a9efa947b9699921b8b9c0617",
+        "results/r6/planner/meta_walker-run-seed3.json": "0b9f87ce98432bbb3366e0b6259f35144c33889adbb46baf27bc327b4b800ad1",
+        "results/r6/planner/meta_humanoid-run-seed1.json": "e12b6104873615801950dd379a028899adcc268bca3b70bb67a49a99804d36fb",
+        "results/r6/planner/meta_humanoid-run-seed2.json": "7ed10aa392cc9f78ab85b219bbf2642bec9e5b2e25e3cf08835097bbd6521dbf",
+        "results/r6/planner/meta_humanoid-run-seed3.json": "ed8b01cce612059a58eae65fc54d0f0d976c5a3829bce218af12ca5e3da67e99",
+        "results/r6/planner/meta_dog-run-seed1.json": "f3236974549a7f3cd6e36c4a1b8b1ccccc0b8f1ce892ac29b0e9da2130b59af9",
+        "results/r6/planner/meta_dog-run-seed2.json": "eef0ce297b900ca21006d30e7bfe59313a9953a740e71e1fded6f0277669338c",
+        "results/r6/planner/meta_dog-run-seed3.json": "cd47e81a718d66385df5142b924923cc427899d629e4ff6d53b0dc00990d1029"
+      }
+    },
+    "d4": {
+      "meta": "results/r6/meta_d4_regeneration.json",
+      "meta_sha256": "bed8acb7c2cee3a2e3bd3218afb160927e99a4f8deeea4c640edf7485f55af8f",
+      "manifest": "results/r6/d4_obs_manifest.csv",
+      "manifest_sha256": "f13b40ae67f2188a6fbda421b7cce872c9b1dc53b8fe3a76940354281652ce50",
+      "files": {
+        "cartpole-swingup-seed1.npz": "353eb03865dd23f3f4a6e6ce85364b2f88caff5370aed262ca1081522bbb0d50",
+        "cartpole-swingup-seed2.npz": "816b5103529d443a17cde639a4dbdc7d3bbaed9212235938c010154067f9f681",
+        "cartpole-swingup-seed3.npz": "820c6a7da9a6acddc9115aa341c410806ab746df270088936ea505197bea1ef7",
+        "cheetah-run-seed1.npz": "ddd47832ceb6cdb5823299ede224d7c134c7fb87360e754d4c227f0635528856",
+        "cheetah-run-seed2.npz": "35a3e8586a97223309147f95c1c1fe677a1b07dbc36dbf0a2f8e3e6a072281eb",
+        "cheetah-run-seed3.npz": "6fda51281a5aaee60978bbb5fd85afef5166cd4c0103b4db9c9ae2a7d0ec9ed4",
+        "dog-run-seed1.npz": "b14850d81b64daf02ac77930af191ca5c4b7591d2dc222fabb27cf71d1d9fec5",
+        "dog-run-seed2.npz": "21e13c657b4fc47d5c1e4c94b0bb6f69f3cc6beb203afd403b96605ebbbb57de",
+        "dog-run-seed3.npz": "8ab26d5cbec29d20c22ffeb00f26a52303668944e77ce2f162651e03e12223aa",
+        "humanoid-run-seed1.npz": "1de5faf074599da65862683fe666aba14952e97044876f2e61007df9aba10ddc",
+        "humanoid-run-seed2.npz": "95aadbc255117aed614a23dca5c778e1b15741902f0762d51e0e8046cc57334c",
+        "humanoid-run-seed3.npz": "2bef6fa0921512fdf1def8a74d903fa2ec23ac5d9d16c364d6f593f846e5ccf6",
+        "walker-run-seed1.npz": "f6c0dc280e410b3bfe8f56d448f0999059bfe4327f2ace897d35a21fb32ba5fb",
+        "walker-run-seed2.npz": "76465e4dcc880b21ab05391ee913d854009e6c951280f45834e814a4280a25d5",
+        "walker-run-seed3.npz": "917bb8fa792f7bd8ec67823800e010d6e1b1a5e5a7102c0077c6c0573e2671b2"
+      }
+    },
+    "lens": {
+      "cartpole-swingup-seed1": {
+        "file": "results/r6/lens/cartpole-swingup-seed1.npz",
+        "sha256": "0d45897c3ef67e5cf1029532e20ed681fee5bf9417f4a82a753dc15c01f926f4",
+        "rel_diff": {
+          "z_star": 5.098862951317054e-16,
+          "norm_c_perp": 1.2635000090955556e-16,
+          "kappa": 1.3079774601749371e-16,
+          "principal_widths": 5.779077139360328e-16
+        },
+        "rtol": 1e-12
+      },
+      "cartpole-swingup-seed2": {
+        "file": "results/r6/lens/cartpole-swingup-seed2.npz",
+        "sha256": "35366a0ef739ea448c846ca9e75e107127006bc0e988fcbff9e3672a88682b43",
+        "rel_diff": {
+          "z_star": 3.5150278731694585e-16,
+          "norm_c_perp": 1.116338561009535e-16,
+          "kappa": 3.351111678744149e-16,
+          "principal_widths": 7.910558002570723e-16
+        },
+        "rtol": 1e-12
+      },
+      "cartpole-swingup-seed3": {
+        "file": "results/r6/lens/cartpole-swingup-seed3.npz",
+        "sha256": "0a3022ba966ec8c1d38c2df1f65ad94426847c615f08a76a0a6556f941a9ea65",
+        "rel_diff": {
+          "z_star": 4.3357390363769293e-16,
+          "norm_c_perp": 0.0,
+          "kappa": 0.0,
+          "principal_widths": 3.513292035205892e-16
+        },
+        "rtol": 1e-12
+      },
+      "cheetah-run-seed1": {
+        "file": "results/r6/lens/cheetah-run-seed1.npz",
+        "sha256": "934cf5785f491a01161bcf20729a9df69917aadb9552dc20a7c6ba13697b02f2",
+        "rel_diff": {
+          "z_star": 9.134977071439393e-16,
+          "norm_c_perp": 1.5429327547247664e-16,
+          "kappa": 1.754230901534522e-16,
+          "principal_widths": 1.1801416369366683e-15
+        },
+        "rtol": 1e-12
+      },
+      "cheetah-run-seed2": {
+        "file": "results/r6/lens/cheetah-run-seed2.npz",
+        "sha256": "851e28831f3a8b505d86015b4f5b85fa3e5a8d6d9b61a0fd8d4a746e81665de1",
+        "rel_diff": {
+          "z_star": 1.7562274466789723e-15,
+          "norm_c_perp": 0.0,
+          "kappa": 0.0,
+          "principal_widths": 1.665154058234999e-15
+        },
+        "rtol": 1e-12
+      },
+      "cheetah-run-seed3": {
+        "file": "results/r6/lens/cheetah-run-seed3.npz",
+        "sha256": "6481e4103b16e17854681f0834227cdbcfb6a5d2cb2252f9c4941614da121e85",
+        "rel_diff": {
+          "z_star": 1.7672109045204929e-15,
+          "norm_c_perp": 0.0,
+          "kappa": 0.0,
+          "principal_widths": 2.435298666739565e-15
+        },
+        "rtol": 1e-12
+      },
+      "walker-run-seed1": {
+        "file": "results/r6/lens/walker-run-seed1.npz",
+        "sha256": "42a650120632bcbc411ab2a7e2847fe540884e3369d588734aa572d06bcd9957",
+        "rel_diff": {
+          "z_star": 1.3233818152652668e-15,
+          "norm_c_perp": 0.0,
+          "kappa": 0.0,
+          "principal_widths": 2.281340235037315e-15
+        },
+        "rtol": 1e-12
+      },
+      "walker-run-seed2": {
+        "file": "results/r6/lens/walker-run-seed2.npz",
+        "sha256": "8cd2cbc29a945437c251cef45d0e89eeffe74c12395593ceaffacf12206cf826",
+        "rel_diff": {
+          "z_star": 1.145066662753127e-15,
+          "norm_c_perp": 0.0,
+          "kappa": 0.0,
+          "principal_widths": 1.3753675916211448e-15
+        },
+        "rtol": 1e-12
+      },
+      "walker-run-seed3": {
+        "file": "results/r6/lens/walker-run-seed3.npz",
+        "sha256": "7abcfe24ac0d33f037a3dc3bf7a60c959aad8ca965d40f95d7aec680d5b0d2e8",
+        "rel_diff": {
+          "z_star": 1.3490796561552749e-15,
+          "norm_c_perp": 0.0,
+          "kappa": 0.0,
+          "principal_widths": 1.437876120387471e-15
+        },
+        "rtol": 1e-12
+      },
+      "humanoid-run-seed1": {
+        "file": "results/r6/lens/humanoid-run-seed1.npz",
+        "sha256": "6af31475e0777c8c193c26ae1c7d632a67488e1c7172210e08f27d702e736429",
+        "rel_diff": {
+          "z_star": 3.851811089883833e-15,
+          "norm_c_perp": 0.0,
+          "kappa": 0.0,
+          "principal_widths": 1.86836632346628e-15
+        },
+        "rtol": 1e-12
+      },
+      "humanoid-run-seed2": {
+        "file": "results/r6/lens/humanoid-run-seed2.npz",
+        "sha256": "c430fb25ce69bc191cc5dd58212195e68a472897b2f8d90c5ae8bfd1fea464d6",
+        "rel_diff": {
+          "z_star": 2.688423070890838e-15,
+          "norm_c_perp": 0.0,
+          "kappa": 0.0,
+          "principal_widths": 2.4471455887175977e-15
+        },
+        "rtol": 1e-12
+      },
+      "humanoid-run-seed3": {
+        "file": "results/r6/lens/humanoid-run-seed3.npz",
+        "sha256": "9fd83fbced9da1a37db084a082b4d21a727cebee26ba6609109538fc8322b6a9",
+        "rel_diff": {
+          "z_star": 3.1694124250153847e-15,
+          "norm_c_perp": 0.0,
+          "kappa": 0.0,
+          "principal_widths": 2.391868160970611e-15
+        },
+        "rtol": 1e-12
+      },
+      "dog-run-seed1": {
+        "file": "results/r6/lens/dog-run-seed1.npz",
+        "sha256": "0ff44f8b213185150fdc896214c824b8b6389ea0532c2c46b9bdf7ef1769fb6a",
+        "rel_diff": {
+          "z_star": 7.732394331783755e-14,
+          "norm_c_perp": 8.147038834100866e-16,
+          "kappa": 1.572972718221794e-15,
+          "principal_widths": 2.01099818592147e-14
+        },
+        "rtol": 1e-12
+      },
+      "dog-run-seed2": {
+        "file": "results/r6/lens/dog-run-seed2.npz",
+        "sha256": "fc7669e766789d5a09f298991cd0ade94c42ddb1e0abdaa9a878d554c4851a91",
+        "rel_diff": {
+          "z_star": 3.8832063329975397e-14,
+          "norm_c_perp": 0.0,
+          "kappa": 0.0,
+          "principal_widths": 1.5136780721944524e-14
+        },
+        "rtol": 1e-12
+      },
+      "dog-run-seed3": {
+        "file": "results/r6/lens/dog-run-seed3.npz",
+        "sha256": "6901afa5851ae1a3d545f483ae229265ece92fc903b62ef62b7a336b45298594",
+        "rel_diff": {
+          "z_star": 3.577625505323943e-14,
+          "norm_c_perp": 2.5811458409211786e-16,
+          "kappa": 6.268385056941965e-16,
+          "principal_widths": 9.52299445648519e-15
+        },
+        "rtol": 1e-12
+      }
+    }
+  },
+  "outputs": "\ncorollary1.csv             D7 (4) and D6 (g): every line, its own s*, r*, kappa, T, max relative deviation\ncriterion.csv              one row per checkpoint and reading: Inside, Populated, Sharp, criterion\nrho_fractions.csv          r6.md, reported regardless: rho_eff and rho fractions (primary reading)\nconsistency_planner.csv    D3 on the planner data (pre-release and D6 (c) calibration)\nconsistency_d4.csv         D3 on the D4 data for the pre-release checkpoints (record only)\nidentification.json        D6 (b) with D7 (1), (2): cartpole-swingup seed 1; humanoid-run seed 3 label\ng1.json, g1.csv            G1: counting checkpoint per task, its result, the vote\nsusceptibility.csv         D6 (g): per checkpoint, direction and output\nborderline.json            D7 (8): every scanned statistic, its threshold, the 1% flag; the stage status\nlines/<name>.npz           D6 (g): t grid, |J(t)| and |g'| along each line (float64)\npopulated/<name>-<reading>.npz  Populated: subsample indices and nearest-other distances\nmeta_criterion.json        status, config, commit, tags, versions, every input's SHA-256, tdmpc2 init.py\n",
+  "config": {
+    "source": {
+      "repo": "https://github.com/nicklashansen/tdmpc2",
+      "checkpoints": "https://huggingface.co/nicklashansen/tdmpc2",
+      "repo_commit": "e9f59321933cbc8e11a002b842adc7d4ffae8ff1",
+      "hf_revision": "8fb2a82efb3bae96941da440128fe1332e4394fd",
+      "eval_repo": "https://github.com/tdmpc2/tdmpc2-eval",
+      "eval_repo_commit": "ab776b65a88465c5b2265938bcbc516a7ff2a40a"
+    },
+    "model_size": 5,
+    "tasks": [
+      "cartpole-swingup",
+      "cheetah-run",
+      "walker-run",
+      "humanoid-run",
+      "dog-run"
+    ],
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "layer": {
+      "layernorm_eps": 1e-05,
+      "layouts": {
+        "public": {
+          "description": "NormedLinear, as built by tdmpc2 e9f59321 common/layers.py",
+          "linear": "_encoder.state.0",
+          "norm": "_encoder.state.0.ln",
+          "layernorm_eps_source": "tdmpc2 e9f59321 common/layers.py:101 nn.LayerNorm(self.out_features), torch default eps"
+        },
+        "prerelease": {
+          "description": "pre-release layout (D1-D3); built by neither tdmpc2 e9f59321 nor tdmpc2-eval ab776b65",
+          "linear": "_encoder.state.1",
+          "norm": "_encoder.state.2",
+          "param_free": [
+            "_encoder.state.0",
+            "_encoder.state.3",
+            "_encoder.state.6"
+          ],
+          "layernorm_eps_source": "assumed (torch default); not in the checkpoint or any public code (D2)"
+        }
+      }
+    },
+    "survey": {
+      "cartpole-swingup": {
+        "1": "prerelease",
+        "2": "public",
+        "3": "public"
+      },
+      "cheetah-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "walker-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      },
+      "humanoid-run": {
+        "1": "public",
+        "2": "public",
+        "3": "prerelease"
+      },
+      "dog-run": {
+        "1": "public",
+        "2": "public",
+        "3": "public"
+      }
+    },
+    "data": {
+      "episodes_per_task": 50,
+      "env_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "policy": "policy prior only, a_t = tanh(mu(enc(o_t))), position 0 = identity (deviation D4)",
+      "steps": 500,
+      "action_repeat": 2
+    },
+    "consistency": {
+      "targets": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 1,
+          "role": "gate"
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 3,
+          "role": "reported"
+        }
+      ],
+      "stop_on_reject": {
+        "gate": true,
+        "reported": false
+      },
+      "calibration": [
+        {
+          "task": "cheetah-run",
+          "seed": 1
+        },
+        {
+          "task": "walker-run",
+          "seed": 1
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 1
+        }
+      ],
+      "candidates": [
+        "identity",
+        "symlog",
+        "layernorm"
+      ],
+      "pos0_layernorm_eps": 1e-05,
+      "simnorm_dim": 8,
+      "rng_seed": 0,
+      "accept_ratio": 0.1,
+      "tie_ratio": 1.1
+    },
+    "planner_check": {
+      "checkpoints": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 2
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 1
+        }
+      ],
+      "episodes": 5,
+      "eval_seed": 1,
+      "eval_modes": [
+        true,
+        false
+      ],
+      "compile": true
+    },
+    "paths": {
+      "checkpoints": "checkpoints/tdmpc2/",
+      "weights_out": "results/r6/weights/",
+      "lens_out": "results/r6/lens/",
+      "data_out": "data/r6/",
+      "tdmpc2_src": "checkpoints/tdmpc2_src/",
+      "results_out": "results/r6/"
+    },
+    "d4_regeneration": {
+      "run_commit": "4c3f129475adceb0c6e90e56df6696b0565d4986",
+      "worktree": "checkpoints/d4_regen_4c3f129",
+      "stages": [
+        "extract list",
+        "extract extract",
+        "extract lens",
+        "collect collect",
+        "collect consistency"
+      ],
+      "expected_exit": {
+        "extract list": 0,
+        "extract extract": 0,
+        "extract lens": 0,
+        "collect collect": 0,
+        "collect consistency": 2
+      },
+      "dm_control": {
+        "allowed_missing": [
+          "labmaze"
+        ],
+        "note": "dm_control 1.0.47 installed with --no-deps and its declared runtime dependencies installed explicitly (4c3f129 pins for mujoco, numpy, scipy), except labmaze: labmaze has no Python 3.13 wheel (1.0.6 stops at cp312) and its sdist needs bazel. labmaze is imported only by dm_control.locomotion, not by dm_control.suite. The 4c3f129 notebook installed dm_control with plain pip (dependencies included); how the original run obtained labmaze on Python 3.13, if it did, is not recorded."
+      },
+      "compare": {
+        "pass": [
+          "returns.csv",
+          "consistency.csv"
+        ],
+        "info_csv": [
+          "lens_summary.csv"
+        ],
+        "info_json": [
+          "consistency.json"
+        ]
+      },
+      "summaries": [
+        "returns.csv",
+        "consistency.csv",
+        "consistency.json",
+        "lens_summary.csv",
+        "meta_list.json",
+        "meta_extract.json",
+        "meta_lens.json",
+        "meta_collect.json",
+        "meta_consistency.json"
+      ]
+    },
+    "planner_collect": {
+      "env_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "episodes_per_env_seed": 10,
+      "steps": 500,
+      "eval_mode": true,
+      "compile": true,
+      "flag_below": 0.5,
+      "positive_control": {
+        "task": "cartpole-swingup",
+        "seed": 2
+      },
+      "negative_control": {
+        "task": "cartpole-swingup",
+        "seed": 1
+      },
+      "prerelease": [
+        {
+          "task": "cartpole-swingup",
+          "seed": 1
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 3
+        }
+      ],
+      "gate": {
+        "median_max": 1e-05,
+        "max_max": 0.001,
+        "negative_min_max": 0.01,
+        "n_random": 1000,
+        "rng_seed": 0,
+        "std_ddof": 1,
+        "worst_n": 5,
+        "batch": 4096
+      },
+      "d4": {
+        "drive_dir": "data/r6",
+        "manifest": "results/r6/d4_obs_manifest.csv",
+        "meta": "results/r6/meta_d4_regeneration.json"
+      },
+      "dirs": {
+        "data": "data/r6/planner",
+        "results": "results/r6/planner",
+        "smoke_data": "data/r6/planner_smoke",
+        "smoke_results": "results/r6/planner_smoke"
+      },
+      "smoke": {
+        "task": "cartpole-swingup",
+        "seed": 1,
+        "env_seed": 0,
+        "episodes": 1
+      }
+    },
+    "criterion": {
+      "results": "results/r6/criterion",
+      "planner_results": "results/r6/planner",
+      "planner_manifest": "results/r6/planner/planner_obs_manifest.csv",
+      "d4_manifest": "results/r6/d4_obs_manifest.csv",
+      "d4_meta": "results/r6/meta_d4_regeneration.json",
+      "d4_drive_dir": "data/r6",
+      "tdmpc2_init": "tdmpc2/common/init.py",
+      "kept_rtol": 1e-10,
+      "inside_quantile": 0.95,
+      "populated": {
+        "n_sub": 5000,
+        "rng_seed": 0,
+        "percentile": 95
+      },
+      "sharp_min": 5.0,
+      "rho_levels": [
+        1,
+        10,
+        100,
+        1000
+      ],
+      "identification": {
+        "gate": {
+          "task": "cartpole-swingup",
+          "seed": 1
+        },
+        "reported": {
+          "task": "humanoid-run",
+          "seed": 3
+        },
+        "candidate": "symlog",
+        "return_ratio": 0.9,
+        "e_over_e0_max": 0.1
+      },
+      "tie_ratio": 1.1,
+      "borderline_band": 0.01,
+      "corollary1": {
+        "rtol": 1e-10,
+        "n_state_lines": 10,
+        "rng_seed": 0
+      },
+      "calibration": [
+        {
+          "task": "cheetah-run",
+          "seed": 1
+        },
+        {
+          "task": "walker-run",
+          "seed": 1
+        },
+        {
+          "task": "humanoid-run",
+          "seed": 1
+        },
+        {
+          "task": "cartpole-swingup",
+          "seed": 2
+        }
+      ],
+      "g1": {
+        "tasks": [
+          "cartpole-swingup",
+          "cheetah-run",
+          "walker-run",
+          "humanoid-run"
+        ],
+        "min_pass": 2
+      },
+      "susceptibility": {
+        "n_grid": 2001,
+        "t_range_r_eff": 3.0
+      }
+    }
+  }
+}

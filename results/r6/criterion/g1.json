@@ -1,0 +1,49 @@
+{
+  "status": "complete",
+  "cartpole_seed1": {
+    "identified": true,
+    "ambiguous": false,
+    "required_readings": [
+      "symlog"
+    ],
+    "criterion": false
+  },
+  "rows": [
+    {
+      "task": "cartpole-swingup",
+      "counting_seed": 1,
+      "why": "seed 1, identified under D6 (b)",
+      "criterion": false,
+      "flagged_below_half": false,
+      "counts": true
+    },
+    {
+      "task": "cheetah-run",
+      "counting_seed": 1,
+      "why": "seed 1",
+      "criterion": false,
+      "flagged_below_half": false,
+      "counts": true
+    },
+    {
+      "task": "walker-run",
+      "counting_seed": 1,
+      "why": "seed 1",
+      "criterion": false,
+      "flagged_below_half": false,
+      "counts": true
+    },
+    {
+      "task": "humanoid-run",
+      "counting_seed": 1,
+      "why": "seed 1",
+      "criterion": false,
+      "flagged_below_half": false,
+      "counts": true
+    }
+  ],
+  "n_counting": 4,
+  "n_pass": 0,
+  "min_pass": 2,
+  "g1": false
+}

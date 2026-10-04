@@ -1,0 +1,486 @@
+{
+  "status": "complete",
+  "band": 0.01,
+  "items": [
+    {
+      "where": "cartpole-swingup-seed1 [symlog]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 33.29930076519405,
+      "threshold": 11.070497693516351,
+      "rel_distance": 2.007931683567977,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed1 [symlog]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 1.4522251988065757,
+      "threshold": 0.057945047876806446,
+      "rel_distance": 24.06211060337833,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed1 [symlog]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 2.0156874397554967,
+      "threshold": 5.0,
+      "rel_distance": 0.5968625120489006,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed1 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 4.481160055072072,
+      "threshold": 11.070497693516351,
+      "rel_distance": 0.5952160255905614,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed1 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 2.397772237883073,
+      "threshold": 0.06169356577073329,
+      "rel_distance": 37.86583970188587,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed1 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 4.698086064840016,
+      "threshold": 5.0,
+      "rel_distance": 0.0603827870319968,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed1 [layernorm]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 12.370866705413311,
+      "threshold": 9.487729036781154,
+      "rel_distance": 0.30388069236116194,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed1 [layernorm]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 1.5336194173609452,
+      "threshold": 0.054667716347326104,
+      "rel_distance": 27.053475064098908,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed1 [layernorm]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 3.9411421683299164,
+      "threshold": 5.0,
+      "rel_distance": 0.21177156633401673,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed2 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 32.48324917396894,
+      "threshold": 11.070497693516351,
+      "rel_distance": 1.9342176000807425,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed2 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 4.138609923955589,
+      "threshold": 0.10711106538086239,
+      "rel_distance": 37.63849089017686,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed2 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 0.9626180138596035,
+      "threshold": 5.0,
+      "rel_distance": 0.8074763972280794,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed3 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 50.38979050572344,
+      "threshold": 11.070497693516351,
+      "rel_distance": 3.5517186219401125,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed3 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 4.749461597229225,
+      "threshold": 0.11071077951755671,
+      "rel_distance": 41.89972139954129,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed3 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 0.8513285486405996,
+      "threshold": 5.0,
+      "rel_distance": 0.8297342902718802,
+      "borderline": false
+    },
+    {
+      "where": "cheetah-run-seed1 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 23.35882989497708,
+      "threshold": 27.58711163827534,
+      "rel_distance": 0.15327018640950396,
+      "borderline": false
+    },
+    {
+      "where": "cheetah-run-seed1 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 2.8113657442607813,
+      "threshold": 2.747915179753262,
+      "rel_distance": 0.023090437788991978,
+      "borderline": false
+    },
+    {
+      "where": "cheetah-run-seed1 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 2.2689369011356737,
+      "threshold": 5.0,
+      "rel_distance": 0.5462126197728653,
+      "borderline": false
+    },
+    {
+      "where": "cheetah-run-seed2 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 12.6018756689672,
+      "threshold": 27.58711163827534,
+      "rel_distance": 0.543196988716901,
+      "borderline": false
+    },
+    {
+      "where": "cheetah-run-seed2 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 2.797202351609413,
+      "threshold": 2.4498009103864673,
+      "rel_distance": 0.14180803009340937,
+      "borderline": false
+    },
+    {
+      "where": "cheetah-run-seed2 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 1.8645164657434814,
+      "threshold": 5.0,
+      "rel_distance": 0.6270967068513038,
+      "borderline": false
+    },
+    {
+      "where": "cheetah-run-seed3 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 36.03967752896131,
+      "threshold": 27.58711163827534,
+      "rel_distance": 0.30639546471978546,
+      "borderline": false
+    },
+    {
+      "where": "cheetah-run-seed3 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 4.152134580927739,
+      "threshold": 2.232221046587923,
+      "rel_distance": 0.8600911353624738,
+      "borderline": false
+    },
+    {
+      "where": "cheetah-run-seed3 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 1.7029539095592445,
+      "threshold": 5.0,
+      "rel_distance": 0.659409218088151,
+      "borderline": false
+    },
+    {
+      "where": "walker-run-seed1 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 288.6955140694961,
+      "threshold": 36.41502850180731,
+      "rel_distance": 6.92792223285416,
+      "borderline": false
+    },
+    {
+      "where": "walker-run-seed1 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 13.526414498128037,
+      "threshold": 2.8171314077344682,
+      "rel_distance": 3.801485106797327,
+      "borderline": false
+    },
+    {
+      "where": "walker-run-seed1 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 2.5309215086472503,
+      "threshold": 5.0,
+      "rel_distance": 0.49381569827054994,
+      "borderline": false
+    },
+    {
+      "where": "walker-run-seed2 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 258.8469301654085,
+      "threshold": 36.41502850180731,
+      "rel_distance": 6.108244612593442,
+      "borderline": false
+    },
+    {
+      "where": "walker-run-seed2 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 13.678242634525787,
+      "threshold": 2.3981304578281706,
+      "rel_distance": 4.703710817681401,
+      "borderline": false
+    },
+    {
+      "where": "walker-run-seed2 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 2.4982165328663335,
+      "threshold": 5.0,
+      "rel_distance": 0.5003566934267333,
+      "borderline": false
+    },
+    {
+      "where": "walker-run-seed3 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 273.80613029226987,
+      "threshold": 36.41502850180731,
+      "rel_distance": 6.51904204272916,
+      "borderline": false
+    },
+    {
+      "where": "walker-run-seed3 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 14.386080208342392,
+      "threshold": 2.1819444750750074,
+      "rel_distance": 5.593238449776707,
+      "borderline": false
+    },
+    {
+      "where": "walker-run-seed3 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 2.3462964246222455,
+      "threshold": 5.0,
+      "rel_distance": 0.5307407150755509,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed1 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 2743.8290218068914,
+      "threshold": 87.10807219532191,
+      "rel_distance": 30.49913610364858,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed1 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 46.08376295117442,
+      "threshold": 10.374997867544415,
+      "rel_distance": 3.4418093901817506,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed1 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 4.075179174757354,
+      "threshold": 5.0,
+      "rel_distance": 0.18496416504852925,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed2 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 2161.4297790183246,
+      "threshold": 87.10807219532191,
+      "rel_distance": 23.813197268007077,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed2 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 41.21190579790167,
+      "threshold": 8.566691360517256,
+      "rel_distance": 3.8107144361289684,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed2 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 3.0413666964328487,
+      "threshold": 5.0,
+      "rel_distance": 0.39172666071343026,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed3 [symlog]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 2731.593359827503,
+      "threshold": 87.10807219532191,
+      "rel_distance": 30.35867079806872,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed3 [symlog]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 45.84421164913602,
+      "threshold": 12.630473276322574,
+      "rel_distance": 2.6296511339030197,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed3 [symlog]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 1.3660348520089693,
+      "threshold": 5.0,
+      "rel_distance": 0.7267930295982061,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed3 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 1799.6844087176964,
+      "threshold": 87.10807219532191,
+      "rel_distance": 19.660363194380825,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed3 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 37.595181071965925,
+      "threshold": 12.139197158923483,
+      "rel_distance": 2.097007205647849,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed3 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 7.0855245282462125,
+      "threshold": 5.0,
+      "rel_distance": 0.4171049056492425,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed3 [layernorm]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 4322.46896591701,
+      "threshold": 85.96490744123098,
+      "rel_distance": 49.281784679079905,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed3 [layernorm]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 63.24698247427575,
+      "threshold": 10.754178126241658,
+      "rel_distance": 4.881154443587325,
+      "borderline": false
+    },
+    {
+      "where": "humanoid-run-seed3 [layernorm]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 0.6543869946207017,
+      "threshold": 5.0,
+      "rel_distance": 0.8691226010758596,
+      "borderline": false
+    },
+    {
+      "where": "dog-run-seed1 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 13135087.882031335,
+      "threshold": 257.7584654845151,
+      "rel_distance": 50957.90005917353,
+      "borderline": false
+    },
+    {
+      "where": "dog-run-seed1 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 3615.5252802644304,
+      "threshold": 20.707991085632667,
+      "rel_distance": 173.59565562460108,
+      "borderline": false
+    },
+    {
+      "where": "dog-run-seed1 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 3.4410804395403183,
+      "threshold": 5.0,
+      "rel_distance": 0.31178391209193634,
+      "borderline": false
+    },
+    {
+      "where": "dog-run-seed2 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 767445.5140357161,
+      "threshold": 251.28636125534243,
+      "rel_distance": 3053.067519629062,
+      "borderline": false
+    },
+    {
+      "where": "dog-run-seed2 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 863.4673430681983,
+      "threshold": 19.839928681722263,
+      "rel_distance": 42.52169591535257,
+      "borderline": false
+    },
+    {
+      "where": "dog-run-seed2 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 3.2478151331860627,
+      "threshold": 5.0,
+      "rel_distance": 0.35043697336278745,
+      "borderline": false
+    },
+    {
+      "where": "dog-run-seed3 [identity]",
+      "statistic": "Inside w2 vs chi2_m 95% quantile",
+      "value": 100119034.29444765,
+      "threshold": 258.83652502482875,
+      "rel_distance": 386803.1200323014,
+      "borderline": false
+    },
+    {
+      "where": "dog-run-seed3 [identity]",
+      "statistic": "Populated distance vs 95th percentile",
+      "value": 9992.671264034163,
+      "threshold": 24.250365414225932,
+      "rel_distance": 411.06270888488086,
+      "borderline": false
+    },
+    {
+      "where": "dog-run-seed3 [identity]",
+      "statistic": "Sharp D / r_eff(d1) vs 5",
+      "value": 3.365513629153056,
+      "threshold": 5.0,
+      "rel_distance": 0.32689727416938885,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed1 [planner data]",
+      "statistic": "condition (ii) e/e0 vs 0.1",
+      "value": 3.686417674872564e-05,
+      "threshold": 0.1,
+      "rel_distance": 0.9996313582325128,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed1 [planner data]",
+      "statistic": "D7 (1) ratio e_identity / e_symlog vs 1.1",
+      "value": 2903.344414317605,
+      "threshold": 1.1,
+      "rel_distance": 2638.4040130160042,
+      "borderline": false
+    },
+    {
+      "where": "cartpole-swingup-seed1 [planner data]",
+      "statistic": "D7 (1) ratio e_layernorm / e_symlog vs 1.1",
+      "value": 2984.3972771977224,
+      "threshold": 1.1,
+      "rel_distance": 2712.0884338161113,
+      "borderline": false
+    }
+  ]
+}
