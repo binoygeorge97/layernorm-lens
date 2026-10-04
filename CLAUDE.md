@@ -24,8 +24,20 @@ Read the project state: @docs/STATE.md
   seems wrong, stop and ask. Never change a definition to make numbers agree.
 - Do not compute an experiment's outcome metric before its pre-registration is
   tagged. Pipeline checks (training converges, tests pass) are fine.
-- If any check fails, stop and ask the author. Never change a threshold,
-  tolerance or check on your own, even before results exist.
+- Stop and wait for the author only if (1) a check that guards data, provenance or a
+  pre-registration fails (SHA-256, manifests, tags, regeneration identity, Drive
+  copies), or a test that passed before the current task now fails for a reason
+  outside the code being written; or (2) the work would touch `prereg/` (except
+  drafts in `prereg/drafts/`), R6 results or R6 analysis code, or any existing
+  threshold, tolerance or check. Never change a threshold, tolerance or check on your
+  own, even before results exist. A failing test in code written in the current
+  session is normal development: fix it.
+- Choices the specs leave open: pick the option most consistent with
+  `docs/theory.md`, `docs/plan.md`, `docs/STATE.md` and the repo's conventions, and
+  record it in `docs/DECISIONS.md` (date, task, the choice, 1-3 sentences of
+  reasoning, the alternatives rejected).
+- Non-blocking questions go in the "Questions for the author" section of
+  `docs/STATE.md`; carry on with work that does not depend on the answer.
 - After every commit, run the full test suite against the committed state (a clean
   worktree of HEAD, so uncommitted files cannot affect it), and report only results
   from after the commit.
@@ -34,13 +46,16 @@ Read the project state: @docs/STATE.md
   metadata JSON and small derived arrays, each under 1 MB. Observation data is never
   committed: it stays on Drive, and a manifest of its file names and SHA-256 hashes
   is committed instead.
-- Plan first for any task touching more than one file; wait for approval.
+- Plan first for any task touching more than one file: write the plan to
+  `docs/plans/<task>.md`. If the task is in an author-approved queue, proceed;
+  otherwise wait for approval.
 
 ## Git safety
 
 - Never create or push tags. The author creates and pushes every tag.
-- Never push to `main`, and never force-push any branch.
-- Ask the author before every `git push`.
+- You may push your own working branches (`r6-criterion` and `quadrotor-sim`) after
+  each completed queue item. Never push `main`, never push or create tags, never
+  force-push.
 - Commit a prereg file alone: nothing else in that commit.
 - Never edit a tagged file.
 
