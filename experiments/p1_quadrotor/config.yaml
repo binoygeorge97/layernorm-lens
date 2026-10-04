@@ -1,0 +1,68 @@
+# P-I: quadrotor surrogates (docs/plan.md). NOT YET PRE-REGISTERED: every stage that
+# touches quadrotor data (generate, train, analyse, hover) refuses to run unless the
+# annotated tag prereg-p1 exists and prereg/p1.md matches it. Values here are the
+# infrastructure's defaults; the open ones are listed in prereg/drafts/p1-draft.md.
+prereg: {tag: prereg-p1, file: prereg/p1.md}
+
+plant:                      # plants/quadrotor.py, approved cf2x.urdf parameters
+  g: 9.81
+  drag: false
+  dt: 0.01                  # RK4 step; target y = (x_{t+1} - x_t)/dt
+
+sampling:                   # OPEN: the sampling design (p1 draft, decisions)
+  distribution: uniform_box # i.i.d. uniform in a box around hover
+  n_train: 20000
+  n_val: 5000
+  n_test: 5000
+  seed: 0                   # numpy.random.default_rng(seed); splits drawn in order train, val, test
+  half_widths:              # around hover (x0 = 0, yaw 0; u0 = m g / 4 per rotor)
+    position: 1.0           # m
+    velocity: 1.0           # m/s
+    roll_pitch_deg: 30.0
+    yaw_deg: 180.0
+    body_rate: 2.0          # rad/s
+    thrust_frac: 0.5        # u_i in u0 (1 ± 0.5), clipped to [0, f_max]
+  standardise: zscore       # per coordinate, mean and std of the training split
+
+paths:
+  data: data/p1             # outside git (data/ is ignored); manifest committed
+  manifest: results/p1/data_manifest.csv
+  checkpoints: checkpoints/p1
+  results: results/p1
+
+grid:                       # plan.md: 2 x 2 x H 128 x {1, 3} blocks x 5 seeds = 40
+  archs: [prenorm, normedlinear]
+  inits: [zero_bias, torch_default]
+  H: 128
+  n_blocks: [1, 3]
+  seeds: [0, 1, 2, 3, 4]
+  eps: 1.0e-5
+  branch_width: 128         # prenorm branch MLP hidden width (OPEN; = H)
+
+training:                   # plan.md "Common rules"
+  lr: 3.0e-3
+  max_steps: 100000         # the converged budget
+  eval_every: 500
+  patience_frac: 0.1        # early stopping: patience 10% of steps
+  tol: 0.01                 #   tolerance 1% on held-out one-step MSE
+  batch_size: null          # full batch (lens/core.py's convention)
+  log_every: 500            # lens logging (z*, r*, kappa, widths, S)
+
+analysis:
+  jacobian_error: rel_fro   # OPEN: per-state ||J_s - J||_F / ||J||_F, standardised coordinates
+  near_frac: 0.1            # 10% nearest by lens distance
+  far_frac: 0.5             # vs 50% farthest
+  stat: median              # OPEN
+  directions: [d1, u_min]
+  corollary1: {n_state_lines: 10, rng_seed: 0, n_grid: 2001, t_range: 3.0}
+  attenuation: {n_grid: 4001, t_range: 3.0}
+
+hover:
+  sign_rel_threshold: 1.0e-3   # OPEN: sign agreement on entries with |truth| > thr * max|truth|
+  q_r: bryson                  # OPEN: Q = diag(1/h_x^2) from the sampling half-widths, R = diag(1/(0.5 u0)^2)
+
+benchmark:                     # random targets only (not quadrotor data); not gated
+  n_train: 20000
+  n_val: 5000
+  steps: 1000
+  seed: 0

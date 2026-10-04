@@ -50,3 +50,107 @@ the task, the choice, the reasoning, and the alternatives rejected.
    - Why: with Crazyflie inertias, random full-range thrusts give angular
      accelerations of order 100 rad/s². Those are not yet in RK4's asymptotic regime
      at dt = 0.01: the observed error ratios were 66 and then 12.6.
+
+## 2026-10-04, queue item 3 (P-I infrastructure)
+
+8. **The surrogates are new code, in `lens/models.py` and `lens/train.py`;
+   `lens/core.py` is not used for them.**
+   - Why: `core.py` is frozen, and its blocks are scalar-output, with GELU branches
+     and Glorot initialisation. P-I needs 12 outputs, a NormedLinear arm and the
+     initial-lens check's initialisations.
+   - Rejected: wrapping `core.make_stack` (no vector head, wrong initialisation).
+
+9. **The pre-norm block is `core.py`'s structure, generalised:**
+   h ← h + W2 GELU(W1 (γ LN(h) + β) + b1) + b2, with the head read from the residual
+   stream, y = Wo h + bo.
+   - Branch width = H = 128 (configurable).
+   - Why: same family as the R1 toys and Theorem 1's setting.
+   - Rejected: a Mish branch (TD-MPC2's activation belongs to the other arm); widths
+     of 2H or 4H; a final LayerNorm before the head.
+
+10. **NormedLinear arm:** "1 block" is one NormedLinear (k → H) and a Linear head;
+    "3 blocks" is three NormedLinear layers (k → H → H → H) and a Linear head.
+    - Why: TD-MPC2's `mlp()` pattern. Regression outputs need a plain Linear last,
+      not SimNorm.
+    - Rejected: counting the head as a block, or ending with SimNorm.
+
+11. **Initialisations follow the initial-lens check's conventions.**
+    - `zero_bias`: PyTorch-default weights, U(±1/√fan_in), and every Linear bias = 0,
+      in all layers. `torch_default`: weights and biases both U(±1/√fan_in).
+    - The bias is always drawn, then zeroed for `zero_bias`, so the two arms of a
+      seed share every weight: a paired comparison, like the initial-lens check's
+      "same E for a given draw".
+    - Rejected: zeroing only the first layer's bias; independent weight draws per arm.
+
+12. **Training: full-batch Adam, lr 3e-3, (0.9, 0.999, 1e-8), as `core.train`;**
+    evaluation and early-stopping checks every 500 steps.
+    - The 1% tolerance is measured against the held-out MSE at the last counted
+      improvement, and patience is 10% of `max_steps`.
+    - The returned parameters are those with the lowest held-out MSE seen.
+    - Rejected: minibatches by default (still available); counting patience in
+      evaluations; returning the last parameters.
+
+13. **The logged susceptibility is S(d) = ‖J(z*) d‖**, the output's slope at z*
+    along d.
+    - Why: by D6 (g)'s identity, S = ‖g′(0)‖/r*(d) = ‖J(0)‖. This is also finite for
+      the degenerate zero-bias start, because ε > 0.
+    - Rejected: computing S through g′ (undefined when r* = 0).
+
+14. **Jacobian error is the per-state relative Frobenius error**
+    ‖J_s − J‖_F / ‖J‖_F, in standardised coordinates.
+    - The near/far comparison uses the median of the 10% nearest against the 50%
+      farthest by ρ, or ρ_eff for a degenerate lens. Sets are ceil(fraction · n)
+      states.
+    - Listed as open in the p1 draft.
+    - Rejected: the mean, absolute errors, physical units.
+
+15. **Sharpness and coverage are computed along any direction:** D(d) as r6.md
+    computes D along d₁, and coverage (2/π)·arctan(D/r*), using r_eff for a
+    degenerate lens.
+    - Both d₁ and u_min are reported, with d₁'s top-two eigenvalue ratio, because
+      standardised i.i.d. inputs have a covariance close to I, so d₁ is poorly
+      determined. This is flagged in the p1 draft.
+    - Rejected: d₁ alone.
+
+16. **Attenuation is measured on a grid uniform in t** along z* + t·d.
+    - Each profile is summarised by peak/median of its speed: each block's pre-affine
+      ĥ_j and the output.
+    - It is reported relative to block 1's profile, which is the Corollary 1
+      Lorentzian.
+    - Rejected: a grid uniform in θ (it weights the median toward the centre);
+      gradient-norm ratios at z* alone.
+
+17. **The hover check compares the y-map's Jacobians**, A_y = (A_d − I)/dt and
+    B_y = B_d/dt, with the surrogate's, both in physical units.
+    - The LQR is continuous-time on (A_y, B_y), and the spectral abscissa is that of
+      A_y,true − B_y,true K_s.
+    - Q and R come from Bryson's rule on the sampling half-widths.
+    - Signs are compared on entries above 1e-3 × max|truth|, per matrix.
+    - A failed Riccati solve for the surrogate counts as unstable.
+    - Rejected: the continuous f-Jacobian as the truth (not the map the surrogate
+      learns), a discrete LQR, and Q = I, R = I (unit-dependent).
+
+18. **Data.**
+    - The plant is generic (a step function plus a trim), so tests use synthetic
+      plants.
+    - Sampling is i.i.d. uniform in a box around hover. Defaults: ±1 m, ±1 m/s,
+      ±30° roll/pitch, ±180° yaw, ±2 rad/s, and thrust u0(1 ± 0.5), clipped. Sizes
+      are 20,000 / 5,000 / 5,000.
+    - The z-score comes from the training split, and Jacobians are stored for every
+      split.
+    - Files go to `data/p1/`, with the manifest at `results/p1/data_manifest.csv`;
+      loading verifies every SHA-256.
+    - All of these are open in the p1 draft.
+    - Rejected: trajectory sampling as the default (configurable later).
+
+19. **Gating:** `generate`, `train`, `analyse` and `hover` all require the annotated
+    tag `prereg-p1`. `generate` is gated too, conservatively, so that no quadrotor
+    data exists before the predictions are fixed. `benchmark` is ungated (random
+    targets).
+    - Rejected: leaving data generation ungated.
+
+20. **The pipeline tests use a synthetic linear plant** with the quadrotor's
+    dimensions. The quadrotor appears only in plant-level tests (sampling, the hover
+    Jacobians of the RK4 map), never with a surrogate.
+    - Why: stop condition 3 (no surrogate trained on quadrotor data before
+      `prereg-p1`).

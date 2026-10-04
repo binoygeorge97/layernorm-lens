@@ -40,7 +40,9 @@ Gate G3 (13 Nov): every main-text claim backed.
 | `lens/geometry.py` | The lens from weights (numpy float64): `lens(E, b, eps)` → z*, c⊥, κ, principal widths/directions, Σ, degenerate flag; `line()` (r*_ℓ and r_eff along a line), `lens_distance` (ρ), `gnomonic` (Theorem 1) |
 | `lens/__init__.py` | Imports core (and therefore JAX) |
 | `plants/quadrotor.py` | The P-I quadrotor (JAX float64, 12 states, 4 rotor thrusts; approved cf2x.urdf parameters; X-mixer; `f`, `rk4_step`, `hover_equilibrium`, `linearize`, `linearize_step`) |
-| `control/` | LQR and the hover linearisation check (P-I infrastructure) |
+| `control/lqr.py` | Continuous and discrete LQR, closed-loop eigenvalues, spectral abscissa and radius |
+| `lens/models.py`, `lens/train.py`, `lens/analysis.py` | P-I surrogates (pre-norm residual block; NormedLinear stack; zero-bias and PyTorch-default inits), training with early stopping and lens logging, and analysis (Jacobian error against lens distance, coverage and sharpness, Corollary 1 on trained models, attenuation) |
+| `experiments/p1_quadrotor/` | P-I: `config.yaml`, `data.py` (sampling, target, standardisation, Jacobians, manifest), `hover.py` (hover linearisation check), `run.py` (stages generate/train/analyse/hover gated on `prereg-p1`; benchmark on random targets) |
 | `docs/DECISIONS.md`, `docs/plans/` | The decision log for choices the specs leave open, and per-task plans |
 | `experiments/initial_lens/` | Initial-lens check: `run.py`, `config.yaml`. 1,000 draws per (H, k, ε, init) for inits (a) zero bias, (b) torch default, (c) Flax, (d) TD-MPC2. Results in `results/initial_lens/` |
 | `experiments/r6_tdmpc2/` | R6 (below) |
@@ -93,6 +95,7 @@ regression in tolerance mode: `LENS_TOL=1 python -m pytest -q tests/test_core_re
 | `test_planner_collect.py` | remap, gate rule, controls, halting, manifests (no checkpoints or GPU needed) |
 | `test_criterion.py` | criterion stage, synthetic arrays only |
 | `test_quadrotor.py` | hover equilibrium, Jacobians against central differences, signs, the hover linearisation, RK4's order |
+| `test_p1_models.py`, `test_p1_pipeline.py` | P-I surrogates, training, analysis, LQR, hover check, data and stages, on synthetic plants only; the gated stages refuse without `prereg-p1` |
 
 ## 3. Branches, merge policy, tags
 
@@ -292,9 +295,10 @@ f_max = 2.25 m g/4, g = 9.81; gym-pybullet-drones uses 9.8), from gym-pybullet-d
 `cf2x.urdf` (889ce4a5c068ae4d811df1442ceb4f4d6cdf43eb, SHA-256 81494018…884b). Linear
 drag is behind a flag with no approved coefficients. Choices: `docs/DECISIONS.md`.
 
-**(e2) P-I infrastructure** (author-approved queue, 4 Oct 2026): data generation,
-surrogates, training with lens logging, analysis, the hover linearisation check; built
-and tested on synthetic problems only. No surrogate is trained on quadrotor data and no
+**(e2) P-I infrastructure.** Built and tested on synthetic problems only (see the layout
+table and `docs/plans/p1-infrastructure.md`): data generation, surrogates, training with
+lens logging, analysis, the hover linearisation check, and a runtime benchmark on random
+targets. No surrogate is trained on quadrotor data and no
 lens quantity is computed on a trained quadrotor surrogate before the tag `prereg-p1`.
 
 **(g) Then `prereg/p1.md`**, written and tagged before any P-I outcome is computed. It
