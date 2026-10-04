@@ -1,0 +1,15 @@
+# R6 exploratory analyses (E1-E3). NOT pre-registered; computed after G1 was decided
+# (3 Oct 2026). They change no rule and no criterion output. Inputs are the same
+# verified planner data and checkpoints as the criterion stage, in the primary reading
+# (symlog for the two pre-release checkpoints, identity for the rest).
+criterion_config: experiments/r6_tdmpc2/config.yaml
+results: results/r6/exploratory
+data_quantiles: [2.5, 97.5]        # as r6.md computes D, numpy's default (linear) method
+e3_init:                           # tdmpc2 e9f59321 common/init.py: nn.init.trunc_normal_(std=0.02), bias 0
+  H: 256                           # enc_dim of the 5M checkpoints
+  std: 0.02
+  trunc: [-2.0, 2.0]               # torch.nn.init.trunc_normal_ defaults a=-2, b=2 (absolute)
+  eps: 1.0e-5
+  n_draws: 1000
+  rng_seed: 0                      # numpy.random.default_rng(0), one stream per task
+  summary_quantiles: [5, 50, 95]
