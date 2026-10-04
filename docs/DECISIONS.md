@@ -154,3 +154,12 @@ the task, the choice, the reasoning, and the alternatives rejected.
     Jacobians of the RK4 map), never with a surrogate.
     - Why: stop condition 3 (no surrogate trained on quadrotor data before
       `prereg-p1`).
+
+21. **The benchmark** (`run.py benchmark`, at 08d1deb) times each of the 8 grid
+    configurations for 1,000 steps after a compile-and-warm-up call.
+    - Data: random targets (Z ~ N(0, I₁₆), Y a fixed random tanh network), 20,000 and
+      5,000 states.
+    - Patience is disabled so every run takes all its steps.
+    - It extrapolates to 40 models × 100k steps as an upper bound.
+    - Rejected: timing on quadrotor data (stop condition 3), and timing with early
+      stopping (its stopping point depends on the data).

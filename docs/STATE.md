@@ -298,7 +298,9 @@ drag is behind a flag with no approved coefficients. Choices: `docs/DECISIONS.md
 **(e2) P-I infrastructure.** Built and tested on synthetic problems only (see the layout
 table and `docs/plans/p1-infrastructure.md`): data generation, surrogates, training with
 lens logging, analysis, the hover linearisation check, and a runtime benchmark on random
-targets. No surrogate is trained on quadrotor data and no
+targets (`results/p1/benchmark/`, run at 08d1deb). On the laptop's CPU, full batch with
+20,000 states: 0.06–0.27 s per step, so the 40-model grid at the 100k-step budget is at
+most 172 h (no early stop, lens logging excluded). No surrogate is trained on quadrotor data and no
 lens quantity is computed on a trained quadrotor surrogate before the tag `prereg-p1`.
 
 **(g) Then `prereg/p1.md`**, written and tagged before any P-I outcome is computed. It
@@ -320,6 +322,12 @@ Non-blocking; work continues on everything that does not depend on the answers.
 1. Linear drag (`plants/quadrotor.py`, flag off by default): no linear coefficient is in
    the approved set. Keep drag off for P-I, or approve coefficients (for example, the
    URDF's rotor drag linearised at hover gives about 5.6e-3 N/(m/s) for xy)?
+
+2. Compute for P-I: the benchmark puts the full grid at up to 172 h of laptop CPU
+   (full batch, 20,000 states, 100k steps, no early stop). Early stopping will cut this,
+   by an unknown amount. Options: run on TACC (the `slurm/` folder is empty), use
+   minibatches, use fewer training states, or a smaller budget. Which? This bears on
+   G2 (18 Oct).
 
 ## 7. Known issues
 
