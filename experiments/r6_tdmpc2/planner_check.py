@@ -47,6 +47,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import layouts  # noqa: E402  (numpy only)
+import provenance as pv  # noqa: E402  (standard library; summary printing only)
 
 TAGS = [("prereg-r6", "prereg/r6.md"), ("prereg-r6-d1", "prereg/r6-deviations.md"),
         ("prereg-r6-d2", "prereg/r6-deviations-2.md")]
@@ -66,6 +67,12 @@ def require_prereg():
             sys.exit(f"refusing to run: {tag} is a lightweight tag; an annotated tag is required.")
         if git("diff", "--quiet", tag, "--", path)[0] != 0:
             sys.exit(f"refusing to run: {path} differs from the version tagged {tag}.")
+
+
+def stage_outputs(cfg):
+    """The result files this stage writes that are committed with `git add -f` (CLAUDE.md)."""
+    out = os.path.join(ROOT, cfg["paths"]["results_out"])
+    return [os.path.join(out, "planner_check.csv"), os.path.join(out, "meta_planner_check.json")]
 
 
 def published_return(src, task, seed):
@@ -201,6 +208,7 @@ def main():
     with open(os.path.join(out, "meta_planner_check.json"), "w") as f:
         json.dump(meta, f, indent=2)
     print(f"wrote {os.path.relpath(os.path.join(out, 'planner_check.csv'), ROOT)}")
+    pv.print_commit_listing(stage_outputs(cfg))
 
 
 if __name__ == "__main__":

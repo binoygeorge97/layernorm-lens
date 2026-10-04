@@ -240,6 +240,21 @@ def compare_csv(ref_bytes, new_bytes):
 # --------------------------------------------------------------------------- #
 
 
+def print_commit_listing(paths, root=ROOT, max_bytes=1 << 20):
+    """Print the `git add -f` command for a stage's result files (CLAUDE.md: summaries,
+    metadata and small arrays, each under 1 MB). Files that do not exist are left out;
+    files of max_bytes or more are left out with a warning. Returns the command."""
+    present = [p for p in paths if os.path.isfile(p)]
+    big = [p for p in present if os.path.getsize(p) >= max_bytes]
+    if big:
+        print("WARNING: 1 MB or more, not listed for commit: "
+              + ", ".join(os.path.relpath(p, root).replace(os.sep, "/") for p in big))
+    cmd = git_add_command([p for p in present if p not in big], root) if len(present) > len(big) else None
+    print("files to commit:")
+    print(cmd or "(none)")
+    return cmd
+
+
 def git_add_command(paths, root=ROOT):
     """`git add -f` for result files (git-ignored under results/), relative to root,
     always with forward slashes."""

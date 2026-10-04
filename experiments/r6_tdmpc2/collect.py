@@ -50,6 +50,7 @@ import yaml
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import layouts  # noqa: E402
+import provenance as pv  # noqa: E402  (summary printing only)
 TAGS = [("prereg-r6", "prereg/r6.md"), ("prereg-r6-d1", "prereg/r6-deviations.md"),
         ("prereg-r6-d2", "prereg/r6-deviations-2.md")]
 
@@ -102,6 +103,14 @@ def write_meta(cfg, stage, extra):
 # --------------------------------------------------------------------------- #
 # networks from the released state_dict                                         #
 # --------------------------------------------------------------------------- #
+
+
+def stage_outputs(cfg, stage):
+    """The result files `stage` writes that are committed with `git add -f` (CLAUDE.md).
+    The observations (data/r6/*.npz) are never committed: they stay on Drive."""
+    res = os.path.join(ROOT, cfg["paths"]["results_out"])
+    files = dict(collect=["returns.csv"], consistency=["consistency.csv", "consistency.json"])[stage]
+    return [os.path.join(res, f) for f in files] + [os.path.join(res, f"meta_{stage}.json")]
 
 
 def load_checkpoint(cfg, task, seed):
@@ -230,6 +239,7 @@ def stage_collect(cfg):
                   f"(published {pub}, fraction {frac:.2f}){'  FLAG < 50%' if rows[-1]['flag_below_half'] else ''}")
     _csv(os.path.join(ROOT, cfg["paths"]["results_out"], "returns.csv"), rows)
     write_meta(cfg, "collect", dict(networks=record))
+    pv.print_commit_listing(stage_outputs(cfg, "collect"))
 
 
 # --------------------------------------------------------------------------- #
@@ -311,6 +321,7 @@ def stage_consistency(cfg):
     with open(os.path.join(res, "consistency.json"), "w") as f:
         json.dump(verdicts, f, indent=2)
     write_meta(cfg, "consistency", {})
+    pv.print_commit_listing(stage_outputs(cfg, "consistency"))
     if stop:
         print(f"\nSTOP: identity rejected for {stop}. Consult the author (D3, D5).")
         sys.exit(2)
