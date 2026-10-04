@@ -100,11 +100,8 @@ regression in tolerance mode: `LENS_TOL=1 python -m pytest -q tests/test_core_re
   and the WIP criterion stage (eb8835a). Changes reach `main` only through pull
   requests that the author merges.
 - `claude/new-session-0r0qe0` and `claude/loving-johnson-wk9yb3` (earlier
-  sessions) are fully merged into `main`. Do not develop on them. The Colab
-  notebooks still clone the old branches (`BRANCH` is `claude/loving-johnson-wk9yb3`
-  in `r6_colab.ipynb` and `r6_planner_check.ipynb`, `claude/new-session-0r0qe0` in
-  `r6_d4_regeneration.ipynb` and `r6_planner_collect.ipynb`); set `BRANCH` before
-  the next Colab run.
+  sessions) are fully merged into `main`. Do not develop on them. Each Colab
+  notebook's first cell is a `BRANCH` parameter, set to `r6-criterion`.
 - Policy as practised: a feature branch with pull requests into `main`, merged by
   the author. Use merge commits, never rebase or force-push shared branches, and
   never rewrite history. Commit and push only what was asked. A cloud session
@@ -268,10 +265,8 @@ inputs, exact Jacobians by autodiff; see plan.md P-I). This waits on the author'
 parameter choice. Then `prereg/p1.md`, written and tagged before any P-I outcome is
 computed.
 
-**(f) Colab notebooks' `BRANCH`.** Before any future Colab run, update `BRANCH` in
-the four notebooks (`r6_colab.ipynb`, `r6_planner_check.ipynb`,
-`r6_d4_regeneration.ipynb`, `r6_planner_collect.ipynb`). They still name the old
-branches (section 3).
+**(f) Colab notebooks' `BRANCH`.** Done: each of the four notebooks now opens with a
+marked `BRANCH` parameter cell, set to `r6-criterion`.
 
 ## 7. Known issues
 
