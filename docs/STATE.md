@@ -1,4 +1,4 @@
-# Project state (handoff), 3 October 2026
+# Project state (handoff), 3 October 2026, updated after the R6 criterion stage
 
 For a fresh Claude Code session with no other context. Read this, then `CLAUDE.md`
 (rules; they override defaults), `docs/theory.md` (definitions; authoritative) and
@@ -117,6 +117,7 @@ regression in tolerance mode: `LENS_TOL=1 python -m pytest -q tests/test_core_re
 | `prereg-r6-d1` | 3a0bb105b2b42223a1cafa9912514ad5246edafd | e5060cf9813401cd652088186641ad913320baa8 | `prereg/r6-deviations.md` | D1 which keys are the layer (pre-release layout); D2 ε = 1e-5 assumed; D3 encoder position 0 decided by a latent-consistency test (identity, symlog, LayerNorm), with an accept rule e ≤ 0.1·e₀ and lowest; D4 data from the policy prior, since the planner could not load the files |
 | `prereg-r6-d2` | df32edce53bcf0c541a285acc1383eb15c1ac4da | e20f5a61c98956da46bbb1d1bf5c6ac5aa4db817 | `prereg/r6-deviations-2.md` | D5 two checkpoint layouts: pre-release for cartpole-swingup s1 and humanoid-run s3, public for the other 13; D1–D3 apply only to the pre-release ones; D3 calibration on public seed-1 checkpoints; layout detection rule |
 | `prereg-r6-d3` | 3dec0649dddb1a2d2125bd22b1a40afd2124beef | bc0b23b52baa14ff35f67d3b752c61b4da9a72c9 | `prereg/r6-deviations-3.md` | D6 planner data (public tdmpc2 planner, eval_mode=True, float32 for acting only); symlog at pre-release position 0; key remap; encoder agreement gate and controls; conditions (i) ≥ 0.9 × published and (ii) for cartpole s1; humanoid s3 labels; (c) calibration; (e) protocol; (g) end-to-end susceptibility (reported only); the 15-checkpoint SHA-256 table |
+| `prereg-r6-d4` | b87cac0e2c604ee3a879fd39567db8b32ac64d6e | 66bd7174ec0202051cce41ae6d47e10e0d7f4e48 | `prereg/r6-deviations-4.md` | D7 clarifications before the criterion stage: D3's tie rule under D6 (every reading within 10% must pass); e₀ each candidate's own; Populated's row order and nearest-neighbour set; Corollary 1 along lines through μ and data states; all three readings for the pre-release files; D6 (g) median state sets; vector signs; laptop environment with a Colab rerun if any statistic is within 1% of its threshold |
 
 ### Key commits since the tags (on `claude/new-session-0r0qe0`)
 
@@ -133,11 +134,42 @@ regression in tolerance mode: `LENS_TOL=1 python -m pytest -q tests/test_core_re
 | 3d52d3d | D6 planner results, all 15 checkpoints (30 files; see open task (a)) |
 | eb8835a | WIP criterion-stage draft (open task (c)) |
 
+### Commits on `r6-criterion`
+
+| Commit | What |
+| --- | --- |
+| 2a44aea, 6abc1e2 | CLAUDE.md laptop and git-safety sections; UTF-8 git output and portable paths |
+| 66bd717 | `prereg/r6-deviations-4.md` (D7), tagged `prereg-r6-d4` |
+| 11843a3 | Criterion stage, reviewed (task (c)) |
+| 8331c12 | `results/r6/planner/PROVENANCE-2026-10-03.md` (task (a)) |
+| 8bcba37 | `criterion.check_lens`: z* compared norm-wise (the first run stopped in input verification on dog-run s1's z*: laptop vs Colab differ by 7.7e-14 norm-wise, cond(A) ≈ 1e4; nothing had been computed) |
+| 57e7689 | `results/r6/criterion/`: the criterion stage outputs (45 files) |
+| 1360cb4, 55f1358 | Notebook `BRANCH` parameter (task (f)); `git add -f` listings (task (d)) |
+
 ## 4. R6 status
 
-Nothing in R6's criterion (Inside, Populated, Sharp), G1, D6 (c) or D6 (g) has
-been computed for any real checkpoint. Everything below is a pipeline result or a
-quantity D6 itself recorded.
+**The R6 criterion stage has run** (`results/r6/criterion/`, commit 57e7689; run at
+8bcba37 on the laptop, status `complete`; nothing within 1% of a threshold, so no
+Colab rerun under D7 (8)). Results, by the rules of r6.md and D3–D7:
+
+- **Corollary 1** (D7 (4), D6 (g)): 225 lines, maximum relative deviation 3.94e-14.
+- **cartpole-swingup s1** (D6 (b)): condition (i) 1.002 ≥ 0.9; condition (ii) on the
+  planner data: symlog lowest, e/e₀ = 3.69e-5 ≤ 0.1 (identity 0.105, LayerNorm
+  0.111); identified. D7 (1) ratios e_c/e_symlog: identity 2903, LayerNorm 2984;
+  not ambiguous. Record-only D4 value: symlog e/e₀ 0.0204, lowest (reproduces
+  `consistency.csv`).
+- **humanoid-run s3**: label "confirmed" (condition (i) 1.058; symlog lowest, e/e₀
+  0.0068).
+- **Criterion:** no checkpoint meets all three of Inside, Populated and Sharp, under
+  any reading. Sharp fails for all 15 under the primary reading (D/r_eff(d₁)
+  0.85–4.08); Populated fails for all 19 checkpoint-readings; Inside holds only for
+  cheetah-run s1 and s2 (and cartpole s1 under the reported identity reading).
+- **G1: does not pass**, 0 of 4 counting tasks (cartpole-swingup s1, cheetah-run s1,
+  walker-run s1, humanoid-run s1; none flagged). r6.md: "If not, the headline
+  becomes 'whether the defect appears depends on a default'."
+- D6 (c) calibration, D6 (g) susceptibility, ρ fractions: in `results/r6/criterion/`.
+
+Pipeline results and quantities D6 itself recorded, from before the stage:
 
 - **Lens from the weights** (`results/r6/lens_summary.csv`, run at 4c3f129): all 15
   checkpoints are non-degenerate, κ ≤ 0.00165. The r* principal widths are strongly
@@ -174,9 +206,7 @@ quantity D6 itself recorded.
   No checkpoint is flagged below 0.5. Cartpole s2 was collected in session
   20260925T214748Z; the other 14 in session 20260927T141627Z.
 - **D6 (b) condition (i) passed** for cartpole-swingup s1 (1.002 ≥ 0.9) and
-  humanoid-run s3 (1.058). Condition (ii) on the planner data, and therefore
-  cartpole s1's identification and humanoid s3's label, has **not** been computed;
-  it is part of task (c).
+  humanoid-run s3 (1.058).
 
 ## 5. Environments and data
 
@@ -204,42 +234,23 @@ each verified against D6's SHA-256 table (read from the tag).
 
 ## 6. Open tasks, in order
 
-**(a) Provenance note** (a dated note under `results/r6/planner/`, in its own
-commit). Read the committed metas; do not guess.
-1. The interrupted session 20260925T214748Z collected cartpole-swingup s2 and left
-   no session file. Confirm from `meta_cartpole-swingup-seed2.json` which code
-   commit it ran. Confirm that `planner_collect.py` and `planner_lib.py` are
-   identical between that commit and the main session's (20260927T141627Z, whose
-   metas record bca1e71, clean).
-2. torch._dynamo hit its recompile limit (8) during walker-run s1 (a guard on
-   `kwargs['t0']`), so `_plan` ran eagerly from then on: walker s1–s3, humanoid,
-   dog and both pre-release runs. Episode times went from about 9 s to 21–29 s.
-   Record which checkpoints ran compiled and which eager, from the per-episode
-   times in the metas (`seconds_per_episode`), and note that the gate tested
-   `encode` eagerly: torch.compile wraps `_plan`, not `encode` (tdmpc2.py:50-51),
-   and D6 (b) says so. No rule
-   depends on this; it is disclosure against D6 (e)'s "torch.compile as in
-   tdmpc2's configuration".
-3. Two smoke sessions exist (20260925T211407Z, 20260927T141335Z). Both are kind
-   `smoke` and unused.
-4. 3d52d3d has 30 files, not 31: `results/r6/planner_smoke/key_mapping_humanoid-run-seed3.json`
-   never reached Drive (only the `planner/` copy did), and the runtime that wrote
-   it is gone. Confirm that the mapping is deterministic: it is a fixed function of
-   the checkpoint's keys (`planner_lib.remap_keys`), so the `planner/` copy should
-   equal what the smoke run wrote. Check this by recomputing it from the verified
-   checkpoint's keys, or from `results/r6/prerelease_keys.json`.
+**(a) Provenance note.** Done: `results/r6/planner/PROVENANCE-2026-10-03.md` (8331c12).
+Both planner sessions ran bca1e71; 5 checkpoints planned compiled and 10 eagerly
+(from walker-run s1 on); the missing smoke key mapping is a deterministic function
+of the keys and was regenerated byte for byte.
 
 **(b) Drive copy check.** Every stage must check that each file in its
 `git add -f` list exists on Drive, with the same SHA-256, before it reports
-success. This is the likely cause of the missing smoke key mapping (confirm in
-(a)4): `planner_collect.load_agent` writes a pre-release checkpoint's key mapping
+success. The criterion stage does this for its own outputs; `planner_collect.py` and
+`regenerate_d4.py` do not yet. This is the cause of the missing smoke key mapping
+(confirmed in (a)): `planner_collect.load_agent` writes a pre-release checkpoint's key mapping
 when it loads it, which happens for the gate, but `run_checkpoint` pushes it to
 Drive only for a checkpoint that acts (`planner_collect.py:472-473`). In a smoke
 run only cartpole-swingup s1 acts, so humanoid-run s3's smoke mapping was written
 locally and never copied. Its `planner/` copy reached Drive because humanoid-run
 s3 acted in the full run.
 
-**(c) Criterion stage.** Code reviewed and approved by the author on 3 Oct 2026,
+**(c) Criterion stage.** Done: run at 8bcba37, outputs in 57e7689 (section 4). Code reviewed and approved by the author on 3 Oct 2026,
 after the seven questions were settled by D7 (`prereg/r6-deviations-4.md`, tag
 `prereg-r6-d4`). `criterion.py` runs on the laptop in float64 (D7 (8)). It refuses
 to run unless the five annotated tags are present locally and on origin, the
@@ -261,7 +272,7 @@ listing (`provenance.print_commit_listing`; summary printing only, outputs uncha
 `tests/test_stage_listings.py`). `results/r6/meta_list.json` (from `extract list`)
 exists locally but was never committed; its origin is not recorded.
 
-**(e)** Session 3: the quadrotor simulator (`plants/quadrotor.py`; 12 states, 4
+**(e) Next: session 3.** The quadrotor simulator (`plants/quadrotor.py`; 12 states, 4
 inputs, exact Jacobians by autodiff; see plan.md P-I). This waits on the author's
 parameter choice. Then `prereg/p1.md`, written and tagged before any P-I outcome is
 computed.
