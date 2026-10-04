@@ -3,6 +3,8 @@ projection, which creates a "lens" (a Cauchy-shaped zone of amplified slopes) in
 learned dynamics models. Read `docs/theory.md` for definitions and `docs/plan.md`
 for what each experiment must do.
 
+Read the project state: @docs/STATE.md
+
 ## Rules
 
 - Use float64 everywhere: call `jax.config.update("jax_enable_x64", True)` at the
@@ -28,6 +30,27 @@ for what each experiment must do.
   committed: it stays on Drive, and a manifest of its file names and SHA-256 hashes
   is committed instead.
 - Plan first for any task touching more than one file; wait for approval.
+
+## Git safety
+
+- Never create or push tags. The author creates and pushes every tag.
+- Never push to `main`, and never force-push any branch.
+- Ask the author before every `git push`.
+- Commit a prereg file alone: nothing else in that commit.
+- Never edit a tagged file.
+
+## Working on the Windows laptop
+
+- The shell is PowerShell. The venv is `.venv`: activate it with
+  `.\.venv\Scripts\Activate.ps1`.
+- The core regression test is bit-exact only in the golden environment. If it
+  fails here, run it in tolerance mode: `$env:LENS_TOL='1'; pytest -q`.
+- Set `$env:PYTHONUTF8='1'` before running tests or R6 scripts. Without it,
+  `provenance.git()` decodes git's UTF-8 output as cp1252 and the prereg checks fail.
+- Data stays outside the repo, at `G:\My Drive\layernorm-lens-r6` (Google Drive for
+  desktop). Always verify every file against the committed SHA-256 manifests before
+  using it.
+- Every run records the package versions in its meta.
 
 ## Layout
 

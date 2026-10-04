@@ -93,13 +93,18 @@ regression in tolerance mode: `LENS_TOL=1 python -m pytest -q tests/test_core_re
 
 ## 3. Branches, merge policy, tags
 
-- **Development branch: `claude/new-session-0r0qe0`.** It contains everything,
-  including the planner results (3d52d3d) and the WIP criterion stage (eb8835a).
-  The Colab notebooks clone this branch.
-- `claude/loving-johnson-wk9yb3` (earlier sessions, ends at bc0b23b) is fully
-  merged into `claude/new-session-0r0qe0`. Do not develop on it.
-- `main` is at 64c02c1 (PR #7, up to fb46698). It lags the development branch.
-  Changes reach `main` only through pull requests that the author merges.
+- **Development branch: `r6-criterion`**, created from `main` at 31be62e. Never
+  commit on `main`.
+- `main` is at 31be62e (PR #8, which merged `claude/new-session-0r0qe0`). It
+  contains everything up to this handoff, including the planner results (3d52d3d)
+  and the WIP criterion stage (eb8835a). Changes reach `main` only through pull
+  requests that the author merges.
+- `claude/new-session-0r0qe0` and `claude/loving-johnson-wk9yb3` (earlier
+  sessions) are fully merged into `main`. Do not develop on them. The Colab
+  notebooks still clone the old branches (`BRANCH` is `claude/loving-johnson-wk9yb3`
+  in `r6_colab.ipynb` and `r6_planner_check.ipynb`, `claude/new-session-0r0qe0` in
+  `r6_d4_regeneration.ipynb` and `r6_planner_collect.ipynb`); set `BRANCH` before
+  the next Colab run.
 - Policy as practised: a feature branch with pull requests into `main`, merged by
   the author. Use merge commits, never rebase or force-push shared branches, and
   never rewrite history. Commit and push only what was asked. A cloud session
@@ -182,7 +187,7 @@ quantity D6 itself recorded.
 | --- | --- | --- | --- |
 | CPU pipeline | Colab CPU | Python 3.13.15, jax/jaxlib 0.10.2, numpy 2.4.6, scipy 1.17.1, torch 2.14.0+cpu, mujoco 3.14.0, dm_control 1.0.47 (installed without labmaze for the regeneration), PyYAML 6.0.1 (`meta_d4_regeneration.json`) | extract, collect (D4), consistency (D3), D4 regeneration; the criterion stage is to run here too |
 | Planner | Colab Tesla T4, CUDA 12.6 | tdmpc2 e9f59321's pinned env (`docker/environment.yaml`) in a Python 3.11.16 uv virtualenv: torch 2.7.1+cu126, tensordict 0.8.3, torchrl 0.8.1, mujoco 3.1.2, dm_control 1.0.16, numpy 1.24.4, gymnasium 0.29.1, hydra-core 1.3.2, omegaconf 2.3.0 (planner metas) | planner_check, planner_collect. No JAX; our float64 work there is numpy |
-| Laptop | Windows, VS Code + Claude Code, `.venv/` (git-ignored) | Not recorded in the repo. Install `requirements.txt` (jax 0.10.2, numpy 2.4.6, scipy 1.17.1, PyYAML 6.0.1, pytest 9.1.1, matplotlib 3.11.2) and, for R6 work, `requirements-r6.txt` (torch 2.14.0 CPU first, from its own index). Record the versions on first use. The core regression is bit-exact only in the golden environment, so use `LENS_TOL=1` | development, tests |
+| Laptop | Windows, VS Code + Claude Code, `.venv/` (git-ignored) | Recorded 3 Oct 2026, see section 7. Install `requirements.txt` (jax 0.10.2, numpy 2.4.6, scipy 1.17.1, PyYAML 6.0.1, pytest 9.1.1, matplotlib 3.11.2) and, for R6 work, `requirements-r6.txt` (torch 2.14.0 CPU first, from its own index). Record the versions on first use. The core regression is bit-exact only in the golden environment, so use `LENS_TOL=1` | development, tests |
 
 Source code: tdmpc2 is cloned to `checkpoints/tdmpc2_src` at
 e9f59321933cbc8e11a002b842adc7d4ffae8ff1. Checkpoints come from
@@ -276,15 +281,42 @@ computed.
 
 ## 7. Known issues
 
-The author's list for this section was cut off in the request that produced this
-file. These are the issues known to the session that wrote it; ask the author for
-anything missing.
-
-- The missing smoke key mapping, and Drive copies that are not verified against
-  the commit list (tasks (a)4 and (b)).
-- torch.compile fell back to eager from walker-run s1 on, so the runs differ from
-  D6 (e)'s wording (task (a)2). GPU execution is not bitwise deterministic anyway;
-  the stored observations are the data of record.
+- The core regression's bit-exact golden test depends on the platform. On the
+  laptop, 5 cases (stack, geometry, evaluate, data, train) fail bit for bit,
+  although jax, jaxlib, numpy and scipy are the versions in
+  `tests/golden/manifest.json`. With `LENS_TOL=1` (rtol 1e-12) the file passes: 8
+  passed, 1 skipped.
+- torch._dynamo hit its recompile limit (8, a guard on `kwargs['t0']`) during
+  walker-run s1, so the planner ran eagerly from walker-run s1 on: walker s1–s3,
+  humanoid, dog and both pre-release runs. The runs therefore differ from D6 (e)'s
+  wording (task (a)2). GPU execution is not bitwise deterministic anyway; the
+  stored observations are the data of record.
+- Colab's GitHub token is read-only, so results are committed from the laptop.
+  Result files must keep their bytes: either `core.autocrlf=false`, or rely on
+  `.gitattributes` (`results/** -text`). The laptop's system gitconfig
+  (`C:/Program Files/Git/etc/gitconfig`) sets `core.autocrlf=true`; every tracked
+  file under `results/` is marked `-text` by `.gitattributes`, so git leaves those
+  bytes alone.
+- The Drive copy gap: `planner_collect` copies a pre-release key mapping to Drive
+  only for a checkpoint that acts, and nothing checks the Drive copies against the
+  `git add -f` list. That is why `results/r6/planner_smoke/key_mapping_humanoid-run-seed3.json`
+  is missing from 3d52d3d (30 files, not 31). See tasks (a)4 and (b).
+- Laptop environment (3 Oct 2026; Windows 11 Pro 10.0.26200): Python 3.12.1,
+  jax/jaxlib 0.10.2 (CPU backend), numpy 2.4.6, scipy 1.17.1, PyYAML 6.0.1,
+  pytest 9.1.1, matplotlib 3.11.2, torch 2.14.0+cpu. Every `requirements.txt` pin
+  matches. Of `requirements-r6.txt`, torch matches, but dm_control (1.0.47) and
+  mujoco (3.14.0) are not installed. Python differs from the Colab CPU runtime
+  (3.13.15).
+- Tests on the laptop at 31be62e: 9 failed and 93 passed with plain `pytest -q`.
+  - 5 are the golden cases above.
+  - 2 (`test_d6_table_from_tag_covers_every_checkpoint`, `test_remap_table_is_d6s`)
+    fail because `provenance.git()` runs `subprocess.run(..., text=True)` without
+    an encoding. Windows decodes git's UTF-8 output as cp1252, so `require_prereg`
+    and `d6_sha_table` also fail on the laptop. `PYTHONUTF8=1` works around it.
+  - 2 (`test_git_add_command`, `test_verify_d4`) fail on path separators:
+    `git_add_command` prints `results\r6\...`, and `verify_d4`'s Drive path mixes
+    separators. Neither is fixed yet.
+  - With `PYTHONUTF8=1` and `LENS_TOL=1`: 2 failed, 99 passed, 1 skipped.
 - The interrupted planner session left no session file (task (a)1).
 - ε = 1e-5 is an assumption for the pre-release checkpoints (D2). κ, ‖c⊥‖ and r*
   are reported, so any ε-dependent quantity can be recomputed.
@@ -297,6 +329,5 @@ anything missing.
 - `results/r6/lens_summary.csv` has CRLF line endings, the original bytes. Keep
   `.gitattributes` (`results/** -text`); on Windows, do not let editors or
   `core.autocrlf` rewrite result files.
-- `main` lags the development branch: everything since fb46698 is unmerged.
 - `results/r6/PROVENANCE.md`'s original text names c85262f; its addendums
   correct this. Do not rewrite the original text; add addendums.
