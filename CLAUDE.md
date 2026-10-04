@@ -45,8 +45,6 @@ Read the project state: @docs/STATE.md
   `.\.venv\Scripts\Activate.ps1`.
 - The core regression test is bit-exact only in the golden environment. If it
   fails here, run it in tolerance mode: `$env:LENS_TOL='1'; pytest -q`.
-- Set `$env:PYTHONUTF8='1'` before running tests or R6 scripts. Without it,
-  `provenance.git()` decodes git's UTF-8 output as cp1252 and the prereg checks fail.
 - Data stays outside the repo, at `G:\My Drive\layernorm-lens-r6` (Google Drive for
   desktop). Always verify every file against the committed SHA-256 manifests before
   using it.

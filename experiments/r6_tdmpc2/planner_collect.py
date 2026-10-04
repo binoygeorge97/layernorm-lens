@@ -202,7 +202,7 @@ def verify_d4(cfg, drive, needed):
         f = f"{name_of(task, seed)}.npz"
         if f not in rows:
             die(f"{f} is not in {d['manifest']}.")
-        path = os.path.join(drive, d["drive_dir"], f)
+        path = os.path.join(drive, *d["drive_dir"].split("/"), f)  # config paths use "/"
         if not os.path.exists(path):
             die(f"D4 observations {path} not found.")
         try:

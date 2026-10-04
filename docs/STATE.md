@@ -310,13 +310,15 @@ computed.
 - Tests on the laptop at 31be62e: 9 failed and 93 passed with plain `pytest -q`.
   - 5 are the golden cases above.
   - 2 (`test_d6_table_from_tag_covers_every_checkpoint`, `test_remap_table_is_d6s`)
-    fail because `provenance.git()` runs `subprocess.run(..., text=True)` without
-    an encoding. Windows decodes git's UTF-8 output as cp1252, so `require_prereg`
-    and `d6_sha_table` also fail on the laptop. `PYTHONUTF8=1` works around it.
-  - 2 (`test_git_add_command`, `test_verify_d4`) fail on path separators:
-    `git_add_command` prints `results\r6\...`, and `verify_d4`'s Drive path mixes
-    separators. Neither is fixed yet.
-  - With `PYTHONUTF8=1` and `LENS_TOL=1`: 2 failed, 99 passed, 1 skipped.
+    failed because `provenance.git()` ran `subprocess.run(..., text=True)` without
+    an encoding. Windows decoded git's UTF-8 output as cp1252, so `require_prereg`
+    and `d6_sha_table` also failed on the laptop.
+  - 2 (`test_git_add_command`, `test_verify_d4`) failed on path separators:
+    `git_add_command` printed `results\r6\...`, and `verify_d4`'s Drive path mixed
+    separators.
+  - Fixed on `r6-criterion`: git output is decoded as UTF-8, `git_add_command`
+    always prints forward slashes, and `verify_d4` builds native paths. With
+    `LENS_TOL=1` and without `PYTHONUTF8`: 105 passed, 1 skipped.
 - The interrupted planner session left no session file (task (a)1).
 - ε = 1e-5 is an assumption for the pre-release checkpoints (D2). κ, ‖c⊥‖ and r*
   are reported, so any ε-dependent quantity can be recomputed.

@@ -114,6 +114,50 @@ def test_git_add_command():
     assert cmd == "git add -f 'results/r6/a b.json' results/r6/b.csv"
 
 
+def test_git_add_command_forward_slashes_from_native_paths():
+    cmd = pv.git_add_command([os.path.join(ROOT, "results", "r6", "criterion", "x y.csv"),
+                              os.path.join(ROOT, "results", "r6", "a.json")])
+    assert cmd == "git add -f results/r6/a.json 'results/r6/criterion/x y.csv'"
+    assert "\\" not in cmd
+
+
+# --------------------------------------------------------------------------- #
+# git output is decoded as UTF-8 on every platform                              #
+# --------------------------------------------------------------------------- #
+
+# "Ł" is C5 81 in UTF-8; 0x81 is undefined in cp1252, Windows' default decoding.
+_UTF8_TEXT = "θ ≥ 0.9 × published, e₀, ‖c⊥‖, Ł\n"
+
+
+def _repo_with_d6_tag(tmp_path):
+    import subprocess
+    repo = tmp_path / "repo"
+    (repo / "prereg").mkdir(parents=True)
+    rows = "".join(f"| {format(i, '064x')} | dmcontrol/task-{i}.pt |\n"
+                   for i in range(pv.N_CHECKPOINTS))
+    with open(repo / pv.D6_PATH, "w", encoding="utf-8", newline="\n") as f:
+        f.write(_UTF8_TEXT + rows)
+    run = ["git", "-c", "user.name=test", "-c", "user.email=test@example.com",
+           "-c", "core.autocrlf=false"]
+    for args in (["init", "-q"], ["add", pv.D6_PATH], ["commit", "-q", "-m", "d6"],
+                 ["tag", "-a", pv.D6_TAG, "-m", "d6"]):
+        subprocess.run(run + args, cwd=repo, check=True, capture_output=True)
+    return repo, rows
+
+
+def test_git_decodes_utf8(tmp_path):
+    repo, rows = _repo_with_d6_tag(tmp_path)
+    rc, out = pv.git("show", f"HEAD:{pv.D6_PATH}", cwd=repo)
+    assert rc == 0 and out == (_UTF8_TEXT + rows).strip()
+
+
+def test_d6_table_decodes_utf8(tmp_path):
+    repo, _ = _repo_with_d6_tag(tmp_path)
+    table = pv.d6_sha_table(cwd=repo)
+    assert len(table) == pv.N_CHECKPOINTS
+    assert table["dmcontrol/task-1.pt"] == format(1, "064x")
+
+
 def test_regeneration_config_is_consistent():
     rc = CFG["d4_regeneration"]
     assert set(rc["stages"]) == set(rc["expected_exit"])

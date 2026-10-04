@@ -237,6 +237,15 @@ def test_verify_d4(tmp_path):
         pc.verify_d4(cfg, str(drive), [("cartpole-swingup", 1)])
 
 
+def test_verify_d4_path_uses_native_separators(tmp_path):
+    import planner_collect as pc
+    cfg, drive, _ = _cfg_with(tmp_path)
+    assert cfg["planner_collect"]["d4"]["drive_dir"] == "data/r6"
+    path = pc.verify_d4(cfg, str(drive), [("cartpole-swingup", 1)])[0][("cartpole-swingup", 1)]
+    assert path == os.path.join(str(drive), "data", "r6", "cartpole-swingup-seed1.npz")
+    assert os.path.normpath(path) == path
+
+
 def test_is_complete_and_smoke_never_counts(tmp_path, monkeypatch):
     import planner_collect as pc
     monkeypatch.setattr(pc, "ROOT", str(tmp_path / "repo"))

@@ -38,8 +38,14 @@ class ProvenanceError(RuntimeError):
     pass
 
 
+def _run_git(args, cwd):
+    # git writes UTF-8; without an explicit encoding Windows decodes it as cp1252.
+    return subprocess.run(["git", *args], capture_output=True, text=True,
+                          encoding="utf-8", cwd=cwd)
+
+
 def git(*args, cwd=ROOT):
-    r = subprocess.run(["git", *args], capture_output=True, text=True, cwd=cwd)
+    r = _run_git(args, cwd)
     return r.returncode, r.stdout.strip()
 
 
@@ -91,8 +97,7 @@ def d6_sha_table(cwd=ROOT):
     rc, kind = git("cat-file", "-t", f"refs/tags/{D6_TAG}", cwd=cwd)
     if rc != 0 or kind != "tag":
         raise ProvenanceError(f"annotated tag {D6_TAG} not found.")
-    r = subprocess.run(["git", "show", f"{D6_TAG}:{D6_PATH}"], capture_output=True,
-                       text=True, cwd=cwd)
+    r = _run_git(["show", f"{D6_TAG}:{D6_PATH}"], cwd)
     if r.returncode != 0:
         raise ProvenanceError(f"git show {D6_TAG}:{D6_PATH} failed: {r.stderr.strip()}")
     table = parse_sha_table(r.stdout)
@@ -210,6 +215,8 @@ def compare_csv(ref_bytes, new_bytes):
 
 
 def git_add_command(paths, root=ROOT):
-    """`git add -f` for result files (git-ignored under results/), relative to root."""
-    rel = sorted({os.path.relpath(os.path.abspath(p), root) for p in paths})
+    """`git add -f` for result files (git-ignored under results/), relative to root,
+    always with forward slashes."""
+    rel = sorted({os.path.relpath(os.path.abspath(p), root).replace(os.sep, "/")
+                  for p in paths})
     return "git add -f " + " ".join(shlex.quote(p) for p in rel)
