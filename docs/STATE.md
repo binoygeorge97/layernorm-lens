@@ -303,8 +303,12 @@ targets (`results/p1/benchmark/`, run at 08d1deb). On the laptop's CPU, full bat
 most 172 h (no early stop, lens logging excluded). No surrogate is trained on quadrotor data and no
 lens quantity is computed on a trained quadrotor surrogate before the tag `prereg-p1`.
 
-**(g) Then `prereg/p1.md`**, written and tagged before any P-I outcome is computed. It
-will include a prospective test of lens migration and widening during training.
+**(g) `prereg/p1.md`.** Draft committed: `prereg/drafts/p1-draft.md` (not a prereg file),
+for the author and advisor. It has predictions 1–4 (reconstructed from plan.md, see the
+questions), the new prediction 5 (prospective lens migration and widening, with proposed
+thresholds κ ≤ 0.1 and 0.1 ≤ r_eff(d₁)/D ≤ 10), a proposed G2 rule and 15 numbered
+decisions. Next: the author's decisions, then `prereg/p1.md` committed alone and tagged
+`prereg-p1` by the author; only then may any P-I stage touch quadrotor data.
 
 **(h) Console log of the main planner session.** Done:
 `results/r6/planner/logs/console_20260927T141627Z.txt` is the author's transcription of
@@ -328,6 +332,11 @@ Non-blocking; work continues on everything that does not depend on the answers.
    by an unknown amount. Options: run on TACC (the `slurm/` folder is empty), use
    minibatches, use fewer training states, or a smaller budget. Which? This bears on
    G2 (18 Oct).
+
+3. The P-I predictions 1–4 and the "protocol amendments" are not in the repository
+   (plan.md defers the predictions to `prereg/p1.md`). The draft reconstructs 1–4 from
+   plan.md's P-I, hover-check and G2 text. Please supply the plan document's wording.
+4. The 15 decisions at the end of `prereg/drafts/p1-draft.md`.
 
 ## 7. Known issues
 

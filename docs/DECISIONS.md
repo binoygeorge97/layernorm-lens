@@ -163,3 +163,28 @@ the task, the choice, the reasoning, and the alternatives rejected.
     - It extrapolates to 40 models × 100k steps as an upper bound.
     - Rejected: timing on quadrotor data (stop condition 3), and timing with early
       stopping (its stopping point depends on the data).
+
+## 2026-10-04, queue item 4 (P-I pre-registration draft)
+
+22. **Predictions 1–4 were reconstructed from plan.md**, because the repository has
+    neither the plan document's predictions nor the "protocol amendments":
+    1. error concentration near the lens (G2);
+    2. default dependence (R6's headline);
+    3. hover linearisation damage;
+    4. Corollary 1 on trained models.
+
+    They are flagged in the draft and in the questions.
+    - Rejected: leaving them blank, which would have blocked the draft.
+
+23. **Prediction 5's thresholds** are κ ≤ 0.1 and 0.1 ≤ r_eff(d₁)/D ≤ 10.
+    - They are anchored on values computed before any quadrotor data exists: the
+      zero-bias start has r_eff/D median 0.0113 (p95 0.0126) for standardised i.i.d.
+      inputs at H = 128, k = 16, ε = 1e-5.
+    - And on R6's E3: trained TD-MPC2 lenses at 0.25–1.17, κ ≤ 0.0017.
+    - Rejected: a relative-only criterion ("×10 from the start"), which says nothing
+      about order 1; and thresholds taken from the TD-MPC2 values themselves, which
+      would be too strict for a different model and data.
+
+24. **The cell rule is "at least 4 of 5 seeds"**, with G2 proposed as prediction 1
+    holding in at least 3 of 4 zero-bias cells, and accuracy matched at rel-MSE within
+    20% (plan.md P-II's rule). All three are listed for decision.
