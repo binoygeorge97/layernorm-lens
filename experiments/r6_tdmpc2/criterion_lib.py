@@ -1,10 +1,11 @@
 """R6 criterion stage: the pure computations, without files, torch or checkpoints, so
 that tests can exercise them on synthetic arrays. numpy float64 and JAX float64.
 
-Every definition is quoted from the tagged pre-registration files, which are its
-only source (CLAUDE.md): prereg/r6.md (tag prereg-r6), r6-deviations.md (D1-D4,
-tag prereg-r6-d1), r6-deviations-2.md (D5, prereg-r6-d2) and r6-deviations-3.md (D6,
-prereg-r6-d3). Lens quantities come from lens/geometry.py (docs/theory.md).
+Every rule is quoted from the tagged pre-registration files, which are its only
+source (CLAUDE.md): prereg/r6.md (tag prereg-r6), r6-deviations.md (D1-D4, tag
+prereg-r6-d1), r6-deviations-2.md (D5, prereg-r6-d2), r6-deviations-3.md (D6,
+prereg-r6-d3) and r6-deviations-4.md (D7, prereg-r6-d4). Lens quantities come from
+lens/geometry.py (docs/theory.md).
 
 r6.md, Definitions:
     "μ, C: sample mean and covariance of all observations of a task (numpy.cov
@@ -20,29 +21,6 @@ r6.md, Definitions:
     Lens distance: ρ(z) = ‖A(z − z*)‖² / ‖c⊥‖² as in docs/theory.md (convention 2),
     defined only for a non-degenerate lens. Effective lens distance:
     ρ_eff(z) = ‖A(z − z*)‖² / (‖c⊥‖² + Hε)"
-
-r6.md, Criterion:
-    "A task's lens is "sharp and in the data" if all three hold.
-    1. Inside: w(z*, μ)² is at most the 95% quantile of χ² with m degrees of freedom.
-    2. Populated: draw a subsample of 5,000 observations with
-       numpy.random.default_rng(0).choice(n, 5000, replace=False), where n is the
-       task's number of observations. For each subsample observation, compute the
-       whitened distance to its nearest *other* subsample observation. The whitened
-       distance from z* to its nearest subsample observation must be at most the 95th
-       percentile of those distances.
-    3. Sharp: D / r_eff(d₁) ≥ 5."
-
-r6.md, Gate G1:
-    "G1 passes if the criterion holds for at least 2 of the 4 tasks other than
-    dog-run." Seed 1 counts (r6.md, Models: "only seed 1 counts toward the gate").
-
-D6 (a): "If this happens [planner return below 0.5 of published] to the checkpoint
-    that counts toward G1 for a task (seed 1, or seed 2 for cartpole-swingup if seed 1
-    ends up unidentified under (b)), that task leaves G1, and G1 then needs 2 of the
-    remaining non-dog tasks."
-
-D6 (b), condition (i), (ii) and the humanoid-run seed 3 label: see identification().
-D6 (g): see susceptibility().
 """
 
 import dataclasses
@@ -68,15 +46,36 @@ geo = lens_geometry()
 
 
 # --------------------------------------------------------------------------- #
+# inputs: D7 (3) row order                                                      #
+# --------------------------------------------------------------------------- #
+
+
+def episode_order_ok(env_seed, episode_in_seed, env_seeds, episodes_per_seed):
+    """D7 (3): "Rows: the observations in stored order: environment seed, then
+    episode within seed, then step. [...] Before using a file, the stage checks that
+    its `env_seed` and `episode_in_seed` arrays are in this order, and stops if they
+    are not." Checked against the protocol of D6 (e) (environment seeds 0-4, 10
+    consecutive episodes each). episode_in_seed=None checks env_seed alone (the D4
+    files store no episode index)."""
+    want_s = np.repeat(np.asarray(env_seeds), episodes_per_seed)
+    if not np.array_equal(np.asarray(env_seed), want_s):
+        return False
+    if episode_in_seed is None:
+        return True
+    want_e = np.tile(np.arange(episodes_per_seed), len(env_seeds))
+    return bool(np.array_equal(np.asarray(episode_in_seed), want_e))
+
+
+# --------------------------------------------------------------------------- #
 # r6.md Definitions                                                             #
 # --------------------------------------------------------------------------- #
 
 
 def canonical_sign(v):
-    """Eigenvectors are defined up to sign. Fix it so that the component of largest
-    magnitude is positive (the first such component on a tie). Affects only the sign
-    of signed outputs such as the t of a peak; every criterion quantity is
-    sign-invariant."""
+    """D7 (7): "Eigenvectors of C (d₁, d₂) and singular vectors of A (u_min and the
+    principal directions) are defined up to sign. Each is signed so that its
+    largest-magnitude component is positive. A tie in magnitude is broken by the
+    lowest index." (np.argmax returns the lowest index among equal maxima.)"""
     v = np.asarray(v, np.float64)
     return v if v[np.argmax(np.abs(v))] >= 0 else -v
 
@@ -100,8 +99,11 @@ class DataStats:
 
 def data_stats(X, kept_rtol=1e-10):
     """μ, C, kept dimensions, m, C⁺, d₁ (r6.md) and d₂ (D6 (g)) of observations X
-    (n, k) in layer-input coordinates. d₁ and d₂ are eigenvectors of the full C: r6.md
-    has no kept-dimension step for d₁ (D6 (g), "Kept dimensions")."""
+    (n, k) in layer-input coordinates. D6 (g): "r6.md has no kept-dimension step for
+    d₁: d₁ is an eigenvector of the full C [...] d₂ is computed the same way. If d₂'s
+    eigenvalue is below the kept-dimension threshold (1e-10 times the largest), d₂ is
+    reported as degenerate for that checkpoint and its (g) quantities are not
+    computed." """
     X = np.asarray(X, np.float64)
     n, k = X.shape
     mu = X.mean(axis=0)
@@ -136,8 +138,9 @@ def half_width_D(S, X, q=(2.5, 97.5)):
 
 
 def inside(S, z_star, quantile=0.95):
-    """Inside: w(z*, μ)² ≤ the `quantile` quantile of χ² with m degrees of freedom.
-    Also reported: the part of z* − μ outside the kept eigenvectors, which C⁺ ignores."""
+    """r6.md: "Inside: w(z*, μ)² is at most the 95% quantile of χ² with m degrees of
+    freedom." Also reported: the part of z* − μ outside the kept eigenvectors, which
+    C⁺ ignores."""
     from scipy.stats import chi2
     dz = np.asarray(z_star, np.float64) - S.mu
     w2 = float(whitened(S, z_star, S.mu) ** 2)
@@ -150,7 +153,8 @@ def inside(S, z_star, quantile=0.95):
 
 def nearest_other(Y, chunk=256):
     """For each row of Y (whitened coordinates), the Euclidean distance to its nearest
-    other row (another index; an exact duplicate at another index counts, at 0)."""
+    other row. D7 (3): ""Other" means another row index. An exact duplicate at another
+    index counts, at distance 0." """
     from scipy.spatial.distance import cdist
     n = len(Y)
     out = np.empty(n)
@@ -162,10 +166,17 @@ def nearest_other(Y, chunk=256):
 
 
 def populated(S, X, z_star, n_sub=5000, rng_seed=0, percentile=95.0):
-    """Populated (r6.md, quoted in the module docstring). The subsample indices are
-    numpy.random.default_rng(rng_seed).choice(n, n_sub, replace=False) over the rows of
-    X in their stored order (episode-major, D6 (e)); the percentile is numpy's default
-    (linear) method."""
+    """r6.md: "Populated: draw a subsample of 5,000 observations with
+    numpy.random.default_rng(0).choice(n, 5000, replace=False), where n is the task's
+    number of observations. For each subsample observation, compute the whitened
+    distance to its nearest *other* subsample observation. The whitened distance from
+    z* to its nearest subsample observation must be at most the 95th percentile of
+    those distances."
+    D7 (3): rows of X in stored order (environment seed, episode, step); "z*'s nearest
+    neighbour is taken from the same 5,000 subsample observations, as r6.md says, not
+    from all n observations"; "Whitened distances use C⁺ from all n observations";
+    "The 95th percentile is numpy's default (linear) method."
+    Returns (results, subsample indices, nearest-other distances)."""
     from scipy.spatial.distance import cdist
     X = np.asarray(X, np.float64)
     idx = np.random.default_rng(rng_seed).choice(len(X), n_sub, replace=False)
@@ -177,11 +188,12 @@ def populated(S, X, z_star, n_sub=5000, rng_seed=0, percentile=95.0):
     j = int(np.argmin(dz))
     return dict(populated_dist=float(dz[j]), populated_threshold=thr,
                 populated=bool(dz[j] <= thr), populated_nearest_index=int(idx[j]),
-                populated_nn_median=float(np.median(nn)), populated_n=int(n_sub)), idx
+                populated_nn_median=float(np.median(nn)), populated_n=int(n_sub)), idx, nn
 
 
 def sharp(S, X, L, minimum=5.0):
-    """Sharp: D / r_eff(d₁) ≥ 5, with r_eff along d₁ through z* (geometry.line)."""
+    """r6.md: "Sharp: D / r_eff(d₁) ≥ 5." r_eff(d₁) = r*(d₁)·√(1 + κ) along d₁ through
+    z* (convention 6; geometry.line)."""
     D = half_width_D(S, X)
     ln = geo.line(L, S.d1)
     ratio = D / ln["r_eff"]
@@ -190,8 +202,9 @@ def sharp(S, X, L, minimum=5.0):
 
 
 def rho_fractions(L, X, levels=(1, 10, 100, 1000)):
-    """r6.md, reported regardless: the fractions of observations with ρ_eff ≤ each
-    level, and the same for ρ when the lens is non-degenerate."""
+    """r6.md, reported regardless: "the distribution of ρ_eff over the observations
+    (fractions with ρ_eff ≤ 1, 10, 100 and 1,000), the same fractions for ρ when the
+    lens is non-degenerate"."""
     dz = np.asarray(X, np.float64) - L.z_star
     Adz2 = np.sum((dz @ L.A.T) ** 2, axis=-1)
     rho_eff = Adz2 / (L.norm_c_perp ** 2 + L.H * L.eps)
@@ -204,34 +217,38 @@ def rho_fractions(L, X, levels=(1, 10, 100, 1000)):
 
 
 def criterion(S, X, L, cfg_c):
-    """All three criterion quantities and the conjunction, for one checkpoint."""
+    """r6.md: "A task's lens is "sharp and in the data" if all three hold." Returns
+    the three quantities, the conjunction, the subsample indices and the
+    nearest-other distances."""
     out = {}
     out.update(inside(S, L.z_star, float(cfg_c["inside_quantile"])))
-    pop, idx = populated(S, X, L.z_star, int(cfg_c["populated"]["n_sub"]),
-                         int(cfg_c["populated"]["rng_seed"]),
-                         float(cfg_c["populated"]["percentile"]))
+    pop, idx, nn = populated(S, X, L.z_star, int(cfg_c["populated"]["n_sub"]),
+                             int(cfg_c["populated"]["rng_seed"]),
+                             float(cfg_c["populated"]["percentile"]))
     out.update(pop)
     out.update(sharp(S, X, L, float(cfg_c["sharp_min"])))
     out["criterion"] = bool(out["inside"] and out["populated"] and out["sharp"])
-    return out, idx
+    return out, idx, nn
 
 
 # --------------------------------------------------------------------------- #
-# D6 (b): identification; G1                                                    #
+# D6 (b), D7 (1), (2): identification and the tie rule                          #
 # --------------------------------------------------------------------------- #
 
 
 def condition_ii(err, candidate="symlog", e_over_e0_max=0.1):
-    """D6 (b) (ii): "symlog gives the lowest e among the three D3 candidates, with
-    e/e₀ ≤ 0.1 (D3's computation)". err: {candidate: dict(e, e0)} from
-    collect.consistency_errors; e₀ is the candidate's own (as consistency.csv's
-    e_over_e0). "Lowest": e_symlog ≤ every other e (as collect.decide)."""
+    """D6 (b) (ii): "on the new planner data, symlog gives the lowest e among the
+    three D3 candidates, with e/e₀ ≤ 0.1 (D3's computation)."
+    D7 (2): "e/e₀ ≤ 0.1 uses each candidate's own random-pairing baseline: e₀ is
+    computed in that candidate's coordinates, with D3's indices
+    j = numpy.random.default_rng(0).integers(0, n, size=n)."
+    err: {candidate: dict(e, e0)} from collect.consistency_errors, whose e0 is each
+    candidate's own. "Lowest": e_symlog ≤ every other e (as collect.decide)."""
     e = err[candidate]["e"]
     lowest = all(e <= err[c]["e"] for c in err)
     ratio = e / err[candidate]["e0"]
-    return dict(lowest=bool(lowest), e_over_e0=float(ratio),
-                holds=bool(lowest and ratio <= e_over_e0_max),
-                within_1p1=sorted(c for c in err if c != candidate and err[c]["e"] <= 1.1 * e))
+    return dict(lowest=bool(lowest), e_over_e0=float(ratio), threshold=float(e_over_e0_max),
+                holds=bool(lowest and ratio <= e_over_e0_max))
 
 
 def identification(fraction_gate, cii_gate, fraction_rep, cii_rep, return_ratio=0.9):
@@ -263,29 +280,117 @@ def identification(fraction_gate, cii_gate, fraction_rep, cii_rep, return_ratio=
     return gate, rep
 
 
-def g1_vote(results, cartpole_s1_identified, flags, tasks, min_pass=2,
-            counting_seed=1, fallback=("cartpole-swingup", 2)):
-    """r6.md G1 with D6 (a)'s flag rule and D6 (b)'s cartpole-swingup fallback.
+def tie_rule(err, candidate="symlog", tie_ratio=1.1):
+    """D7 (1): "Suppose symlog gives the lowest e among the three D3 candidates. A
+    non-symlog reading c is within 10% of symlog if e_c / e_symlog ≤ 1.1. If at least
+    one reading is within 10%, cartpole-swingup seed 1 is ambiguous."
+    Returns every ratio (all are scanned by D7 (8)), the readings within 10%, and
+    whether seed 1 is ambiguous (only when symlog gives the lowest e)."""
+    e_s = err[candidate]["e"]
+    lowest = all(e_s <= err[c]["e"] for c in err)
+    ratios = {c: float(err[c]["e"] / e_s) for c in err if c != candidate}
+    within = sorted(c for c, r in ratios.items() if r <= tie_ratio)
+    return dict(symlog_lowest=bool(lowest), ratios=ratios, threshold=float(tie_ratio),
+                within=within if lowest else [], ambiguous=bool(lowest and within))
 
-    results: {(task, seed): criterion bool}; flags: {(task, seed): below 0.5 x published}.
-    tasks: the 4 tasks other than dog-run. A task whose counting checkpoint is flagged
-    leaves G1; G1 then needs min_pass of the remaining tasks.
-    """
-    rows, passes = [], 0
+
+def cartpole_seed1(identified, tie, criterion_by_reading, primary="symlog"):
+    """D7 (1): "In that case it counts as passing for G1 only if the criterion holds
+    under symlog and under every reading within 10%. If both non-symlog readings are
+    within 10%, the criterion must hold under all three [...]. An ambiguous seed 1
+    remains the counting checkpoint for cartpole-swingup: it does not hand the vote to
+    seed 2. Seed 2 votes only if seed 1 is unidentified under D6 (b)."
+    criterion_by_reading: {reading: bool} for cartpole-swingup seed 1 (D7 (5))."""
+    if not identified:
+        return dict(identified=False, ambiguous=False, required_readings=[], criterion=None)
+    required = [primary] + [r for r in tie["within"] if r != primary]
+    return dict(identified=True, ambiguous=bool(tie["ambiguous"]), required_readings=required,
+                criterion=bool(all(criterion_by_reading[r] for r in required)))
+
+
+def counting_checkpoints(tasks, criterion_primary, cartpole, flags,
+                         cartpole_task="cartpole-swingup", counting_seed=1, fallback_seed=2):
+    """The checkpoint that counts toward G1 for each task.
+    r6.md, Models: "Seed 1 is the primary checkpoint for each task. [...] only seed 1
+    counts toward the gate."
+    D6 (a): "If this happens [planner return below 0.5 of published] to the checkpoint
+    that counts toward G1 for a task (seed 1, or seed 2 for cartpole-swingup if seed 1
+    ends up unidentified under (b)), that task leaves G1, and G1 then needs 2 of the
+    remaining non-dog tasks."
+    D7 (1): an identified seed 1 of cartpole-swingup votes with cartpole_seed1()'s
+    result, ambiguous or not.
+    criterion_primary: {(task, seed): bool} in the primary reading; flags:
+    {(task, seed): below 0.5 x published}."""
+    rows = []
     for t in tasks:
-        seed = counting_seed
-        why = "seed 1"
-        if t == fallback[0] and not cartpole_s1_identified:
-            seed, why = fallback[1], "seed 1 unidentified under D6 (b): seed 2"
-        k = (t, seed)
-        left = bool(flags.get(k, False))
-        holds = bool(results[k])
-        rows.append(dict(task=t, counting_seed=seed, why=why, flagged_below_half=left,
-                         counts=not left, criterion=holds))
-        passes += int(holds and not left)
-    remaining = sum(r["counts"] for r in rows)
-    return dict(rows=rows, n_counting=remaining, n_pass=passes, min_pass=min_pass,
-                g1=bool(passes >= min_pass))
+        if t == cartpole_task and cartpole["identified"]:
+            seed, holds = counting_seed, cartpole["criterion"]
+            why = "seed 1, identified under D6 (b)"
+            if cartpole["ambiguous"]:
+                why += "; ambiguous (D7 (1)): criterion required under " + ", ".join(cartpole["required_readings"])
+        elif t == cartpole_task:
+            seed, holds = fallback_seed, criterion_primary[(t, fallback_seed)]
+            why = "seed 1 unidentified under D6 (b): seed 2"
+        else:
+            seed, holds, why = counting_seed, criterion_primary[(t, counting_seed)], "seed 1"
+        flagged = bool(flags.get((t, seed), False))
+        rows.append(dict(task=t, counting_seed=seed, why=why, criterion=bool(holds),
+                         flagged_below_half=flagged, counts=not flagged))
+    return rows
+
+
+def g1_vote(rows, min_pass=2):
+    """r6.md, Gate G1: "G1 passes if the criterion holds for at least 2 of the 4 tasks
+    other than dog-run." With D6 (a): a flagged task leaves G1, which still needs 2."""
+    n_counting = sum(r["counts"] for r in rows)
+    n_pass = sum(r["counts"] and r["criterion"] for r in rows)
+    return dict(rows=rows, n_counting=int(n_counting), n_pass=int(n_pass), min_pass=int(min_pass),
+                g1=bool(n_pass >= min_pass))
+
+
+# --------------------------------------------------------------------------- #
+# D7 (8): borderline scan                                                       #
+# --------------------------------------------------------------------------- #
+
+
+def borderline_items(crit_rows, cii=None, tie=None, gate_name="cartpole-swingup-seed1"):
+    """D7 (8): "The statistics are: Inside: w(z*, μ)² against the χ²_m 95% quantile;
+    Populated: the whitened distance from z* against the 95th percentile; Sharp:
+    D / r_eff(d₁) against 5; D6 (b) condition (ii), for cartpole-swingup seed 1 on the
+    planner data: symlog's e/e₀ against 0.1; (1)'s ratio e_c / e_symlog against 1.1,
+    for cartpole-swingup seed 1 on the planner data, for each non-symlog reading c."
+    crit_rows: one per checkpoint and reading, with task, seed, reading and the
+    criterion quantities."""
+    items = []
+    for r in crit_rows:
+        where = f"{r['task']}-seed{r['seed']} [{r['reading']}]"
+        items += [dict(where=where, statistic="Inside w2 vs chi2_m 95% quantile",
+                       value=r["inside_w2"], threshold=r["inside_chi2_q"]),
+                  dict(where=where, statistic="Populated distance vs 95th percentile",
+                       value=r["populated_dist"], threshold=r["populated_threshold"]),
+                  dict(where=where, statistic="Sharp D / r_eff(d1) vs 5",
+                       value=r["sharp_ratio"], threshold=r["sharp_min"])]
+    if cii is not None:
+        items.append(dict(where=f"{gate_name} [planner data]", statistic="condition (ii) e/e0 vs 0.1",
+                          value=cii["e_over_e0"], threshold=cii["threshold"]))
+    if tie is not None:
+        for c, ratio in sorted(tie["ratios"].items()):
+            items.append(dict(where=f"{gate_name} [planner data]",
+                              statistic=f"D7 (1) ratio e_{c} / e_symlog vs 1.1",
+                              value=ratio, threshold=tie["threshold"]))
+    return items
+
+
+def borderline_scan(items, band=0.01):
+    """D7 (8): "A statistic is borderline if it lies within 1% of its threshold:
+    |s − τ| ≤ 0.01·|τ|." Returns the items with their relative distance and flag."""
+    out = []
+    for it in items:
+        s, tau = float(it["value"]), float(it["threshold"])
+        gap = abs(s - tau)
+        rel = gap / abs(tau) if tau != 0 else (0.0 if gap == 0 else np.inf)
+        out.append(dict(it, rel_distance=float(rel), borderline=bool(gap <= band * abs(tau))))
+    return out
 
 
 # --------------------------------------------------------------------------- #
@@ -350,7 +455,7 @@ def jax_mlp(ops, eps, simnorm_dim):
 
 
 # --------------------------------------------------------------------------- #
-# D6 (g): end-to-end susceptibility                                             #
+# Corollary 1 checks: D6 (g) lines through z*, D7 (4) lines through the data    #
 # --------------------------------------------------------------------------- #
 
 
@@ -359,6 +464,10 @@ def ln_hat(E, b, eps, X):
     h = np.asarray(X, np.float64) @ np.asarray(E, np.float64).T + b
     r = h - h.mean(-1, keepdims=True)
     return r / np.sqrt((r ** 2).mean(-1, keepdims=True) + eps)
+
+
+def _max_rel_dev(hh, cf):
+    return float(np.max(np.linalg.norm(hh - cf, axis=-1) / np.linalg.norm(cf, axis=-1)))
 
 
 def corollary1(L, d, t):
@@ -371,12 +480,64 @@ def corollary1(L, d, t):
 
 
 def theta_grid(L, d, X, n_grid=2001, t_range=3.0):
-    """D6 (g) Lines: 2,001 points uniform in θ over |θ| ≤ arctan(T / r*(d)), with
-    T = max(max_i |⟨x_i − z*, d⟩|, 3·r_eff(d))."""
+    """D6 (g) Lines: "x(t) = z* + t·d, with 2,001 points uniform in θ over
+    |θ| ≤ arctan(T / r*(d)), where T = max(max_i |⟨x_i − z*, d⟩|, 3·r_eff(d)) over the
+    data states x_i"."""
     ln = geo.line(L, d)
     T = max(float(np.max(np.abs((np.asarray(X, np.float64) - L.z_star) @ d))), t_range * ln["r_eff"])
     th = np.linspace(-np.arctan(T / ln["r_star"]), np.arctan(T / ln["r_star"]), n_grid)
     return ln["r_star"] * np.tan(th), dict(T=T, r_star=ln["r_star"], r_eff=ln["r_eff"])
+
+
+def corollary1_g_line(L, E, b, d, X, n_grid=2001, t_range=3.0):
+    """D6 (g): "the layer-1 LayerNorm output before its affine parameters γ and β
+    (theory.md's ĥ) along each line matches the closed form above to 1e-10 relative
+    (float64); the maximum deviation is reported." Returns the grid t, its info and
+    the maximum relative deviation."""
+    d = np.asarray(d, np.float64)
+    t, info = theta_grid(L, d, X, n_grid, t_range)
+    dev = _max_rel_dev(ln_hat(E, b, L.eps, L.z_star + t[:, None] * d), corollary1(L, d, t))
+    return t, info, dev
+
+
+def corollary1_data_line(L, E, b, x0, d, X, n_grid=2001, t_range=3.0):
+    """D7 (4): "Each line x₀ + s·d uses its own closest approach s*, c⊥,ℓ, κ_ℓ and r*_ℓ
+    (theory.md, Corollary 1), not the lens's. The grid follows D6 (g)'s rule, about
+    the line's own closest approach x₀ + s*·d: 2,001 points uniform in θ over
+    |θ| ≤ arctan(T / r*_ℓ), with T = max(max_i |⟨x_i − (x₀ + s*·d), d⟩|, 3·r_eff,ℓ).
+    At each grid point, the deviation is ‖ĥ − ĥ_Cor1‖₂ / ‖ĥ_Cor1‖₂."
+    theory.md, Corollary 1: θ(s) = arctan((s − s*) / r*_ℓ),
+    ĥ(s) = √H (cos θ ĉ_ℓ + sin θ q̂) / √(1 + κ_ℓ cos² θ)."""
+    d = np.asarray(d, np.float64)
+    x0 = np.asarray(x0, np.float64)
+    ln = geo.line(L, d, x0)
+    if ln["norm_c_perp_l"] == 0.0:
+        raise ValueError("the line passes through the degenerate set c_perp_l = 0.")
+    xc = x0 + ln["s_star"] * d
+    rs = ln["r_star"]
+    T = max(float(np.max(np.abs((np.asarray(X, np.float64) - xc) @ d))), t_range * ln["r_eff"])
+    th = np.linspace(-np.arctan(T / rs), np.arctan(T / rs), n_grid)
+    tau = rs * np.tan(th)
+    q = L.A @ d
+    qh = q / np.linalg.norm(q)
+    ch = ln["c_perp_l"] / ln["norm_c_perp_l"]
+    c = np.cos(th)[:, None]
+    cf = np.sqrt(L.H) * (c * ch + np.sin(th)[:, None] * qh) / np.sqrt(1.0 + ln["kappa_l"] * c ** 2)
+    dev = _max_rel_dev(ln_hat(E, b, L.eps, xc + tau[:, None] * d), cf)
+    return dict(s_star=float(ln["s_star"]), r_star_l=float(rs), r_eff_l=float(ln["r_eff"]),
+                kappa_l=float(ln["kappa_l"]), T=float(T), n_grid=int(n_grid), max_rel_dev=dev)
+
+
+def data_line_rows(n, n_lines=10, rng_seed=0):
+    """D7 (4): "10 lines along d₁, one through each of 10 data states. The states are
+    the rows numpy.random.default_rng(0).choice(n, 10, replace=False), in the row order
+    of (3)." """
+    return np.random.default_rng(rng_seed).choice(n, n_lines, replace=False)
+
+
+# --------------------------------------------------------------------------- #
+# D6 (g): end-to-end susceptibility                                             #
+# --------------------------------------------------------------------------- #
 
 
 def jvp_norms(f, X, d, batch=4096):
@@ -391,29 +552,28 @@ def jvp_norms(f, X, d, batch=4096):
     return np.concatenate(out)
 
 
-def susceptibility(L, E, b, d, X, outputs, n_grid=2001, t_range=3.0, cor1_rtol=1e-10):
-    """D6 (g) for one direction d (unit, layer-input coordinates). E, b: layer 1.
+def susceptibility(L, d, t, info, outputs, t_range=3.0):
+    """D6 (g) for one direction d (unit, layer-input coordinates), on the grid t of
+    corollary1_g_line (whose check has already passed).
+
+    D6 (g), Reported per checkpoint, direction and output: "‖g′(0)‖; S = ‖g′(0)‖ /
+    r*(d), with the r_eff(d) version ‖g′(0)‖ / r_eff(d) beside it [...]; the peak ‖J(t)‖
+    over the grid points with |t| ≤ 3·r_eff(d), and the t where it occurs; the median
+    over data states of ‖J(x_i) d‖ with a = 0, and a secondary version using each
+    state's recorded executed action; the ratio of the peak to that median (a = 0)."
+    with g′(θ) = J(t) · (r*(d)² + t²) / r*(d).
 
     outputs: {name: (f_line, {key: (f_data, rows, direction)})}. f_line maps a layer
-    input (k,) to the output, with the action fixed at a = 0 for the dynamics; it is
-    evaluated along the line. Each data set gives a function of one row, the rows
-    and the direction to differentiate along: for the a = 0 version the rows are
-    the states x_i and the direction d; for the recorded-action version the rows are
-    [x_i, a_i] and the direction [d, 0], so the action is held fixed.
-    Returns the Corollary 1 check and, per output: ‖g′(0)‖, S = ‖g′(0)‖ / r*(d),
-    ‖g′(0)‖ / r_eff(d), the peak ‖J(t)‖ over grid points with |t| ≤ 3·r_eff(d) and
-    its t, the medians over data states, and the ratio of the peak to the median.
+    input (k,) to the output, with the action fixed at a = 0 for the dynamics. For
+    the a = 0 version the rows are the states x_i (all 25,050, D7 (6)) and the
+    direction d; for the recorded-action version the rows are [x_i, a_i] (the 25,000
+    states with an executed action, D7 (6)) and the direction [d, 0].
     """
     d = np.asarray(d, np.float64)
-    t, info = theta_grid(L, d, X, n_grid, t_range)
     line = L.z_star + t[:, None] * d
-    hh = ln_hat(E, b, L.eps, line)
-    cf = corollary1(L, d, t)
-    dev = float(np.max(np.linalg.norm(hh - cf, axis=-1) / np.linalg.norm(cf, axis=-1)))
-    res = dict(T=info["T"], r_star=info["r_star"], r_eff=info["r_eff"], n_grid=n_grid,
-               cor1_max_rel_dev=dev, cor1_ok=bool(dev <= cor1_rtol), out={})
     rs = info["r_star"]
     near = np.abs(t) <= t_range * info["r_eff"]
+    res = {}
     for name, (f_line, data_sets) in outputs.items():
         Jn = jvp_norms(f_line, line, d)
         J0 = float(jvp_norms(f_line, L.z_star[None], d)[0])
@@ -427,6 +587,5 @@ def susceptibility(L, E, b, d, X, outputs, n_grid=2001, t_range=3.0, cor1_rtol=1
             o[f"median_J_{key}"] = float(np.median(jvp_norms(f_d, rows, dvec)))
             o[f"n_{key}"] = int(len(rows))
         o["peak_over_median_a0"] = o["peak_J"] / o["median_J_a0"]
-        res["out"][name] = o
-    res["t"] = t
+        res[name] = o
     return res

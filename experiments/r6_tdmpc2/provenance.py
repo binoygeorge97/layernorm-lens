@@ -29,7 +29,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 
 TAGS = [("prereg-r6", "prereg/r6.md"), ("prereg-r6-d1", "prereg/r6-deviations.md"),
         ("prereg-r6-d2", "prereg/r6-deviations-2.md"),
-        ("prereg-r6-d3", "prereg/r6-deviations-3.md")]
+        ("prereg-r6-d3", "prereg/r6-deviations-3.md"),
+        ("prereg-r6-d4", "prereg/r6-deviations-4.md")]
 D6_TAG, D6_PATH = "prereg-r6-d3", "prereg/r6-deviations-3.md"
 N_CHECKPOINTS = 15
 
@@ -60,6 +61,31 @@ def require_prereg(tags=TAGS, cwd=ROOT):
                                   "an annotated tag is required.")
         if git("diff", "--quiet", tag, "--", path, cwd=cwd)[0] != 0:
             raise ProvenanceError(f"refusing to run: {path} differs from the version tagged {tag}.")
+
+
+def require_tags_on_origin(tags=TAGS, remote="origin", cwd=ROOT):
+    """Refuse unless every tag is on `remote`, annotated there (a peeled ^{} ref
+    exists), with the same tag object as the local tag. Returns {tag: tag object}."""
+    rc, out = git("ls-remote", "--tags", remote, cwd=cwd)
+    if rc != 0:
+        raise ProvenanceError(f"refusing to run: git ls-remote --tags {remote} failed.")
+    refs = {}
+    for ln in out.splitlines():
+        if "\t" in ln:
+            sha, ref = ln.split("\t", 1)
+            refs[ref] = sha
+    found = {}
+    for tag, _ in tags:
+        local = git("rev-parse", f"refs/tags/{tag}", cwd=cwd)[1]
+        there = refs.get(f"refs/tags/{tag}")
+        if there is None:
+            raise ProvenanceError(f"refusing to run: tag {tag} is not on {remote}.")
+        if f"refs/tags/{tag}^{{}}" not in refs:
+            raise ProvenanceError(f"refusing to run: {tag} on {remote} is not an annotated tag.")
+        if there != local:
+            raise ProvenanceError(f"refusing to run: {tag} on {remote} is {there}, locally {local}.")
+        found[tag] = there
+    return found
 
 
 def tag_objects(tags=TAGS, cwd=ROOT):

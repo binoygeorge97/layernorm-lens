@@ -53,7 +53,7 @@ Gate G3 (13 Nov): every main-text claim backed.
 
 | File | What it does |
 | --- | --- |
-| `config.yaml` | Tasks (cartpole-swingup, cheetah-run, walker-run, humanoid-run, dog-run), seeds 1–3, tdmpc2 commit e9f59321, HF revision 8fb2a82, layouts survey (D5), consistency (D3), planner_check, d4_regeneration, planner_collect and (WIP) criterion sections |
+| `config.yaml` | Tasks (cartpole-swingup, cheetah-run, walker-run, humanoid-run, dog-run), seeds 1–3, tdmpc2 commit e9f59321, HF revision 8fb2a82, layouts survey (D5), consistency (D3), planner_check, d4_regeneration, planner_collect and criterion sections |
 | `layouts.py` | The two checkpoint layouts (D5): `detect_layout`, `check_first_layer`, numpy float64 networks `build_public` / `build_prerelease` / `build_networks`, D3 input candidates `input_candidates` (identity, symlog, LayerNorm without affine) |
 | `extract.py` | Stages `list`, `extract`, `lens`: list and download checkpoints, save first-layer E, b, γ, β, ε to `results/r6/weights/`, lens to `results/r6/lens/` and `lens_summary.csv`. Requires tag prereg-r6 |
 | `collect.py` | Stages `collect` (D4 policy-prior data, CPU) and `consistency` (D3 latent-consistency test, plus D5 calibration). `consistency_errors()` is D3's computation |
@@ -62,7 +62,7 @@ Gate G3 (13 Nov): every main-text claim backed.
 | `provenance.py` | Standard library only: `require_prereg` (annotated tags + file match), `d6_sha_table` (read from the tag), `sha256`, `download_verified`, `write_manifest`, `compare_csv`, `git_add_command` |
 | `planner_lib.py` | D6 key remap (`PRERELEASE_REMAP`, `remap_keys`), `public_shapes`, planner input (symlog), encoder agreement gate (`random_states`, `relative_errors`, `gate_rule`, `control_outcomes`, `halts`), d₁ and worst-state lens distances |
 | `planner_collect.py` | D6 (a), (b), (e) collector: 15 checkpoints through tdmpc2's `TDMPC2`, controls and gate, 50 episodes each, Drive copy, manifests, `git add -f` summary. `--smoke` for 1 episode |
-| `criterion_lib.py`, `criterion.py` | **WIP (eb8835a), not reviewed, never run on data**: criterion stage (open task (c)) |
+| `criterion_lib.py`, `criterion.py` | Criterion stage (task (c)): pure rules in `criterion_lib.py`, inputs, the six steps and outputs in `criterion.py` |
 | `r6_colab.ipynb` | Original CPU pipeline notebook (extract, collect, consistency) |
 | `r6_planner_check.ipynb`, `r6_d4_regeneration.ipynb`, `r6_planner_collect.ipynb` | Colab runners for the corresponding scripts |
 
@@ -75,7 +75,7 @@ python experiments/r6_tdmpc2/collect.py --config experiments/r6_tdmpc2/config.ya
 python experiments/r6_tdmpc2/planner_check.py --config experiments/r6_tdmpc2/config.yaml        # GPU, tdmpc2 env
 python experiments/r6_tdmpc2/regenerate_d4.py ...                                               # see its docstring
 python experiments/r6_tdmpc2/planner_collect.py --config experiments/r6_tdmpc2/config.yaml --drive DIR [--smoke]   # GPU, tdmpc2 env
-python experiments/r6_tdmpc2/criterion.py --config experiments/r6_tdmpc2/config.yaml --drive DIR   # WIP: do not run before review
+python experiments/r6_tdmpc2/criterion.py --config experiments/r6_tdmpc2/config.yaml --drive DIR   # laptop, float64
 ```
 
 ### Tests
@@ -89,7 +89,7 @@ regression in tolerance mode: `LENS_TOL=1 python -m pytest -q tests/test_core_re
 | `test_lens.py` | `lens/geometry.py`, Theorem 1 |
 | `test_d4_regeneration.py` | `regenerate_d4.py` logic |
 | `test_planner_collect.py` | remap, gate rule, controls, halting, manifests (no checkpoints or GPU needed) |
-| `test_criterion.py` | WIP criterion stage, synthetic arrays only |
+| `test_criterion.py` | criterion stage, synthetic arrays only |
 
 ## 3. Branches, merge policy, tags
 
@@ -185,9 +185,9 @@ quantity D6 itself recorded.
 
 | Environment | Where | Versions | Used for |
 | --- | --- | --- | --- |
-| CPU pipeline | Colab CPU | Python 3.13.15, jax/jaxlib 0.10.2, numpy 2.4.6, scipy 1.17.1, torch 2.14.0+cpu, mujoco 3.14.0, dm_control 1.0.47 (installed without labmaze for the regeneration), PyYAML 6.0.1 (`meta_d4_regeneration.json`) | extract, collect (D4), consistency (D3), D4 regeneration; the criterion stage is to run here too |
+| CPU pipeline | Colab CPU | Python 3.13.15, jax/jaxlib 0.10.2, numpy 2.4.6, scipy 1.17.1, torch 2.14.0+cpu, mujoco 3.14.0, dm_control 1.0.47 (installed without labmaze for the regeneration), PyYAML 6.0.1 (`meta_d4_regeneration.json`) | extract, collect (D4), consistency (D3), D4 regeneration; the D7 (8) rerun of the criterion stage if anything is borderline |
 | Planner | Colab Tesla T4, CUDA 12.6 | tdmpc2 e9f59321's pinned env (`docker/environment.yaml`) in a Python 3.11.16 uv virtualenv: torch 2.7.1+cu126, tensordict 0.8.3, torchrl 0.8.1, mujoco 3.1.2, dm_control 1.0.16, numpy 1.24.4, gymnasium 0.29.1, hydra-core 1.3.2, omegaconf 2.3.0 (planner metas) | planner_check, planner_collect. No JAX; our float64 work there is numpy |
-| Laptop | Windows, VS Code + Claude Code, `.venv/` (git-ignored) | Recorded 3 Oct 2026, see section 7. Install `requirements.txt` (jax 0.10.2, numpy 2.4.6, scipy 1.17.1, PyYAML 6.0.1, pytest 9.1.1, matplotlib 3.11.2) and, for R6 work, `requirements-r6.txt` (torch 2.14.0 CPU first, from its own index). Record the versions on first use. The core regression is bit-exact only in the golden environment, so use `LENS_TOL=1` | development, tests |
+| Laptop | Windows, VS Code + Claude Code, `.venv/` (git-ignored) | Recorded 3 Oct 2026, see section 7. Install `requirements.txt` (jax 0.10.2, numpy 2.4.6, scipy 1.17.1, PyYAML 6.0.1, pytest 9.1.1, matplotlib 3.11.2) and, for R6 work, `requirements-r6.txt` (torch 2.14.0 CPU first, from its own index). Record the versions on first use. The core regression is bit-exact only in the golden environment, so use `LENS_TOL=1` | development, tests, the criterion stage (D7 (8)) |
 
 Source code: tdmpc2 is cloned to `checkpoints/tdmpc2_src` at
 e9f59321933cbc8e11a002b842adc7d4ffae8ff1. Checkpoints come from
@@ -242,36 +242,25 @@ run only cartpole-swingup s1 acts, so humanoid-run s3's smoke mapping was writte
 locally and never copied. Its `planner/` copy reached Drive because humanoid-run
 s3 acted in the full run.
 
-**(c) Criterion stage.** D6 (b) condition (ii) for cartpole s1 on the planner data,
-plus the record-only value on the D4 data; the humanoid s3 label; the D6 (c)
-calibration; Inside, Populated and Sharp for all 15 checkpoints exactly as r6.md
-and the deviations define them (symlog coordinates for the pre-release files); G1
-from the counting checkpoints; D6 (g) susceptibility (reported only). It runs on a
-Colab CPU runtime, reads planner observations from Drive after checking each
-SHA-256 against `planner_obs_manifest.csv`, writes to `results/r6/criterion/` with
-meta, and prints `git add -f`. **The author reviews the code before anything
-runs.** A draft is in eb8835a (`criterion_lib.py`, `criterion.py`,
-`tests/test_criterion.py`, config section). Questions put to the author and not
-yet answered:
-1. D3's "within 10%" rule (count toward G1 only if the criterion holds under both
-   readings) under D6: apply it with symlog in identity's place? The draft reports
-   it but does not apply it.
-2. Condition (ii)'s e₀: symlog's own e₀, as `consistency.csv` computes e/e₀ and D6
-   quotes it (0.020)?
-3. Populated's subsample indexes rows in stored order (env seed, episode, step;
-   n = 25,050), and its 95th percentile uses numpy's default linear method. OK?
-4. r6.md's "Corollary 1 identity check on the real layer along lines through the
-   data": the draft checks only along (g)'s lines through z*. Add lines through μ
-   along d₁ and d₂? Also record TD-MPC2's initialisation code (`common/init.py`)
-   in the meta.
-5. humanoid s3 in symlog only (D6 (b)), rather than under every candidate (D5)?
-6. The recorded-action median uses the 25,000 states that have an executed action;
-   the encoder output has one median. OK?
-7. Eigenvectors' sign: the largest-magnitude component is positive. This affects
-   only the sign of t at the peak.
+**(c) Criterion stage.** Code reviewed and approved by the author on 3 Oct 2026,
+after the seven questions were settled by D7 (`prereg/r6-deviations-4.md`, tag
+`prereg-r6-d4`). `criterion.py` runs on the laptop in float64 (D7 (8)). It refuses
+to run unless the five annotated tags are present locally and on origin, the
+prereg files match them, and the working tree is clean. It verifies every planner
+observation file (kind `data` rows only) and every D4 file against the committed
+manifests on Drive, with D7 (3)'s order check. It then runs, in order: (1) the
+Corollary 1 checks, D7 (4) and D6 (g), stopping on any line above 1e-10; (2) D6 (b)
+condition (ii) with D7 (2), the record-only D4 value, the humanoid s3 label and the
+D6 (c) calibration; (3) Inside, Populated and Sharp for all 15 checkpoints, under
+all three readings for the pre-release files (D7 (5)); (4) the D7 (1) tie rule, the
+counting checkpoints and G1; (5) D6 (g), reported only; (6) the D7 (8) borderline
+scan, which marks the stage "pending Colab rerun" if anything lies within 1% of its
+threshold. Outputs go to `results/r6/criterion/`, are copied to Drive and verified
+there, and the stage prints the `git add -f` list. Tests: `tests/test_criterion.py`
+(synthetic only).
 
 **(d)** Add the printed `git add -f` listing to `extract.py`, `collect.py` and
-`planner_check.py` (planner_collect, regenerate_d4 and the criterion draft already
+`planner_check.py` (planner_collect, regenerate_d4 and the criterion stage already
 print one).
 
 **(e)** Session 3: the quadrotor simulator (`plants/quadrotor.py`; 12 states, 4

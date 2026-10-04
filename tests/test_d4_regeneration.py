@@ -151,6 +151,44 @@ def test_git_decodes_utf8(tmp_path):
     assert rc == 0 and out == (_UTF8_TEXT + rows).strip()
 
 
+def _origin(tmp_path):
+    """A repo with annotated tags t1, t2 pushed to a bare remote 'origin'."""
+    import subprocess
+    run = ["git", "-c", "user.name=test", "-c", "user.email=test@example.com", "-c", "core.autocrlf=false"]
+    bare, repo = tmp_path / "origin.git", tmp_path / "work"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True, capture_output=True)
+    repo.mkdir()
+    (repo / "f.md").write_text("x\n", encoding="utf-8")
+    for args in (["init", "-q"], ["add", "f.md"], ["commit", "-q", "-m", "c"],
+                 ["tag", "-a", "t1", "-m", "t1"], ["tag", "-a", "t2", "-m", "t2"],
+                 ["remote", "add", "origin", str(bare)], ["push", "-q", "origin", "--tags"]):
+        subprocess.run(run + args, cwd=repo, check=True, capture_output=True)
+    return repo, run
+
+
+def test_tags_on_origin(tmp_path):
+    import subprocess
+    repo, run = _origin(tmp_path)
+    tags = [("t1", "f.md"), ("t2", "f.md")]
+    got = pv.require_tags_on_origin(tags, cwd=repo)
+    assert got == {t: pv.git("rev-parse", t, cwd=repo)[1] for t, _ in tags}
+    with pytest.raises(pv.ProvenanceError, match="not on origin"):
+        pv.require_tags_on_origin([("t3", "f.md")], cwd=repo)
+    # a lightweight tag on origin is refused
+    for args in (["tag", "t4"], ["push", "-q", "origin", "t4"]):
+        subprocess.run(run + args, cwd=repo, check=True, capture_output=True)
+    with pytest.raises(pv.ProvenanceError, match="not an annotated tag"):
+        pv.require_tags_on_origin([("t4", "f.md")], cwd=repo)
+    # a local tag that differs from origin's is refused
+    subprocess.run(run + ["tag", "-f", "-a", "t1", "-m", "moved"], cwd=repo, check=True, capture_output=True)
+    with pytest.raises(pv.ProvenanceError, match="locally"):
+        pv.require_tags_on_origin(tags, cwd=repo)
+
+
+def test_tags_include_d7():
+    assert ("prereg-r6-d4", "prereg/r6-deviations-4.md") in pv.TAGS and len(pv.TAGS) == 5
+
+
 def test_d6_table_decodes_utf8(tmp_path):
     repo, _ = _repo_with_d6_tag(tmp_path)
     table = pv.d6_sha_table(cwd=repo)
