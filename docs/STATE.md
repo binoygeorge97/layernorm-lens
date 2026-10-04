@@ -292,11 +292,11 @@ derives 21,702.6 from thrust-to-weight with g = 9.8 (hover 14,468.4).
 **(g) Then `prereg/p1.md`**, written and tagged before any P-I outcome is computed. It
 will include a prospective test of lens migration and widening during training.
 
-**(h) Console log of the main planner session.** The author is saving the Colab
-cell-7 output as `results/r6/planner/logs/console_20260927T141627Z.txt` (with the
-torch._dynamo recompile_limit (8) warning at 14:51:36 UTC, walker-run s1). It was not
-on disk on 3 Oct 2026. When it is: commit it (`git add -f`) and update
-`results/r6/planner/PROVENANCE-2026-10-03.md` to cite it.
+**(h) Console log of the main planner session.** Done:
+`results/r6/planner/logs/console_20260927T141627Z.txt` is the author's transcription of
+the Colab cell-7 output. It was verified episode by episode against the stored rewards
+(700 returns, 14 means; no mismatch). The provenance note's 4 Oct addendum cites it for
+the recompile_limit (8) warning (14:51:36 UTC, walker-run s1).
 
 **(f) Colab notebooks' `BRANCH`.** Done: each of the four notebooks now opens with a
 marked `BRANCH` parameter cell, set to `r6-criterion`.

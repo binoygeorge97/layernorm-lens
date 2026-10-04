@@ -120,3 +120,31 @@ ref = open("results/r6/planner/key_mapping_humanoid-run-seed3.json", "rb").read(
 assert b == ref, "differs"
 print(hashlib.sha256(b).hexdigest())
 ```
+
+## Addendum, 4 October 2026: the session's console log
+
+`results/r6/planner/logs/console_20260927T141627Z.txt` (SHA-256 d11f3774a1deacd8fd98d6fb3e2033681527bc782b0956061d1b81e81144a0a0) is the author's
+transcription of the Colab cell-7 output of session 20260927T141627Z. It was made from
+a copy pasted into the author's advisor chat; the runtime itself is gone. It covers the
+14 checkpoints collected in that session. cartpole-swingup s2, from the earlier session
+20260925T214748Z, is not in it.
+
+It was verified against the data on 4 Oct 2026, with each planner observation file
+first checked on Drive against its SHA-256 in `planner_obs_manifest.csv`:
+
+- Every printed episode return (700 lines: 14 checkpoints × 50 episodes) equals the sum
+  of that episode's stored rewards, matched by `env_seed` and `episode_in_seed`, at the
+  printed 0.1.
+- Every printed mean return, published return and fraction (14 lines) matches its
+  kind `data` row of `planner_returns.csv`.
+- Every printed episode time equals the meta's `seconds_per_episode` at the printed
+  0.1 s.
+
+There were no mismatches.
+
+The recompile-limit warning is in the log, lines 257-261, at 14:51:36 UTC. It appears
+after walker-run s1 was loaded and before that checkpoint's first episode line:
+`torch._dynamo hit config.recompile_limit (8)`, function `inner`, last reason
+`0/7: ___check_obj_id(kwargs['t0'], ...)`. This supersedes section 2's statement that
+no committed file records the message. The compiled/eager split in section 2's table
+stands, and the log now backs it alongside the per-episode times.
