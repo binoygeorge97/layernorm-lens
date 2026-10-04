@@ -526,16 +526,23 @@ def load_checkpoint(cfg, table, task, seed):
     return sd, (None if mods is None else sorted(mods.keys())), sha
 
 
-def check_lens(cfg, L, task, seed):
-    """The recomputed lens must equal the lens stage's (results/r6/lens)."""
+def check_lens(cfg, L, task, seed, rtol=1e-12):
+    """The recomputed lens must equal the lens stage's (results/r6/lens) to rtol: z*
+    norm-wise (‖Δz*‖ ≤ rtol·‖z*‖; elementwise, a near-zero component of a vector solved
+    from an ill-conditioned A fails on rounding alone), ‖c⊥‖ and κ as scalars, the
+    principal widths elementwise. The observed relative differences are returned."""
     p = os.path.join(ROOT, cfg["paths"]["lens_out"], f"{name_of(task, seed)}.npz")
     ref = np.load(p)
-    pairs = dict(z_star=L.z_star, norm_c_perp=L.norm_c_perp, kappa=L.kappa,
-                 principal_widths=L.principal_widths)
-    bad = [k for k, v in pairs.items() if not np.allclose(v, ref[k], rtol=1e-12, atol=0)]
+    diff = dict(z_star=float(np.linalg.norm(L.z_star - ref["z_star"]) / np.linalg.norm(ref["z_star"])),
+                norm_c_perp=float(abs(L.norm_c_perp - ref["norm_c_perp"]) / abs(ref["norm_c_perp"])),
+                kappa=float(abs(L.kappa - ref["kappa"]) / abs(ref["kappa"])),
+                principal_widths=float(np.max(np.abs(L.principal_widths - ref["principal_widths"])
+                                              / np.abs(ref["principal_widths"]))))
+    bad = [k for k, v in diff.items() if not v <= rtol]
     if bad:
-        die(f"{task} seed {seed}: lens differs from {p} in {bad}.")
-    return dict(file=os.path.relpath(p, ROOT).replace(os.sep, "/"), sha256=pv.sha256(p))
+        die(f"{task} seed {seed}: lens differs from {p} in {bad}: relative differences {diff}.")
+    return dict(file=os.path.relpath(p, ROOT).replace(os.sep, "/"), sha256=pv.sha256(p),
+                rel_diff=diff, rtol=rtol)
 
 
 def tdmpc2_init_record(cfg):

@@ -645,6 +645,32 @@ def test_d4_inputs(tmp_path):
         crit.d4_inputs(cfg, str(drive), [("cartpole-swingup", 1)])
 
 
+def _saved_lens(tmp_path, L, **over):
+    vals = dict(z_star=L.z_star, norm_c_perp=L.norm_c_perp, kappa=L.kappa, principal_widths=L.principal_widths)
+    vals.update(over)
+    np.savez(tmp_path / "cartpole-swingup-seed1.npz", **vals)
+    cfg = copy.deepcopy(CFG)
+    cfg["paths"]["lens_out"] = str(tmp_path)
+    return cfg
+
+
+def test_check_lens_compares_z_star_norm_wise(tmp_path):
+    E, b = _layer(k=5)
+    L = geo.lens(E, b, 1e-5)
+    z = L.z_star.copy()
+    i = int(np.argmin(np.abs(z)))
+    z[i] += 1e-14 * np.linalg.norm(z)  # large relative change of the smallest component, 1e-14 norm-wise
+    cfg = _saved_lens(tmp_path, L, z_star=z)
+    r = crit.check_lens(cfg, L, "cartpole-swingup", 1)
+    assert r["rel_diff"]["z_star"] == pytest.approx(1e-14, rel=1e-3) and r["rtol"] == 1e-12
+    cfg = _saved_lens(tmp_path, L, z_star=L.z_star * (1 + 1e-10))
+    with pytest.raises(SystemExit):
+        crit.check_lens(cfg, L, "cartpole-swingup", 1)
+    cfg = _saved_lens(tmp_path, L, principal_widths=L.principal_widths * (1 + 1e-10))
+    with pytest.raises(SystemExit):
+        crit.check_lens(cfg, L, "cartpole-swingup", 1)
+
+
 def test_tdmpc2_init_record_reads_the_commit(tmp_path):
     import hashlib
     import subprocess
