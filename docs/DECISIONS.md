@@ -292,7 +292,7 @@ the task, the choice, the reasoning, and the alternatives rejected.
     - Upper bounds, every run to its full budget: 30.2 h for the 40-model grid at
       100,000 steps, and 24.5 h for the long-budget subset at 500,000 steps.
     - **Long budget: 500,000 steps**, 5× the 40 runs' maximum. Even a run that never
-      stops early is then trained 5× past its early-stopping budget, at about 2.5 h per
+      stops early is then trained to 5× its early-stopping budget, at about 2.5 h per
       run and 24.5 h for the subset on the laptop.
     - Rejected:
       - 300,000 steps (3×; cheaper, but little room past a late stop);
@@ -317,3 +317,31 @@ the task, the choice, the reasoning, and the alternatives rejected.
     - Rejected: drawing the inputs with `p1_data.sample` on the quadrotor's box (same
       distribution, but it would put P-I's own sampling code in front of a lens
       computation before the tag).
+
+## 2026-10-04, second queue: the p1 draft, v2
+
+35. **Predictions 1–4 are now the amendments' item 3, quoted exactly**
+    (`docs/protocol_amendments_v3.md`, d6b822b). v1's reconstructions are withdrawn:
+    - v1's prediction 3 (hover damage) becomes H1, the ledger's "wrong in sign or
+      stability" claim, in the hover-check section;
+    - its paired zero-bias against PyTorch-default comparison is reported;
+    - v1's prediction 4 (Corollary 1 on trained models) becomes a pipeline check, as
+      plan.md lists it under "Measure", and a failure is a code error.
+    - Rejected: keeping v1's numbering, which would not match the numbering the
+      amendments, and so the paper, use.
+
+36. **Every open choice in the draft is a numbered decision (D1–D18), each with a
+    recommendation, its reasoning and the alternatives.** They are not repeated here.
+    The substantive proposals:
+    - u_min is the primary direction (D6);
+    - "affected" means an error above 3× the model's own far-set median (D9);
+    - prediction 4's ratio is taken along u_min, with 0.2 checked within a factor of 2
+      (D10);
+    - prediction 5 is evaluated at the end, with the long-budget subset as the primary
+      test (D11);
+    - the race is reported, not tested (D13);
+    - H1 is pre-registered, and the hover trims are 200 fixed no-drag trims (D16).
+
+    The draft's operationalisations are already implemented in `run.py`. The exceptions
+    wait for D16: H1's cell rule (its per-model quantities, sign agreement and
+    stability, are already computed) and the trims.
