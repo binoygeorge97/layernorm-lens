@@ -39,14 +39,23 @@ grid:                       # plan.md: 2 x 2 x H 128 x {1, 3} blocks x 5 seeds =
   eps: 1.0e-5
   branch_width: 128         # prenorm branch MLP hidden width (OPEN; = H)
 
-training:                   # plan.md "Common rules"
+training:                   # plan.md "Common rules"; the 40-model grid
   lr: 3.0e-3
-  max_steps: 100000         # the converged budget
-  eval_every: 500
+  max_steps: 100000         # plan.md's converged budget (minibatch steps); early stopping usually ends sooner
+  eval_every: 500           # fixed evaluation interval: held-out one-step MSE on the FULL validation set
   patience_frac: 0.1        # early stopping: patience 10% of steps
   tol: 0.01                 #   tolerance 1% on held-out one-step MSE
-  batch_size: null          # full batch (lens/core.py's convention)
-  log_every: 500            # lens logging (z*, r*, kappa, widths, S)
+  batch_size: 2048          # minibatch Adam (author, 4 Oct 2026); distinct rows, drawn afresh each step; null = full batch
+  log_every: 500            # lens logging (z*, r*, kappa, widths, S; d1 and u_min)
+
+long_budget:                # prediction 5's long-budget subset (p1 draft): 10 runs, early stopping disabled
+  archs: [prenorm, normedlinear]
+  inits: [zero_bias]
+  n_blocks: [1]
+  seeds: [0, 1, 2, 3, 4]
+  max_steps: 500000         # proposed from the minibatch benchmark (results/p1/benchmark_bs2048/)
+  log_every: 500            # the lens throughout
+  snapshot_every: 10000     # parameter snapshots, for prediction 1's statistic over training (analyse_long)
 
 analysis:
   jacobian_error: rel_fro   # OPEN: per-state ||J_s - J||_F / ||J||_F, standardised coordinates
@@ -54,8 +63,16 @@ analysis:
   far_frac: 0.5             # vs 50% farthest
   stat: median              # OPEN
   directions: [d1, u_min]
+  affected_factor: 3.0      # prediction 3: a test state is affected if its error > 3 x the far set's median
+  r_star_init: {n_directions: 64, rng_seed: 0}   # prediction 2: median r*(d) at initialisation (convention 4)
   corollary1: {n_state_lines: 10, rng_seed: 0, n_grid: 2001, t_range: 3.0}
   attenuation: {n_grid: 4001, t_range: 3.0}
+
+p5:                         # prediction 5 (p1 draft), along u_min: ratio = r_eff(u_min)/D(u_min)
+  fold: 10.0                #   ratio_end >= 10 x ratio at step 0
+  floor: 0.1                #   and ratio_end >= 0.1
+  kappa_max: 0.1            #   and kappa_end <= 0.1
+  min_seeds: 4              #   in at least 4 of 5 seeds per cell
 
 hover:
   sign_rel_threshold: 1.0e-3   # OPEN: sign agreement on entries with |truth| > thr * max|truth|
@@ -66,3 +83,4 @@ benchmark:                     # random targets only (not quadrotor data); not g
   n_val: 5000
   steps: 1000
   seed: 0
+  out: benchmark_bs2048     # under results/p1/; the full-batch benchmark (08d1deb) is in benchmark/

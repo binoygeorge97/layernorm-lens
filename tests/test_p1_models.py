@@ -138,3 +138,58 @@ def test_lens_logging():
     S = np.linalg.norm(np.asarray(jax.jvp(lambda z: models.forward(spec, p0, z), (jnp.asarray(L.z_star),),
                                           (jnp.asarray(d),))[1]))
     assert rec["S_d1"] == pytest.approx(S)
+
+
+def test_minibatch_size_is_checked_and_patience_can_be_disabled():
+    spec = _spec()
+    data = _linear_data()
+    p0 = models.init_params(spec, 0)
+    with pytest.raises(ValueError):
+        tr.train(spec, p0, data, dict(max_steps=100, eval_every=50, log_every=0, batch_size=401))
+    # patience_frac None: a fixed budget, even with lr = 0 (no evaluation ever improves)
+    seen = []
+    p, hist, info = tr.train(spec, p0, data, dict(lr=0.0, max_steps=1000, eval_every=250, log_every=0,
+                                                 patience_frac=None, batch_size=64),
+                             on_eval=lambda step, pp: seen.append(step))
+    assert info["patience"] is None and info["stopped_step"] == 1000 and not info["stopped_early"]
+    assert seen == [0, 250, 500, 750, 1000]
+
+
+def test_minibatches_are_the_same_for_both_initialisations_of_a_seed():
+    """The minibatch stream depends only on the run's seed and the step, so the paired
+    arms (shared weights) also see the same batches."""
+    data = _linear_data()
+    out = []
+    for init in ("zero_bias", "torch_default"):
+        spec = _spec(init=init)
+        p0 = models.init_params(spec, 2)
+        p0 = dict(p0, b=jnp.zeros_like(p0["b"]), b1_0=jnp.zeros_like(p0["b1_0"]), b2_0=jnp.zeros_like(p0["b2_0"]),
+                  bo=jnp.zeros_like(p0["bo"]))
+        p, _, _ = tr.train(spec, p0, data, dict(lr=1e-2, max_steps=200, eval_every=100, log_every=0, batch_size=32,
+                                                patience_frac=None, seed=2))
+        out.append(p)
+    assert all(np.array_equal(out[0][k], out[1][k]) for k in out[0])
+
+
+def test_lens_record_along_u_min():
+    from lens import analysis as an
+    spec = _spec(H=16, k=3)
+    p0 = models.init_params(spec, 1)
+    Z = np.random.default_rng(0).uniform(-np.sqrt(3), np.sqrt(3), (500, 3))
+    rec = tr.lens_record(spec, p0, None, None, Z)
+    E, b = models.first_layer(spec, p0)
+    L = geo.lens(np.asarray(E), np.asarray(b), spec.eps)
+    u = an.u_min(L)
+    assert np.array_equal(rec["u_min"], u)
+    assert rec["D_u_min"] == an.half_width(Z, u)[0]
+    assert rec["r_eff_u_min"] == pytest.approx(np.sqrt(L.norm_c_perp ** 2 + L.H * L.eps) / L.sing[0], rel=1e-12)
+    assert rec["r_eff_over_D_u_min"] == pytest.approx(rec["r_eff_u_min"] / rec["D_u_min"], rel=1e-15)
+    assert rec["r_eff_over_D_u_min"] * rec["D_over_r_eff_u_min"] == pytest.approx(1.0, rel=1e-14)
+    # u_min is the narrowest principal direction: no unit direction has a smaller r_eff
+    d = np.random.default_rng(1).standard_normal((200, 3))
+    d /= np.linalg.norm(d, axis=1, keepdims=True)
+    assert min(geo.line(L, dj)["r_eff"] for dj in d) >= rec["r_eff_u_min"] * (1 - 1e-12)
+    # in the training history, every logged step carries u_min
+    data = _linear_data()
+    _, hist, _ = tr.train(spec, p0, data, dict(lr=1e-2, max_steps=200, eval_every=100, log_every=100), lens_Z=data["Z"])
+    assert all("r_eff_over_D_u_min" in h and h["u_min"].shape == (3,) for h in hist)

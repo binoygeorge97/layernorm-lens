@@ -5,6 +5,7 @@ surrogate of the quadrotor: the end-to-end tests use a synthetic linear plant wi
 quadrotor's dimensions (12 states, 4 inputs)."""
 
 import copy
+import json
 import os
 import subprocess
 import sys
@@ -61,7 +62,8 @@ def _small_cfg():
     cfg = copy.deepcopy(CFG)
     cfg["sampling"].update(n_train=400, n_val=100, n_test=100)
     cfg["grid"].update(H=32, branch_width=16, seeds=[0])  # H > k = 16 (rank A = k; theory.md Remark 1b)
-    cfg["training"].update(max_steps=400, eval_every=100, log_every=200)
+    cfg["training"].update(max_steps=400, eval_every=100, log_every=200, batch_size=64)
+    cfg["long_budget"].update(seeds=[0], max_steps=400, log_every=100, snapshot_every=200)
     cfg["analysis"]["corollary1"].update(n_state_lines=3, n_grid=201)
     cfg["analysis"]["attenuation"].update(n_grid=401)
     return cfg
@@ -285,15 +287,17 @@ def test_train_and_analyse_stages_on_the_synthetic_plant(synthetic, tmp_path):
     members = [m for m in prun.grid(cfg) if m[1].arch == "normedlinear" and m[1].n_blocks == 3][:2]
     rows = prun.stage_train(cfg, ds, str(tmp_path / "ck"), str(tmp_path / "res"), members)
     assert len(rows) == 2 and all(r["best_val"] < np.inf for r in rows)
-    for name, spec, _ in members:
+    for name, spec, seed in members:
         assert (tmp_path / "res" / "history" / f"{name}.csv").exists()
         h = np.load(tmp_path / "res" / "history" / f"{name}.npz")
         assert list(h["step"]) == [0, 200, 400] and h["z_star"].shape == (3, 16)
         p = prun.load_params(str(tmp_path / "ck" / f"{name}.npz"))
-        out = prun.analyse_one(cfg, spec, p, ds)
-        assert {"nf_ratio", "d1_sharpness", "u_min_coverage", "err_median"} <= set(out)
+        out = prun.analyse_one(cfg, spec, p, ds, seed)
+        assert {"nf_ratio", "d1_sharpness", "u_min_coverage", "err_median", "z_star_to_mean", "affected_frac",
+                "r_star_init_median", "attenuation_out", "u_min_attenuation_out"} <= set(out)
+        assert 0.0 <= out["affected_frac"] <= 1.0
         if not out["degenerate"]:
-            assert out["corollary1_max_rel_dev"] < 1e-10 and "attenuation_out" in out
+            assert out["corollary1_max_rel_dev"] < 1e-10
         r = prun.hover_one(cfg, spec, p, ds, plant, hx, hu)
         assert {"rel_err_A", "rel_err_B", "sign_agree_A"} <= set(r)
 
@@ -303,7 +307,7 @@ def test_benchmark_stage_runs_on_random_targets(tmp_path):
     cfg["benchmark"].update(n_train=200, n_val=50)
     members = [m for m in prun.grid(cfg) if m[2] == 0][:2]
     rows, summary = prun.stage_benchmark(cfg, str(tmp_path), members, steps=200)
-    assert len(rows) == 2 and all(r["seconds_per_step"] > 0 for r in rows)
+    assert len(rows) == 2 and all(r["seconds_per_step"] > 0 and r["lens_record_seconds"] > 0 for r in rows)
     assert (tmp_path / "benchmark.csv").exists() and summary["n_models"] == 2
 
 
@@ -312,3 +316,127 @@ def test_gated_stages_refuse_without_the_prereg_tag(stage):
     r = subprocess.run([sys.executable, os.path.join(P1, "run.py"), "--config", os.path.join(P1, "config.yaml"), stage],
                        capture_output=True, text=True, encoding="utf-8", cwd=ROOT)
     assert r.returncode != 0 and "prereg-p1" in (r.stderr + r.stdout)
+
+
+# --------------------------------------------------------------------------- #
+# the revision queue: minibatch default, long-budget subset, array runs, P5     #
+# --------------------------------------------------------------------------- #
+
+
+def test_config_training_defaults_and_long_budget_subset():
+    t = CFG["training"]
+    assert (t["batch_size"], t["eval_every"], t["patience_frac"], t["tol"], t["max_steps"]) == (2048, 500, 0.1, 0.01,
+                                                                                                100000)
+    g = prun.grid(CFG, "long_budget")
+    assert len(g) == 10 and {(s.arch, s.init, s.n_blocks, s.H) for _, s, _ in g} == {
+        (a, "zero_bias", 1, 128) for a in models.ARCHS}
+    tc = prun.train_cfg(CFG, 3, long=True)
+    assert tc["patience_frac"] is None and tc["max_steps"] == CFG["long_budget"]["max_steps"] and tc["seed"] == 3
+    assert CFG["long_budget"]["max_steps"] > t["max_steps"]
+
+
+def test_paths_redirect_outputs_but_not_the_manifest(tmp_path):
+    P = prun.paths(CFG, str(tmp_path))
+    assert P["data"].startswith(str(tmp_path)) and P["ck"].startswith(str(tmp_path)) and P["res"].startswith(str(tmp_path))
+    assert P["manifest"] == prun.paths(CFG)["manifest"] and P["manifest"].startswith(prun.ROOT)
+    assert prun.paths(CFG, str(tmp_path), str(tmp_path / "d"))["data"] == str(tmp_path / "d")
+
+
+@pytest.fixture(scope="module")
+def long_run(synthetic, tmp_path_factory):
+    _, _, _, _, _, ds, _ = synthetic
+    cfg = _small_cfg()
+    base = tmp_path_factory.mktemp("scratch")
+    members = prun.grid(cfg, "long_budget")
+    assert len(members) == 2  # 2 architectures x 1 seed
+    rows = prun.stage_train(cfg, ds, str(base / "ck" / "long"), str(base / "res" / "train_long"), members[:1],
+                            long=True, base=str(base), summary=False)
+    return cfg, ds, base, members, rows
+
+
+def test_long_run_snapshots_history_and_manifest(long_run):
+    cfg, ds, base, members, rows = long_run
+    name = members[0][0]
+    assert rows[0]["stopped_step"] == 400 and not rows[0]["stopped_early"]
+    assert sorted(os.listdir(base / "ck" / "long" / name)) == ["step0000000.npz", "step0000200.npz", "step0000400.npz"]
+    last = prun.load_params(str(base / "ck" / "long" / f"{name}-last.npz"))
+    snap = prun.load_params(str(base / "ck" / "long" / name / "step0000400.npz"))
+    assert all(np.array_equal(last[k], snap[k]) for k in last)
+    h = np.load(base / "res" / "train_long" / "history" / f"{name}.npz")
+    assert list(h["step"]) == [0, 100, 200, 300, 400] and h["u_min"].shape == (5, 16)
+    assert not (base / "res" / "train_long" / "train_summary.csv").exists()  # a single array task writes none
+    import provenance as pv
+    m = pv.read_manifest(str(base / "res" / "train_long" / "runs" / f"{name}_manifest.csv"))
+    assert len(m) == 3 + 1 + 1 + 3
+    rj = json.load(open(base / "res" / "train_long" / "runs" / f"{name}.json", encoding="utf-8"))
+    assert rj["git_commit"] and "slurm" in rj and rj["run"]["name"] == name
+
+
+def test_gather_verifies_every_run(long_run):
+    cfg, ds, base, members, _ = long_run
+    import provenance as pv
+    rd = str(base / "res" / "train_long")
+    with pytest.raises(pv.ProvenanceError, match="missing"):  # the second member never ran
+        prun.stage_gather(rd, str(base), members, require_clean=False)
+    dirty = json.load(open(base / "res" / "train_long" / "runs" / f"{members[0][0]}.json", encoding="utf-8"))["git_dirty"]
+    if dirty:  # the tests ran on a working tree with uncommitted changes: gather must refuse by default
+        with pytest.raises(pv.ProvenanceError, match="dirty tree"):
+            prun.stage_gather(rd, str(base), members[:1])
+    rows, mrows = prun.stage_gather(rd, str(base), members[:1], require_clean=False)
+    assert len(rows) == 1 and len(mrows) == 8 and (base / "res" / "train_long" / "train_summary.csv").exists()
+    snap = base / "ck" / "long" / members[0][0] / "step0000200.npz"
+    good = snap.read_bytes()
+    snap.write_bytes(good + b"x")
+    try:
+        with pytest.raises(pv.ProvenanceError, match="SHA-256 mismatch"):
+            prun.stage_gather(rd, str(base), members[:1], require_clean=False)
+    finally:
+        snap.write_bytes(good)
+
+
+def test_analyse_long_traces_prediction_1_over_snapshots(long_run):
+    cfg, ds, base, members, _ = long_run
+    rows = prun.stage_analyse_long(cfg, ds, str(base / "ck" / "long"), members[:1])
+    assert [r["step"] for r in rows] == [0, 200, 400]
+    assert rows[0]["degenerate"] and rows[0]["dist_kind"] == "rho_eff" and rows[0]["z_star_to_mean"] < 1e-12
+    assert all(np.isfinite(r["nf_ratio"]) and r["u_min_r_eff_over_D"] > 0 for r in rows)
+
+
+def test_p5_rule():
+    steps = [0, 500, 1000, 1500]
+    ok = prun.p5_run(steps, [0.008, 0.02, 0.09, 0.12], [np.inf, 0.5, 0.08, 0.05], 1500)
+    assert ok["passes"] and ok["fold_end"] == pytest.approx(15.0) and ok["ratio_max"] == 0.12
+    assert not prun.p5_run(steps, [0.008, 0.02, 0.09, 0.12], [np.inf, 0.5, 0.08, 0.05], 1000)["passes"]  # < 0.1
+    assert not prun.p5_run(steps, [0.02, 0.05, 0.1, 0.12], [np.inf, 0.5, 0.08, 0.05], 1500)["passes"]  # fold 6
+    assert not prun.p5_run(steps, [0.008, 0.02, 0.09, 0.12], [np.inf, 0.5, 0.08, 0.2], 1500)["passes"]  # kappa
+    assert not prun.p5_run(steps, [0.008, 0.02, 0.09, 0.12], [np.inf] * 4, 1500)["passes"]  # still degenerate
+    with pytest.raises(ValueError):
+        prun.p5_run(steps, [0.008, 0.02, 0.09, 0.12], [np.inf] * 4, 750)  # the end step was not logged
+    res = [dict(arch="a", passes=p) for p in (True, True, True, True, False)] + \
+          [dict(arch="b", passes=p) for p in (True, True, True, False, False)]
+    cells = prun.p5_cells(res, ("arch",), 4)
+    assert [(c["arch"], c["n"], c["n_pass"], c["holds"]) for c in cells] == [("a", 5, 4, True), ("b", 5, 3, False)]
+
+
+def test_stage_p5_reads_the_lens_logs(synthetic, tmp_path):
+    _, _, _, _, _, ds, _ = synthetic
+    cfg = _small_cfg()
+    cfg["grid"].update(archs=["normedlinear"], n_blocks=[1], seeds=[0, 1])
+    cfg["training"].update(log_every=100)  # every evaluation logged, as in the P-I config
+    prun.stage_train(cfg, ds, str(tmp_path / "ck"), str(tmp_path / "res" / "train"))
+    runs, cells = prun.stage_p5(cfg, str(tmp_path / "res"), "train")
+    assert len(runs) == 4 and {r["init"] for r in runs} == {"zero_bias", "torch_default"}
+    summ = {r["name"]: r for r in prun.read_csv(str(tmp_path / "res" / "train" / "train_summary.csv"))}
+    assert all(r["end_step"] == int(summ[r["name"]]["best_step"]) for r in runs)
+    assert [(c["arch"], c["n_blocks"], c["n"]) for c in cells] == [("normedlinear", 1, 2)]  # zero bias only
+
+
+def test_p3_spearman_and_initial_r_star():
+    rows = [dict(u_min_sharpness=s, d1_sharpness=s, u_min_coverage=s, d1_coverage=-s, affected_frac=a)
+            for s, a in ((1, 0.1), (2, 0.3), (3, 0.2), (4, 0.4))]
+    r = prun.p3_spearman(rows)
+    assert r["u_min_sharpness"] == pytest.approx(0.8) and r["d1_coverage"] == pytest.approx(-0.8)
+    # the PyTorch-default start lies inside the initial-lens check's range at H = 128, k = 16
+    spec = models.SurrogateSpec(arch="prenorm", n_blocks=1, init="torch_default")
+    assert 0.79 < prun.initial_r_star_median(spec, 0) < 1.07
+    assert prun.initial_r_star_median(models.SurrogateSpec(init="zero_bias"), 0) < 0.05  # ε-limited

@@ -188,3 +188,95 @@ the task, the choice, the reasoning, and the alternatives rejected.
 24. **The cell rule is "at least 4 of 5 seeds"**, with G2 proposed as prediction 1
     holding in at least 3 of 4 zero-bias cells, and accuracy matched at rel-MSE within
     20% (plan.md P-II's rule). All three are listed for decision.
+
+## 2026-10-04, second queue: minibatch Adam, the long-budget subset, TACC (`docs/plans/p1-revision.md`)
+
+25. **Linear drag is off for P-I** (the author's answer to question 1). The p1 draft
+    records it as a modelling choice: `plants/quadrotor.py` keeps the flag, off, with no
+    coefficients.
+
+26. **Minibatch Adam is P-I's training default** (the author's answer to question 2):
+    batch 2,048, lr 3e-3 and the Adam constants unchanged.
+    - Each step draws 2,048 distinct training rows afresh, from
+      `fold_in(PRNGKey(seed), step)`. There are no epochs.
+    - The held-out one-step MSE is evaluated on the full validation set every 500 steps,
+      and so is the training MSE, on the full training set. Early stopping is unchanged.
+    - `max_steps` stays 100,000, plan.md's converged budget, now counted in minibatch
+      steps (about 10,240 epochs of 20,000 states).
+    - The default lives in `experiments/p1_quadrotor/config.yaml`. `lens/train.py`'s
+      library default stays full batch, because synthetic tests use fewer than 2,048
+      rows. `train` refuses a batch larger than the training set.
+    - Why: the batch stream depends only on (seed, step). The paired arms of a seed
+      therefore see the same batches as well as the same weights, and any step can be
+      reproduced without carrying sampler state.
+    - Rejected:
+      - epoch-wise reshuffling (needs sampler state in the scan carry);
+      - scaling lr with the batch size (no rule in plan.md, and 3e-3 is the full-batch
+        value already in use);
+      - counting the budget in epochs.
+
+27. **u_min is recomputed from the current weights at every lens-log step**, along with
+    D(u_min) from the training inputs. Logged: r*(u_min), r_eff(u_min), D(u_min), both
+    ratios, S(u_min) and the vector u_min.
+    - Why: prediction 5's primary quantity is along the lens's narrowest direction, which
+      moves during training.
+    - Rejected: a fixed u_min taken from the initial or final weights; it would track a
+      direction the lens has left.
+
+28. **The long-budget subset is a separate gated stage, `train_long`**: config
+    `long_budget`; zero bias, 1 block, both architectures, seeds 0–4.
+    - Early stopping is disabled (`patience_frac: null`). The lens is logged every 500
+      steps, and parameter snapshots are saved every 10,000 steps.
+    - Both the last parameters and the best held-out ones are kept.
+    - The snapshots let `analyse_long` trace prediction 1's statistic over training (the
+      race in the p1 draft).
+    - The budget is set from the minibatch benchmark (entry 33).
+    - Rejected: snapshots at every log step (about 15 MB per run at 500k steps, with
+      little gain), and running the subset as an extension of the 40 runs (their early
+      stopping would have to be switched off mid-run).
+
+29. **One run per invocation.**
+    - `--index i` runs member i of a stage's grid, and `--out-root DIR` moves data,
+      checkpoints and results under DIR. The data manifest is always the committed one.
+    - Every run, laptop or TACC, writes a run JSON (summary row, commit, dirty flag,
+      versions, config, Slurm identity) and a SHA-256 manifest of its outputs.
+    - `gather` verifies every member's files and requires one clean commit for all of
+      them. It refuses on any gap or mismatch, then writes `train_summary.csv` and
+      `outputs_manifest.csv`.
+    - Why: array tasks must not write a shared summary, and a run on another machine
+      needs the same provenance as a local one.
+    - Rejected: one shared summary file with locking.
+
+30. **TACC Slurm array scripts target Stampede3**, which supports job arrays (Stampede2
+    did not): `slurm/p1_array.slurm`, `slurm/p1_gather.slurm`, `slurm/README.md`.
+    - One run per array task and node. The repository is under `$WORK` and the outputs
+      under `$SCRATCH`.
+    - The commit is printed in the job log and recorded in every run JSON. `run.py`'s
+      tag, clean-tree and data-manifest checks run first, and gather is a dependent job
+      (`afterok`).
+    - Queue, allocation and wall time are marked EDIT. The wall time is to be set from
+      one test task measured against the laptop benchmark.
+    - Rejected:
+      - TACC's PyLauncher, which packs runs onto shared nodes and is more efficient, but
+        the author asked for arrays;
+      - GPU nodes (float64 with 128-wide layers gains little).
+
+31. **Analysis quantities for the amendments' predictions 1–4** (`analyse_one`):
+    - ‖z* − μ‖ with μ the training inputs' mean (prediction 1);
+    - the initial median r*(d) over 64 random unit directions (rng seed 0), the
+      initial-lens check's number per draw (prediction 2);
+    - the affected-data fraction: test states whose Jacobian error exceeds 3× the far
+      set's median, with Spearman correlations of the weight-based scores against it
+      over the models (prediction 3);
+    - attenuation along u_min as well as d₁ (prediction 4).
+
+    Each is an operationalisation proposed in the p1 draft's decisions, not a choice
+    already made.
+
+32. **Prediction 5's rule is a pure function, `p5_run`, of a run's lens log**, applied
+    by the gated stage `p5`.
+    - It requires the end step to be logged: the P-I config logs at every evaluation.
+    - The end is the returned (best held-out) parameters for the 40 runs, and the last
+      step for the long runs. This is proposed in the draft.
+    - Rejected: the best ratio at any time (it rewards a transient), which is reported as
+      `ratio_max` instead.

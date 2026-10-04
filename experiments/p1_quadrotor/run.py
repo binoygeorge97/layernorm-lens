@@ -1,12 +1,23 @@
-"""P-I: quadrotor surrogates (docs/plan.md). Stages:
+"""P-I: quadrotor surrogates (docs/plan.md; prereg/drafts/p1-draft.md). Stages:
 
     python experiments/p1_quadrotor/run.py --config experiments/p1_quadrotor/config.yaml STAGE
+        [--index I] [--out-root DIR] [--data-dir DIR] [--of train|train_long]
 
-- generate, train, analyse, hover: refuse to run unless the annotated tag prereg-p1
-  exists and prereg/p1.md matches it (CLAUDE.md: no outcome before the tag). They run
-  on quadrotor data.
+- generate, train, train_long, gather, analyse, analyse_long, hover, p5: refuse to run
+  unless the annotated tag prereg-p1 exists and prereg/p1.md matches it (CLAUDE.md: no
+  outcome before the tag), and the working tree is clean. They run on quadrotor data.
+  - train: the 40-model grid (early stopping). train_long: the long-budget subset
+    (`long_budget` in the config; early stopping disabled, parameter snapshots).
+  - `--index I` runs only the I-th member of the stage's grid (one Slurm array task,
+    slurm/p1_array.slurm); each run writes its summary JSON and a SHA-256 manifest of
+    its outputs, and `gather --of STAGE` verifies and merges them.
+  - `--out-root DIR` puts data, checkpoints and results under DIR (e.g. $SCRATCH); the
+    data manifest is always the committed one in the repository.
+  - analyse: predictions 1–4's quantities on the 40 models; analyse_long: prediction 1's
+    statistic and the lens at every snapshot of the long runs (the race of the draft);
+    p5: prediction 5 from the lens logs of both stages.
 - benchmark: not gated; times every grid configuration on RANDOM targets (no quadrotor
-  data) to estimate the cost of the 40-model grid.
+  data) to estimate the cost of the grid and the long-budget subset.
 
 The stage functions take a `Plant` (p1_data.py), so tests drive them with synthetic plants.
 Every stage writes its config, the git commit and the package versions next to its
@@ -16,11 +27,14 @@ results, and prints the `git add -f` command for its small outputs.
 import argparse
 import csv
 import datetime
+import glob
 import importlib.metadata as md
 import json
 import os
 import platform
+import socket
 import sys
+import time
 
 import jax
 
@@ -28,6 +42,7 @@ jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp  # noqa: E402
 import numpy as np  # noqa: E402
 import yaml  # noqa: E402
+from scipy import stats  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -42,7 +57,8 @@ from lens import geometry as geo  # noqa: E402
 from lens import models  # noqa: E402
 from lens import train as tr  # noqa: E402
 
-GATED = ("generate", "train", "analyse", "hover")
+GATED = ("generate", "train", "train_long", "gather", "analyse", "analyse_long", "hover", "p5")
+GRIDS = {"train": "grid", "train_long": "long_budget"}
 
 
 # --------------------------------------------------------------------------- #
@@ -58,6 +74,12 @@ def versions():
         except md.PackageNotFoundError:
             out[p] = None
     return out
+
+
+def slurm_env():
+    """The Slurm job's identity, if any (None outside Slurm), and the host."""
+    keys = ("SLURM_JOB_ID", "SLURM_ARRAY_JOB_ID", "SLURM_ARRAY_TASK_ID", "SLURM_JOB_NODELIST", "SLURM_CLUSTER_NAME")
+    return dict(host=socket.gethostname(), **{k: os.environ.get(k) for k in keys})
 
 
 def meta(cfg, stage, extra=None):
@@ -91,9 +113,18 @@ def write_csv(path, rows):
             w.writerow({k: (repr(float(v)) if isinstance(v, float) else v) for k, v in r.items()})
 
 
-def grid(cfg):
-    """[(name, spec, seed)] for the configured grid."""
-    g = cfg["grid"]
+def read_csv(path):
+    with open(path, newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def grid(cfg, which="grid"):
+    """[(name, spec, seed)] for the configured grid ("grid": the 40 models) or for the
+    long-budget subset ("long_budget": its archs, inits, n_blocks and seeds, with the
+    grid's H, k, ε and branch width)."""
+    g = dict(cfg["grid"])
+    if which != "grid":
+        g.update({k: cfg[which][k] for k in ("archs", "inits", "n_blocks", "seeds")})
     out = []
     for arch in g["archs"]:
         for init in g["inits"]:
@@ -104,6 +135,15 @@ def grid(cfg):
                                                 branch_width=int(g["branch_width"]))
                     out.append((f"{arch}-{init}-b{nb}-s{seed}", spec, int(seed)))
     return out
+
+
+def paths(cfg, out_root=None, data_dir=None):
+    """Data, checkpoints and results under `out_root` (default: the repository); the data
+    manifest always in the repository (it is committed and verifies the data anywhere)."""
+    base = out_root or ROOT
+    j = lambda root, key: os.path.join(root, *cfg["paths"][key].split("/"))  # noqa: E731
+    return dict(base=base, data=data_dir or j(base, "data"), manifest=j(ROOT, "manifest"),
+                ck=j(base, "checkpoints"), res=j(base, "results"))
 
 
 def save_params(path, p):
@@ -123,6 +163,30 @@ def directions_for(ds):
     return dict(d1=d1), dict(d1=D), ratio
 
 
+def train_cfg(cfg, seed, long=False):
+    """lens/train.py's config for one run: `training`, or for the long-budget subset its
+    budget and logging with early stopping disabled."""
+    t = dict(cfg["training"])
+    if long:
+        lb = cfg["long_budget"]
+        t.update(max_steps=lb["max_steps"], log_every=lb["log_every"], patience_frac=None)
+    return dict(lr=float(t["lr"]), max_steps=int(t["max_steps"]), eval_every=int(t["eval_every"]),
+                patience_frac=None if t["patience_frac"] is None else float(t["patience_frac"]),
+                tol=float(t["tol"]), batch_size=None if t["batch_size"] is None else int(t["batch_size"]),
+                seed=seed, log_every=int(t["log_every"]))
+
+
+def initial_r_star_median(spec, seed, n_dir=64, rng_seed=0):
+    """Prediction 2's initial r*: the median over n_dir random unit directions of r*(d)
+    for the initial first layer (theory.md convention 4; the initial-lens check used 64
+    directions per draw). For a degenerate lens, the ε-limited √(Hε)/‖A d‖ instead."""
+    E, b = (np.asarray(m) for m in models.first_layer(spec, models.init_params(spec, seed)))
+    L = geo.lens(E, b, spec.eps)
+    d = np.random.default_rng(rng_seed).standard_normal((n_dir, spec.k))
+    d /= np.linalg.norm(d, axis=1, keepdims=True)
+    return float(np.median([geo.line(L, dj)["r_eff" if L.degenerate else "r_star"] for dj in d]))
+
+
 # --------------------------------------------------------------------------- #
 # stages                                                                        #
 # --------------------------------------------------------------------------- #
@@ -136,73 +200,227 @@ def stage_generate(cfg, plant, hx, hu, data_dir, manifest_path):
     return ds, rows
 
 
-def train_one(cfg, spec, seed, ds):
+def train_one(cfg, spec, seed, ds, long=False, on_eval=None):
     dirs, D, ratio = directions_for(ds)
     p0 = models.init_params(spec, seed)
-    t = cfg["training"]
-    tcfg = dict(lr=float(t["lr"]), max_steps=int(t["max_steps"]), eval_every=int(t["eval_every"]),
-                patience_frac=float(t["patience_frac"]), tol=float(t["tol"]), batch_size=t["batch_size"],
-                seed=seed, log_every=int(t["log_every"]))
     data = dict(Z=ds["train"]["Z"], Y=ds["train"]["Y"], Zv=ds["val"]["Z"], Yv=ds["val"]["Y"])
-    p, hist, info = tr.train(spec, p0, data, tcfg, directions=dirs, D=D)
+    p, hist, info = tr.train(spec, p0, data, train_cfg(cfg, seed, long), directions=dirs, D=D,
+                             lens_Z=ds["train"]["Z"], on_eval=on_eval)
     info["d1_eigen_ratio"] = ratio
     return p, hist, info
 
 
 def history_arrays(hist):
-    """Scalars of the training history as columns; per-step z* and widths stacked."""
+    """Scalars of the training history as columns; per-step z*, widths and u_min stacked."""
     scal = [{k: v for k, v in h.items() if not isinstance(v, np.ndarray)} for h in hist]
     logged = [h for h in hist if "z_star" in h]
-    arrays = dict(step=np.array([h["step"] for h in logged]),
-                  z_star=np.stack([h["z_star"] for h in logged]) if logged else np.zeros((0,)),
-                  widths=np.stack([h["widths"] for h in logged]) if logged else np.zeros((0,)))
+    stack = lambda key: np.stack([h[key] for h in logged]) if logged and key in logged[0] else np.zeros((0,))  # noqa: E731
+    arrays = dict(step=np.array([h["step"] for h in logged]), z_star=stack("z_star"), widths=stack("widths"),
+                  u_min=stack("u_min"))
     return scal, arrays
 
 
-def stage_train(cfg, ds, ck_dir, res_dir, members=None):
+def stage_train(cfg, ds, ck_dir, res_dir, members=None, long=False, base=None, summary=True):
+    """Train each member and save: its parameters (the best held-out MSE's; for a long run
+    also the last, and snapshots every `long_budget.snapshot_every` steps), its history,
+    a per-run JSON (summary row, commit, versions, config, Slurm identity) and a per-run
+    SHA-256 manifest of those files, with paths relative to `base`. `summary` writes
+    train_summary.csv for the members (off for a single array task; see stage_gather)."""
+    base = base or ROOT
+    stage = "train_long" if long else "train"
     rows = []
-    for name, spec, seed in (members or grid(cfg)):
-        p, hist, info = train_one(cfg, spec, seed, ds)
-        save_params(os.path.join(ck_dir, f"{name}.npz"), p)
+    for name, spec, seed in (members or grid(cfg, GRIDS[stage])):
+        files, last = [], {}
+        on_eval = None
+        if long:
+            every = int(cfg["long_budget"]["snapshot_every"])
+
+            def on_eval(step, p, name=name, every=every):
+                last.update(step=step, p=p)
+                if step % every == 0:
+                    path = os.path.join(ck_dir, name, f"step{step:07d}.npz")
+                    save_params(path, p)
+                    files.append(path)
+        p, hist, info = train_one(cfg, spec, seed, ds, long, on_eval)
+        files.append(os.path.join(ck_dir, f"{name}.npz"))
+        save_params(files[-1], p)
+        if long:
+            files.append(os.path.join(ck_dir, f"{name}-last.npz"))
+            save_params(files[-1], last["p"])
         scal, arrays = history_arrays(hist)
-        write_csv(os.path.join(res_dir, "history", f"{name}.csv"), scal)
-        np.savez(os.path.join(res_dir, "history", f"{name}.npz"), **arrays)
-        rows.append(dict(name=name, arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, seed=seed,
-                         best_step=info["best_step"], best_val=info["best_val"], stopped_step=info["stopped_step"],
-                         stopped_early=info["stopped_early"], seconds=info["seconds"], n_params=info["n_params"],
-                         d1_eigen_ratio=info["d1_eigen_ratio"]))
-    write_csv(os.path.join(res_dir, "train_summary.csv"), rows)
+        hcsv, hnpz = (os.path.join(res_dir, "history", f"{name}.{e}") for e in ("csv", "npz"))
+        write_csv(hcsv, scal)
+        np.savez(hnpz, **arrays)
+        row = dict(name=name, stage=stage, arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, seed=seed,
+                   best_step=info["best_step"], best_val=info["best_val"], stopped_step=info["stopped_step"],
+                   stopped_early=info["stopped_early"], seconds=info["seconds"], n_params=info["n_params"],
+                   d1_eigen_ratio=info["d1_eigen_ratio"])
+        rjson = os.path.join(res_dir, "runs", f"{name}.json")
+        write_json(rjson, meta(cfg, stage, dict(run=row, slurm=slurm_env(), train_info=info)))
+        pv.write_manifest(os.path.join(res_dir, "runs", f"{name}_manifest.csv"), files + [hcsv, hnpz, rjson], base)
+        rows.append(row)
+    if summary:
+        write_csv(os.path.join(res_dir, "train_summary.csv"), rows)
     return rows
 
 
-def analyse_one(cfg, spec, p, ds):
+def stage_gather(res_dir, base, members, require_clean=True):
+    """Verify and merge the per-run outputs of one training stage: every member's JSON
+    and manifest must exist, every manifest file must exist under `base` with its
+    SHA-256, and all runs must share one git commit, clean unless `require_clean` is
+    False (tests only; `main` always requires it). Writes train_summary.csv and
+    outputs_manifest.csv (run, file, bytes, sha256). Raises pv.ProvenanceError on any
+    problem, listing them all."""
+    rows, mrows, problems, commits = [], [], [], set()
+    for name, _, _ in members:
+        rj, mf = (os.path.join(res_dir, "runs", f"{name}{s}") for s in (".json", "_manifest.csv"))
+        if not (os.path.exists(rj) and os.path.exists(mf)):
+            problems.append(f"{name}: run JSON or manifest missing")
+            continue
+        for r in pv.read_manifest(mf):
+            path = os.path.join(base, *r["file"].replace("\\", "/").split("/"))
+            if not os.path.exists(path):
+                problems.append(f"{name}: {r['file']} missing")
+            elif pv.sha256(path) != r["sha256"]:
+                problems.append(f"{name}: {r['file']} SHA-256 mismatch")
+            mrows.append(dict(run=name, file=r["file"].replace("\\", "/"), bytes=r["bytes"], sha256=r["sha256"]))
+        with open(rj, encoding="utf-8") as f:
+            m = json.load(f)
+        commits.add((m["git_commit"], m["git_dirty"]))
+        rows.append(m["run"])
+    if len(commits) > 1:
+        problems.append(f"runs differ in commit: {sorted(commits)}")
+    if require_clean and any(dirty for _, dirty in commits):
+        problems.append(f"a run ran on a dirty tree: {sorted(commits)}")
+    if problems:
+        raise pv.ProvenanceError("gather: " + "; ".join(problems))
+    write_csv(os.path.join(res_dir, "train_summary.csv"), rows)
+    write_csv(os.path.join(res_dir, "outputs_manifest.csv"), mrows)
+    return rows, mrows
+
+
+def analyse_one(cfg, spec, p, ds, seed=None):
+    """Predictions 1–4's quantities for one trained model (p1 draft):
+    (1) the near/far Jacobian-error ratio and ‖z* − μ‖ (μ the training inputs' mean);
+    (2) the initial median r* (if `seed` is given); (3) sharpness and coverage along d₁ and
+    u_min, and the affected-data fraction (test states whose error exceeds
+    `affected_factor` times the far set's median); (4) attenuation along d₁ and u_min for
+    stacks. Also the Corollary 1 deviations (a pipeline check)."""
     a = cfg["analysis"]
     Zt, Jt = ds["test"]["Z"], ds["test"]["J_std"]
+    Ztr = ds["train"]["Z"]
     E, b = (np.asarray(m) for m in models.first_layer(spec, p))
     L = geo.lens(E, b, spec.eps)
     err = an.jacobian_error(an.jacobians(spec, p, Zt), Jt, a["jacobian_error"])
     dist, kind = an.lens_distances(L, Zt)
     nf = an.near_far(err, dist, float(a["near_frac"]), float(a["far_frac"]), a["stat"])
-    d1, ratio = an.data_d1(ds["train"]["Z"])
+    d1, ratio = an.data_d1(Ztr)
+    um = an.u_min(L)
     out = dict(degenerate=L.degenerate, kappa=float(L.kappa), norm_z_star=float(np.linalg.norm(L.z_star)),
+               z_star_to_mean=float(np.linalg.norm(L.z_star - Ztr.mean(0))),
                dist_kind=kind, d1_eigen_ratio=ratio, err_median=float(np.median(err)),
+               affected_frac=float(np.mean(err > float(a["affected_factor"]) * nf["far"])),
                **{f"nf_{k}": v for k, v in nf.items()})
-    for dname, d in (("d1", d1), ("u_min", an.u_min(L))):
-        for k, v in an.direction_sharpness(L, ds["train"]["Z"], d).items():
+    if seed is not None:
+        ri = a["r_star_init"]
+        out["r_star_init_median"] = initial_r_star_median(spec, seed, int(ri["n_directions"]), int(ri["rng_seed"]))
+    for dname, d in (("d1", d1), ("u_min", um)):
+        for k, v in an.direction_sharpness(L, Ztr, d).items():
             out[f"{dname}_{k}"] = v
     if not L.degenerate:
         c1 = a["corollary1"]
-        Ztr = ds["train"]["Z"]
         lines = [(Ztr.mean(0), d1)] + [(Ztr[i], d1) for i in np.random.default_rng(int(c1["rng_seed"])).choice(
             len(Ztr), int(c1["n_state_lines"]), replace=False)]
         devs = [an.corollary1_line(L, E, b, x0, d, Ztr, int(c1["n_grid"]), float(c1["t_range"]))["max_rel_dev"]
                 for x0, d in lines]
         out["corollary1_max_rel_dev"] = float(max(devs))
-        if spec.n_blocks > 1:
-            at = an.attenuation(spec, p, L, d1, Ztr, int(a["attenuation"]["n_grid"]), float(a["attenuation"]["t_range"]))
-            out.update(attenuation_out=at["attenuation_out"],
-                       **{f"attenuation_block{j + 1}": v for j, v in enumerate(at["attenuation_blocks"])})
+    if spec.n_blocks > 1:
+        for dname, d in (("d1", d1), ("u_min", um)):
+            at = an.attenuation(spec, p, L, d, Ztr, int(a["attenuation"]["n_grid"]), float(a["attenuation"]["t_range"]))
+            pre = "" if dname == "d1" else "u_min_"
+            out.update({f"{pre}attenuation_out": at["attenuation_out"],
+                        **{f"{pre}attenuation_block{j + 1}": v for j, v in enumerate(at["attenuation_blocks"])}})
     return out
+
+
+def p3_spearman(rows, scores=("u_min_sharpness", "d1_sharpness", "u_min_coverage", "d1_coverage"),
+                target="affected_frac"):
+    """Prediction 3: Spearman's rank correlation, over the models, between each
+    weight-based score and the affected-data fraction."""
+    y = np.array([float(r[target]) for r in rows])
+    return {s: float(stats.spearmanr(np.array([float(r[s]) for r in rows]), y).statistic) for s in scores}
+
+
+def race_point(cfg, spec, p, ds):
+    """Prediction 1's statistic and the lens for one parameter snapshot (analyse_long)."""
+    a = cfg["analysis"]
+    Zt, Ztr = ds["test"]["Z"], ds["train"]["Z"]
+    E, b = (np.asarray(m) for m in models.first_layer(spec, p))
+    L = geo.lens(E, b, spec.eps)
+    err = an.jacobian_error(an.jacobians(spec, p, Zt), ds["test"]["J_std"], a["jacobian_error"])
+    dist, kind = an.lens_distances(L, Zt)
+    nf = an.near_far(err, dist, float(a["near_frac"]), float(a["far_frac"]), a["stat"])
+    um = an.u_min(L)
+    s = an.direction_sharpness(L, Ztr, um)
+    return dict(degenerate=L.degenerate, kappa=float(L.kappa), dist_kind=kind, nf_ratio=nf["ratio"],
+                err_median=float(np.median(err)), z_star_to_mean=float(np.linalg.norm(L.z_star - Ztr.mean(0))),
+                u_min_r_eff_over_D=s["r_eff"] / s["D"])
+
+
+def stage_analyse_long(cfg, ds, ck_dir, members):
+    rows = []
+    for name, spec, _ in members:
+        for path in sorted(glob.glob(os.path.join(ck_dir, name, "step*.npz"))):
+            step = int(os.path.basename(path)[4:-4])
+            rows.append(dict(name=name, step=step, **race_point(cfg, spec, load_params(path), ds)))
+    return rows
+
+
+# --------------------------------------------------------------------------- #
+# prediction 5                                                                  #
+# --------------------------------------------------------------------------- #
+
+
+def p5_run(steps, ratio, kappa, end_step, fold=10.0, floor=0.1, kappa_max=0.1):
+    """Prediction 5 for one run's lens log (p1 draft): along u_min, the ratio
+    r_eff(u_min)/D(u_min) at `end_step` is at least `fold` times its value at step 0 and
+    at least `floor`, and κ at `end_step` is at most `kappa_max` (a degenerate lens has
+    κ = ∞ and fails). Also returns the largest ratio up to end_step."""
+    steps, ratio, kappa = (np.asarray(v, np.float64) for v in (steps, ratio, kappa))
+    if not (np.any(steps == 0) and np.any(steps == end_step)):
+        raise ValueError(f"the lens log must include step 0 and the end step {end_step} (log at every evaluation)")
+    i0, ie = int(np.flatnonzero(steps == 0)[0]), int(np.flatnonzero(steps == end_step)[0])
+    r0, re, ke = float(ratio[i0]), float(ratio[ie]), float(kappa[ie])
+    return dict(end_step=int(end_step), ratio_init=r0, ratio_end=re, fold_end=re / r0, kappa_end=ke,
+                ratio_max=float(np.max(ratio[:ie + 1])),
+                passes=bool(re >= fold * r0 and re >= floor and ke <= kappa_max))
+
+
+def p5_cells(results, keys, min_pass=4):
+    """Count passes per cell (results grouped by `keys`); a cell holds if at least
+    `min_pass` of its runs pass."""
+    cells = {}
+    for r in results:
+        cells.setdefault(tuple(r[k] for k in keys), []).append(bool(r["passes"]))
+    return [dict(**dict(zip(keys, c)), n=len(v), n_pass=int(sum(v)), holds=sum(v) >= min_pass)
+            for c, v in sorted(cells.items())]
+
+
+def stage_p5(cfg, res, which):
+    """Prediction 5 on one training stage's lens logs. End: the returned (best held-out
+    MSE) parameters for `train`, the last step for `train_long`."""
+    q = cfg["p5"]
+    rd = os.path.join(res, which)
+    summ = {r["name"]: r for r in read_csv(os.path.join(rd, "train_summary.csv"))}
+    out = []
+    for name, spec, seed in grid(cfg, GRIDS[which]):
+        h = [r for r in read_csv(os.path.join(rd, "history", f"{name}.csv")) if r.get("kappa", "") != ""]
+        end = int(summ[name]["best_step"] if which == "train" else summ[name]["stopped_step"])
+        r = p5_run([int(x["step"]) for x in h], [float(x["r_eff_over_D_u_min"]) for x in h],
+                   [float(x["kappa"]) for x in h], end, float(q["fold"]), float(q["floor"]), float(q["kappa_max"]))
+        out.append(dict(name=name, stage=which, arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, seed=seed, **r))
+    keys = ("arch", "n_blocks") if which == "train" else ("arch",)
+    return out, p5_cells([r for r in out if r["init"] == "zero_bias"], keys, int(q["min_seeds"]))
 
 
 def hover_one(cfg, spec, p, ds, plant, hx, hu):
@@ -214,15 +432,24 @@ def hover_one(cfg, spec, p, ds, plant, hx, hu):
     return {k: v for k, v in r.items() if not isinstance(v, np.ndarray)}
 
 
+# --------------------------------------------------------------------------- #
+# benchmark (random targets only)                                               #
+# --------------------------------------------------------------------------- #
+
+
 def stage_benchmark(cfg, out_dir, members=None, steps=None):
     """Time every grid configuration on random targets: Z ~ N(0, I_k), Y = a fixed random
-    tanh network of Z (12 outputs). No quadrotor data is used."""
+    tanh network of Z (12 outputs). No quadrotor data is used. Also times one lens record
+    (d₁ and u_min) per configuration. Summary: upper bounds for the grid at its budget
+    and for the long-budget subset at its budget (no early stop; lens logging included
+    at the configured interval)."""
     b = cfg["benchmark"]
     rng = np.random.default_rng(int(b["seed"]))
     k, n_out = 16, 12
     W1, W2 = rng.standard_normal((k, 64)) / np.sqrt(k), rng.standard_normal((64, n_out)) / 8.0
     Z, Zv = rng.standard_normal((int(b["n_train"]), k)), rng.standard_normal((int(b["n_val"]), k))
     data = dict(Z=Z, Y=np.tanh(Z @ W1) @ W2, Zv=Zv, Yv=np.tanh(Zv @ W1) @ W2)
+    d1 = an.data_d1(Z)[0]
     steps = int(steps or b["steps"])
     t = cfg["training"]
     rows, seen = [], set()
@@ -232,19 +459,35 @@ def stage_benchmark(cfg, out_dir, members=None, steps=None):
             continue
         seen.add(key)
         p0 = models.init_params(spec, seed)
-        base = dict(lr=float(t["lr"]), eval_every=int(t["eval_every"]), patience_frac=10.0, tol=float(t["tol"]),
+        base = dict(lr=float(t["lr"]), eval_every=int(t["eval_every"]), patience_frac=None, tol=float(t["tol"]),
                     batch_size=t["batch_size"], seed=seed, log_every=0)
         _, _, warm = tr.train(spec, p0, data, dict(base, max_steps=int(t["eval_every"])))  # compile + one chunk
         _, _, info = tr.train(spec, p0, data, dict(base, max_steps=steps))
         per_step = info["seconds"] / info["stopped_step"]
+        tr.lens_record(spec, p0, dict(d1=d1), dict(d1=1.0), Z)  # warm-up
+        t0 = time.time()
+        for _ in range(3):
+            tr.lens_record(spec, p0, dict(d1=d1), dict(d1=1.0), Z)
         rows.append(dict(arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, n_params=info["n_params"],
-                         steps=info["stopped_step"], seconds=info["seconds"], seconds_per_step=per_step,
-                         first_call_seconds=warm["seconds"]))
-    n_models = len(members or grid(cfg))
-    per_cfg = {(r["arch"], r["init"], r["n_blocks"]): r["seconds_per_step"] for r in rows}
-    total = sum(per_cfg[(s.arch, s.init, s.n_blocks)] for _, s, _ in (members or grid(cfg))) * int(t["max_steps"])
-    summary = dict(n_models=n_models, max_steps=int(t["max_steps"]), upper_bound_hours=total / 3600.0,
-                   note="Upper bound: every model runs the full budget with no early stop; lens logging excluded.")
+                         batch_size=t["batch_size"], steps=info["stopped_step"], seconds=info["seconds"],
+                         seconds_per_step=per_step, first_call_seconds=warm["seconds"],
+                         lens_record_seconds=(time.time() - t0) / 3.0))
+    per_cfg = {(r["arch"], r["init"], r["n_blocks"]): r for r in rows}
+
+    def bound(mem, max_steps, log_every):
+        return sum(per_cfg[(s.arch, s.init, s.n_blocks)]["seconds_per_step"] * max_steps
+                   + per_cfg[(s.arch, s.init, s.n_blocks)]["lens_record_seconds"] * (max_steps // log_every + 1)
+                   for _, s, _ in mem) / 3600.0
+
+    mem = members or grid(cfg)
+    summary = dict(n_models=len(mem), batch_size=t["batch_size"], max_steps=int(t["max_steps"]),
+                   upper_bound_hours=bound(mem, int(t["max_steps"]), int(t["log_every"])),
+                   note="Upper bound: every model runs its full budget with no early stop; lens logging included.")
+    if "long_budget" in cfg and members is None:
+        lb = cfg["long_budget"]
+        lmem = grid(cfg, "long_budget")
+        summary.update(long_n_models=len(lmem), long_max_steps=int(lb["max_steps"]),
+                       long_hours=bound(lmem, int(lb["max_steps"]), int(lb["log_every"])))
     write_csv(os.path.join(out_dir, "benchmark.csv"), rows)
     write_json(os.path.join(out_dir, "meta_benchmark.json"), meta(cfg, "benchmark", dict(summary=summary)))
     return rows, summary
@@ -259,15 +502,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("stage", choices=list(GATED) + ["benchmark"])
+    ap.add_argument("--index", type=int, help="run only this member of the stage's grid (a Slurm array task)")
+    ap.add_argument("--out-root", help="data, checkpoints and results under this directory (e.g. $SCRATCH)")
+    ap.add_argument("--data-dir", help="the data directory, if not <out-root>/<paths.data>")
+    ap.add_argument("--of", choices=list(GRIDS), default="train", help="gather / p5: which training stage")
     args = ap.parse_args()
     cfg = yaml.safe_load(open(args.config, encoding="utf-8"))
-    res = os.path.join(ROOT, *cfg["paths"]["results"].split("/"))
+    P = paths(cfg, args.out_root, args.data_dir)
+    res = P["res"]
     if args.stage == "benchmark":
-        rows, summary = stage_benchmark(cfg, os.path.join(res, "benchmark"))
+        out = os.path.join(res, cfg["benchmark"]["out"])
+        rows, summary = stage_benchmark(cfg, out)
         for r in rows:
             print(r)
         print(summary)
-        pv.print_commit_listing([os.path.join(res, "benchmark", f) for f in ("benchmark.csv", "meta_benchmark.json")])
+        pv.print_commit_listing([os.path.join(out, f) for f in ("benchmark.csv", "meta_benchmark.json")])
         return
     pre = cfg["prereg"]
     try:
@@ -278,26 +527,50 @@ def main():
         sys.exit("refusing to run: the working tree has uncommitted changes to tracked files.")
     plant, _ = pdata.quadrotor_plant(cfg["plant"])
     hx, hu = pdata.quadrotor_half_widths(cfg["sampling"]["half_widths"], plant.u0)
-    data_dir = os.path.join(ROOT, *cfg["paths"]["data"].split("/"))
-    manifest = os.path.join(ROOT, *cfg["paths"]["manifest"].split("/"))
-    ck = os.path.join(ROOT, *cfg["paths"]["checkpoints"].split("/"))
     if args.stage == "generate":
-        _, rows = stage_generate(cfg, plant, hx, hu, data_dir, manifest)
+        _, rows = stage_generate(cfg, plant, hx, hu, P["data"], P["manifest"])
         write_json(os.path.join(res, "meta_generate.json"), meta(cfg, "generate", dict(files=rows)))
-        pv.print_commit_listing([manifest, os.path.join(res, "meta_generate.json")])
+        pv.print_commit_listing([P["manifest"], os.path.join(res, "meta_generate.json")])
         return
-    ds = pdata.load_dataset(data_dir, manifest)
-    if args.stage == "train":
-        stage_train(cfg, ds, ck, os.path.join(res, "train"))
-        write_json(os.path.join(res, "train", "meta_train.json"), meta(cfg, "train"))
+    if args.stage == "gather":
+        rd = os.path.join(res, args.of)
+        try:
+            stage_gather(rd, P["base"], grid(cfg, GRIDS[args.of]))
+        except pv.ProvenanceError as e:
+            sys.exit(str(e))
+        print(f"gather {args.of}: every run present, every SHA-256 verified, one clean commit")
         return
-    rows = []
-    for name, spec, _ in grid(cfg):
-        p = load_params(os.path.join(ck, f"{name}.npz"))
-        r = analyse_one(cfg, spec, p, ds) if args.stage == "analyse" else hover_one(cfg, spec, p, ds, plant, hx, hu)
-        rows.append(dict(name=name, **r))
+    if args.stage == "p5":
+        runs, cells = stage_p5(cfg, res, args.of)
+        write_csv(os.path.join(res, f"p5_{args.of}.csv"), runs)
+        write_csv(os.path.join(res, f"p5_{args.of}_cells.csv"), cells)
+        write_json(os.path.join(res, f"meta_p5_{args.of}.json"), meta(cfg, "p5", dict(of=args.of)))
+        pv.print_commit_listing([os.path.join(res, f) for f in (f"p5_{args.of}.csv", f"p5_{args.of}_cells.csv",
+                                                                 f"meta_p5_{args.of}.json")])
+        return
+    ds = pdata.load_dataset(P["data"], P["manifest"])
+    if args.stage in GRIDS:
+        long = args.stage == "train_long"
+        members = grid(cfg, GRIDS[args.stage])
+        if args.index is not None:
+            members = [members[args.index]]
+        ck = os.path.join(P["ck"], "long") if long else P["ck"]
+        stage_train(cfg, ds, ck, os.path.join(res, args.stage), members, long, P["base"], summary=args.index is None)
+        if args.index is None:
+            write_json(os.path.join(res, args.stage, f"meta_{args.stage}.json"), meta(cfg, args.stage))
+        return
+    if args.stage == "analyse_long":
+        rows = stage_analyse_long(cfg, ds, os.path.join(P["ck"], "long"), grid(cfg, "long_budget"))
+    else:
+        rows = []
+        for name, spec, seed in grid(cfg):
+            p = load_params(os.path.join(P["ck"], f"{name}.npz"))
+            r = (analyse_one(cfg, spec, p, ds, seed) if args.stage == "analyse"
+                 else hover_one(cfg, spec, p, ds, plant, hx, hu))
+            rows.append(dict(name=name, arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, seed=seed, **r))
+    extra = dict(p3_spearman=p3_spearman(rows)) if args.stage == "analyse" else {}
     write_csv(os.path.join(res, f"{args.stage}.csv"), rows)
-    write_json(os.path.join(res, f"meta_{args.stage}.json"), meta(cfg, args.stage))
+    write_json(os.path.join(res, f"meta_{args.stage}.json"), meta(cfg, args.stage, extra))
     pv.print_commit_listing([os.path.join(res, f"{args.stage}.csv"), os.path.join(res, f"meta_{args.stage}.json")])
 
 
