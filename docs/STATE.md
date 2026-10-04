@@ -267,10 +267,11 @@ threshold. Outputs go to `results/r6/criterion/`, are copied to Drive and verifi
 there, and the stage prints the `git add -f` list. Tests: `tests/test_criterion.py`
 (synthetic only).
 
-**(d)** Done: `extract.py`, `collect.py` and `planner_check.py` print their `git add -f`
-listing (`provenance.print_commit_listing`; summary printing only, outputs unchanged;
-`tests/test_stage_listings.py`). `results/r6/meta_list.json` (from `extract list`)
-exists locally but was never committed; its origin is not recorded.
+**(d)** Done for `planner_check.py`, which prints its `git add -f` listing
+(`provenance.print_commit_listing`; `tests/test_stage_listings.py`). `extract.py` and
+`collect.py` print none: they must stay byte-identical to the recorded CPU run's
+commit 4c3f129, the guarantee `results/r6/PROVENANCE.md` rests on
+(`test_d4_regeneration.py`). Their listing, added in 55f1358, was reverted.
 
 **(e) Next: session 3.** The quadrotor simulator (`plants/quadrotor.py`; 12 states, 4
 inputs, exact Jacobians by autodiff; see plan.md P-I). This waits on the author's

@@ -26,6 +26,9 @@ Read the project state: @docs/STATE.md
   tagged. Pipeline checks (training converges, tests pass) are fine.
 - If any check fails, stop and ask the author. Never change a threshold,
   tolerance or check on your own, even before results exist.
+- After every commit, run the full test suite against the committed state (a clean
+  worktree of HEAD, so uncommitted files cannot affect it), and report only results
+  from after the commit.
 - Large files (checkpoints, raw data, raw results) go in `checkpoints/`, `data/` and
   `results/`, which are git-ignored. Commit (with `git add -f`) only summary CSVs,
   metadata JSON and small derived arrays, each under 1 MB. Observation data is never

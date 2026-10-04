@@ -48,7 +48,6 @@ from lens import geometry as geo  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import layouts  # noqa: E402
-import provenance as pv  # noqa: E402  (summary printing only)
 
 TAG = "prereg-r6"
 HF_API = "https://huggingface.co/api/models/{repo}"
@@ -110,17 +109,6 @@ def meta(cfg, stage, extra):
         json.dump(m, f, indent=2)
 
 
-def stage_outputs(cfg, stage):
-    """The result files `stage` writes that are committed with `git add -f` (CLAUDE.md)."""
-    res = os.path.join(ROOT, cfg["paths"]["results_out"])
-    names = [f"{t}-seed{s}.npz" for t in cfg["tasks"] for s in cfg["seeds"]]
-    files = dict(list=[],
-                 extract=[os.path.join(ROOT, cfg["paths"]["weights_out"], n) for n in names],
-                 lens=[os.path.join(ROOT, cfg["paths"]["lens_out"], n) for n in names]
-                 + [os.path.join(res, "lens_summary.csv")])[stage]
-    return files + [os.path.join(res, f"meta_{stage}.json")]
-
-
 def stage_list(cfg):
     info = http_json(HF_API.format(repo=hf_repo(cfg)))
     files = sorted(s["rfilename"] for s in info.get("siblings", []))
@@ -134,7 +122,6 @@ def stage_list(cfg):
         for h in hits:
             print(f"  {h['path']}")
     meta(cfg, "list", dict(hf_revision=info.get("sha"), files=files, matches=found))
-    pv.print_commit_listing(stage_outputs(cfg, "list"))
 
 
 def sha256(path):
@@ -207,7 +194,6 @@ def stage_extract(cfg):
                 checkpoint_metadata=json.loads(json.dumps(ck.get("metadata"), default=str)))
     meta(cfg, "extract", dict(torch=torch.__version__, hf_revision=rev, layernorm_eps=eps,
                               checkpoints=record))
-    pv.print_commit_listing(stage_outputs(cfg, "extract"))
 
 
 def stage_lens(cfg):
@@ -241,7 +227,6 @@ def stage_lens(cfg):
     for r in rows:
         print(r)
     meta(cfg, "lens", {})
-    pv.print_commit_listing(stage_outputs(cfg, "lens"))
 
 
 def main():

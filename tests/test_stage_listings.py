@@ -1,6 +1,6 @@
-"""The `git add -f` listings printed by the finished R6 stages (extract.py, collect.py,
-planner_check.py; task (d)). Only their summary printing is under test: each stage's
-listed files must be exactly the committed outputs of that stage."""
+"""The `git add -f` listing printed by planner_check.py (task (d)) and the helper behind
+it. extract.py and collect.py stay byte-identical to the recorded CPU run's commit
+4c3f129 (test_d4_regeneration.py), so they print no listing."""
 
 import os
 import subprocess
@@ -11,8 +11,6 @@ import yaml
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 R6 = os.path.join(ROOT, "experiments", "r6_tdmpc2")
 sys.path.insert(0, R6)
-import collect  # noqa: E402
-import extract  # noqa: E402
 import planner_check  # noqa: E402
 import provenance as pv  # noqa: E402
 
@@ -24,28 +22,6 @@ def _tracked(paths):
     out = subprocess.run(["git", "ls-files", "--", *rel], capture_output=True, text=True,
                          encoding="utf-8", cwd=ROOT).stdout.split()
     return sorted(rel), sorted(out)
-
-
-def test_extract_listings_are_the_committed_outputs():
-    for stage, n in (("extract", 16), ("lens", 17)):
-        paths = extract.stage_outputs(CFG, stage)
-        rel, tracked = _tracked(paths)
-        assert len(paths) == n and rel == tracked, stage
-    assert any(p.endswith("lens_summary.csv") for p in extract.stage_outputs(CFG, "lens"))
-    # `extract list` writes only its meta. results/r6/meta_list.json was never committed
-    # (00603a8 recovered the other metas); the listing names it so the next run prints it.
-    assert [os.path.relpath(p, ROOT).replace(os.sep, "/") for p in extract.stage_outputs(CFG, "list")] == \
-        ["results/r6/meta_list.json"]
-
-
-def test_collect_listings_never_include_observations():
-    for stage, want in (("collect", ["returns.csv", "meta_collect.json"]),
-                        ("consistency", ["consistency.csv", "consistency.json", "meta_consistency.json"])):
-        paths = collect.stage_outputs(CFG, stage)
-        assert [os.path.basename(p) for p in paths] == want
-        rel, tracked = _tracked(paths)
-        assert rel == tracked
-        assert not any("/data/" in r or r.startswith("data/") for r in rel)
 
 
 def test_planner_check_listing():
