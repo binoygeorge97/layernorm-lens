@@ -145,10 +145,14 @@ regression in tolerance mode: `LENS_TOL=1 python -m pytest -q tests/test_core_re
 | 8bcba37 | `criterion.check_lens`: z* compared norm-wise (the first run stopped in input verification on dog-run s1's z*: laptop vs Colab differ by 7.7e-14 norm-wise, cond(A) ≈ 1e4; nothing had been computed) |
 | 57e7689 | `results/r6/criterion/`: the criterion stage outputs (45 files) |
 | 1360cb4, 55f1358 | Notebook `BRANCH` parameter (task (f)); `git add -f` listings (task (d)) |
+| 6d503b7, 2e2d312 | CLAUDE.md: stop and ask on any failed check; test the committed state after every commit. 2e2d312 reverts 55f1358's `collect.py`/`extract.py` listings (they must stay byte-identical to 4c3f129) |
+| 56bfd75 | `results/r6/meta_list.json` committed, with a `PROVENANCE.md` addendum on its origin |
+| 7249b68, d3e197f | Exploratory analyses E1–E3 (not pre-registered): code, then outputs and tables in `results/r6/exploratory/README.md` |
 
 ## 4. R6 status
 
-**The R6 criterion stage has run** (`results/r6/criterion/`, commit 57e7689; run at
+**G1 failed (0 of 4) on 3 October 2026.** Per r6.md, "the headline becomes 'whether the
+defect appears depends on a default'". **The R6 criterion stage has run** (`results/r6/criterion/`, commit 57e7689; run at
 8bcba37 on the laptop, status `complete`; nothing within 1% of a threshold, so no
 Colab rerun under D7 (8)). Results, by the rules of r6.md and D3–D7:
 
@@ -168,6 +172,9 @@ Colab rerun under D7 (8)). Results, by the rules of r6.md and D3–D7:
   walker-run s1, humanoid-run s1; none flagged). r6.md: "If not, the headline
   becomes 'whether the defect appears depends on a default'."
 - D6 (c) calibration, D6 (g) susceptibility, ρ fractions: in `results/r6/criterion/`.
+- Exploratory analyses after G1 (not pre-registered): `results/r6/exploratory/` (E1
+  directional sharpness, E2 where z* sits, E3 initialisation versus trained). Its
+  README also tabulates the reported-regardless ρ and ρ_eff fractions.
 
 Pipeline results and quantities D6 itself recorded, from before the stage:
 
@@ -274,9 +281,22 @@ commit 4c3f129, the guarantee `results/r6/PROVENANCE.md` rests on
 (`test_d4_regeneration.py`). Their listing, added in 55f1358, was reverted.
 
 **(e) Next: session 3.** The quadrotor simulator (`plants/quadrotor.py`; 12 states, 4
-inputs, exact Jacobians by autodiff; see plan.md P-I). This waits on the author's
-parameter choice. Then `prereg/p1.md`, written and tagged before any P-I outcome is
-computed.
+inputs, exact Jacobians by autodiff; see plan.md P-I). The author is choosing its
+parameters, checked against gym-pybullet-drones' `cf2x.urdf` (learnsyslab, last changed
+at 889ce4a5c068ae4d811df1442ceb4f4d6cdf43eb, unchanged at `main` 7ebad1e on 3 Oct 2026):
+mass 0.027 kg, arm 0.0397 m, inertia diag(1.4e-5, 1.4e-5, 2.17e-5) kg·m², kf 3.16e-10,
+km 7.94e-12 (per RPM², as `BaseAviary` uses them), thrust-to-weight 2.25, drag
+coefficients 9.1785e-7 (xy) and 10.311e-7 (z). Max RPM is not in the URDF: `BaseAviary`
+derives 21,702.6 from thrust-to-weight with g = 9.8 (hover 14,468.4).
+
+**(g) Then `prereg/p1.md`**, written and tagged before any P-I outcome is computed. It
+will include a prospective test of lens migration and widening during training.
+
+**(h) Console log of the main planner session.** The author is saving the Colab
+cell-7 output as `results/r6/planner/logs/console_20260927T141627Z.txt` (with the
+torch._dynamo recompile_limit (8) warning at 14:51:36 UTC, walker-run s1). It was not
+on disk on 3 Oct 2026. When it is: commit it (`git add -f`) and update
+`results/r6/planner/PROVENANCE-2026-10-03.md` to cite it.
 
 **(f) Colab notebooks' `BRANCH`.** Done: each of the four notebooks now opens with a
 marked `BRANCH` parameter cell, set to `r6-criterion`.
