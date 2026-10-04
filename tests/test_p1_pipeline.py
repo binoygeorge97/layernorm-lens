@@ -440,3 +440,24 @@ def test_p3_spearman_and_initial_r_star():
     spec = models.SurrogateSpec(arch="prenorm", n_blocks=1, init="torch_default")
     assert 0.79 < prun.initial_r_star_median(spec, 0) < 1.07
     assert prun.initial_r_star_median(models.SurrogateSpec(init="zero_bias"), 0) < 0.05  # ε-limited
+
+
+def test_init_lens_stage_from_initialisation_alone(tmp_path):
+    cfg = copy.deepcopy(CFG)
+    cfg["init_lens"].update(n_seeds=6, n_inputs=2000)
+    rows, summary = prun.stage_init_lens(cfg, str(tmp_path))
+    assert len(rows) == 12 and (tmp_path / "init_lens_summary.csv").exists()
+    zb = [r for r in rows if r["init"] == "zero_bias"]
+    assert all(r["degenerate"] and r["norm_z_star"] == 0.0 for r in zb)
+    assert all(r["r_eff_u_min"] <= r["r_eff_d1"] * (1 + 1e-12) for r in rows)  # u_min is the narrowest
+    td = [r for r in rows if r["init"] == "torch_default"]
+    assert all(not r["degenerate"] and 0.47 < r["r_star_init_median"] < 1.87 for r in td)
+    q = {(s["init"], s["quantity"]): s for s in summary}
+    assert q[("zero_bias", "r_eff_over_D_u_min")]["seed0"] == zb[0]["r_eff_over_D_u_min"]
+
+
+def test_first_layer_is_shared_across_architectures_and_depths():
+    for seed in range(3):
+        Eb = [models.first_layer(s, models.init_params(s, seed)) for s in (
+            models.SurrogateSpec(arch=a, n_blocks=nb, init="torch_default") for a in models.ARCHS for nb in (1, 3))]
+        assert all(np.array_equal(Eb[0][0], e) and np.array_equal(Eb[0][1], b) for e, b in Eb)

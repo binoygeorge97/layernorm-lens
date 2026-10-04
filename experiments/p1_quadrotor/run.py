@@ -18,6 +18,8 @@
     p5: prediction 5 from the lens logs of both stages.
 - benchmark: not gated; times every grid configuration on RANDOM targets (no quadrotor
   data) to estimate the cost of the grid and the long-budget subset.
+- init_lens: not gated; the initial lens of every seed from initialisation alone, on
+  synthetic i.i.d. uniform inputs (no quadrotor data): the p1 draft's initial values.
 
 The stage functions take a `Plant` (p1_data.py), so tests drive them with synthetic plants.
 Every stage writes its config, the git commit and the package versions next to its
@@ -433,6 +435,65 @@ def hover_one(cfg, spec, p, ds, plant, hx, hu):
 
 
 # --------------------------------------------------------------------------- #
+# initial values (initialisation alone; no quadrotor data)                      #
+# --------------------------------------------------------------------------- #
+
+
+def stage_init_lens(cfg, out_dir):
+    """Initial values from initialisation alone (no quadrotor data, not gated): the lens of
+    the initial first layer for seeds 0 … n_seeds − 1 of each initialisation. At a given
+    seed the first layer (E, b) is the first draw for both architectures and both depths,
+    so one lens per (init, seed) covers all four cells.
+
+    Inputs: the sampling design draws every input coordinate independently and uniformly
+    in its box, so the standardised inputs are i.i.d. U(−√3, √3) up to sampling noise;
+    `n_inputs` such draws, z-scored by their own mean and standard deviation, stand in for
+    the training inputs. Per seed: κ, ‖z*‖, ‖z* − μ‖, and along u_min (the lens's
+    narrowest principal direction) and d₁ (the inputs' principal direction): D, r_eff and
+    r_eff/D; and prediction 2's median r*(d) over the analysis config's random directions
+    (ε-limited for a degenerate lens)."""
+    c = cfg["init_lens"]
+    rng = np.random.default_rng(int(c["input_seed"]))
+    g = cfg["grid"]
+    k = int(g.get("k", 16))
+    Z = rng.uniform(-np.sqrt(3.0), np.sqrt(3.0), (int(c["n_inputs"]), k))
+    Z = (Z - Z.mean(0)) / Z.std(0)
+    d1, d1_ratio = an.data_d1(Z)
+    ri = cfg["analysis"]["r_star_init"]
+    rows = []
+    for init in g["inits"]:
+        spec = models.SurrogateSpec(arch=g["archs"][0], n_blocks=1, H=int(g["H"]), k=k, eps=float(g["eps"]),
+                                    init=init, branch_width=int(g["branch_width"]))
+        for seed in range(int(c["n_seeds"])):
+            E, b = (np.asarray(m) for m in models.first_layer(spec, models.init_params(spec, seed)))
+            L = geo.lens(E, b, spec.eps)
+            row = dict(init=init, seed=seed, degenerate=L.degenerate, kappa=float(L.kappa),
+                       norm_z_star=float(np.linalg.norm(L.z_star)),
+                       z_star_to_mean=float(np.linalg.norm(L.z_star - Z.mean(0))),
+                       r_star_init_median=initial_r_star_median(spec, seed, int(ri["n_directions"]),
+                                                                int(ri["rng_seed"])))
+            for name, d in (("u_min", an.u_min(L)), ("d1", d1)):
+                s = an.direction_sharpness(L, Z, d)
+                row.update({f"D_{name}": s["D"], f"r_eff_{name}": s["r_eff"], f"r_eff_over_D_{name}": s["r_eff"] / s["D"]})
+            rows.append(row)
+    qs = (5, 50, 95)
+    summary = []
+    for init in g["inits"]:
+        rr = [r for r in rows if r["init"] == init]
+        for key in ("r_eff_over_D_u_min", "r_eff_over_D_d1", "r_star_init_median", "kappa", "norm_z_star",
+                    "D_u_min", "D_d1"):
+            v = np.array([r[key] for r in rr], np.float64)
+            fin = v[np.isfinite(v)]
+            summary.append(dict(init=init, quantity=key, n=len(v), n_finite=len(fin),
+                                **{f"q{q}": float(np.percentile(fin, q)) if len(fin) else np.nan for q in qs},
+                                **{f"seed{s}": float(v[s]) for s in g["seeds"]}))
+    write_csv(os.path.join(out_dir, "init_lens_summary.csv"), summary)
+    write_json(os.path.join(out_dir, "meta_init_lens.json"),
+               meta(cfg, "init_lens", dict(d1_eigen_ratio=d1_ratio, n_rows=len(rows))))
+    return rows, summary
+
+
+# --------------------------------------------------------------------------- #
 # benchmark (random targets only)                                               #
 # --------------------------------------------------------------------------- #
 
@@ -501,7 +562,7 @@ def stage_benchmark(cfg, out_dir, members=None, steps=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
-    ap.add_argument("stage", choices=list(GATED) + ["benchmark"])
+    ap.add_argument("stage", choices=list(GATED) + ["benchmark", "init_lens"])
     ap.add_argument("--index", type=int, help="run only this member of the stage's grid (a Slurm array task)")
     ap.add_argument("--out-root", help="data, checkpoints and results under this directory (e.g. $SCRATCH)")
     ap.add_argument("--data-dir", help="the data directory, if not <out-root>/<paths.data>")
@@ -517,6 +578,13 @@ def main():
             print(r)
         print(summary)
         pv.print_commit_listing([os.path.join(out, f) for f in ("benchmark.csv", "meta_benchmark.json")])
+        return
+    if args.stage == "init_lens":
+        out = os.path.join(res, cfg["init_lens"]["out"])
+        _, summary = stage_init_lens(cfg, out)
+        for r in summary:
+            print(r)
+        pv.print_commit_listing([os.path.join(out, f) for f in ("init_lens_summary.csv", "meta_init_lens.json")])
         return
     pre = cfg["prereg"]
     try:

@@ -299,3 +299,21 @@ the task, the choice, the reasoning, and the alternatives rejected.
       - 1,000,000 steps (10×; 49 h for the subset).
     - With both stages at about 55 h in the worst case, the laptop can finish the grid
       before G2 (18 Oct). TACC stays the fallback.
+
+34. **Initial values come from an ungated stage, `init_lens`**: the initial first layer
+    of seeds 0–999 of each initialisation, on 20,000 i.i.d. U(−√3, √3)¹⁶ inputs
+    z-scored by their own mean and standard deviation.
+    - It reports per seed:
+      - r_eff/D along u_min and d₁;
+      - κ, ‖z*‖ and ‖z* − μ‖;
+      - prediction 2's initial median r* (64 directions, rng seed 0);
+    - and quantiles over seeds, plus the grid's seeds 0–4.
+    - Why:
+      - The sampling design draws every input coordinate independently and uniformly,
+        so its standardised inputs have this distribution up to sampling noise. No
+        quadrotor state, target or surrogate is involved (stop condition 3).
+      - The first layer is the first draw for both architectures and depths, so one
+        lens per (initialisation, seed) covers all four cells (tested).
+    - Rejected: drawing the inputs with `p1_data.sample` on the quadrotor's box (same
+      distribution, but it would put P-I's own sampling code in front of a lens
+      computation before the tag).

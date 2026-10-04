@@ -78,6 +78,12 @@ hover:
   sign_rel_threshold: 1.0e-3   # OPEN: sign agreement on entries with |truth| > thr * max|truth|
   q_r: bryson                  # OPEN: Q = diag(1/h_x^2) from the sampling half-widths, R = diag(1/(0.5 u0)^2)
 
+init_lens:                     # initial values from initialisation alone (no quadrotor data); not gated
+  n_seeds: 1000                # seeds 0..999 of each initialisation (the grid's seeds 0-4 among them)
+  n_inputs: 20000              # i.i.d. U(-sqrt3, sqrt3)^16, z-scored: the sampling design's standardised inputs
+  input_seed: 0
+  out: init_lens               # under results/p1/
+
 benchmark:                     # random targets only (not quadrotor data); not gated
   n_train: 20000
   n_val: 5000
