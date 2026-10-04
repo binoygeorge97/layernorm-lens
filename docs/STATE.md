@@ -279,6 +279,11 @@ inputs, exact Jacobians by autodiff; see plan.md P-I). This waits on the author'
 parameter choice. Then `prereg/p1.md`, written and tagged before any P-I outcome is
 computed.
 
+**(f) Colab notebooks' `BRANCH`.** Before any future Colab run, update `BRANCH` in
+the four notebooks (`r6_colab.ipynb`, `r6_planner_check.ipynb`,
+`r6_d4_regeneration.ipynb`, `r6_planner_collect.ipynb`). They still name the old
+branches (section 3).
+
 ## 7. Known issues
 
 - The core regression's bit-exact golden test depends on the platform. On the
