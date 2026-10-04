@@ -280,3 +280,22 @@ the task, the choice, the reasoning, and the alternatives rejected.
       step for the long runs. This is proposed in the draft.
     - Rejected: the best ratio at any time (it rewards a transient), which is reported as
       `ratio_max` instead.
+
+33. **Minibatch benchmark** (`run.py benchmark` at d7b2cb3, `results/p1/benchmark_bs2048/`;
+    random targets, the same design as entry 21). The full-batch benchmark of 08d1deb
+    stays in `results/p1/benchmark/`.
+    - Batch 2,048 takes 0.016–0.042 s per step on the laptop CPU, against 0.06–0.27 s
+      full batch: 4–6× faster, not 10×, because the per-step row draw and the Adam
+      update do not shrink with the batch.
+    - One lens record (d₁ and u_min) takes 8–23 ms, under 1% of the time between
+      records.
+    - Upper bounds, every run to its full budget: 30.2 h for the 40-model grid at
+      100,000 steps, and 24.5 h for the long-budget subset at 500,000 steps.
+    - **Long budget: 500,000 steps**, 5× the 40 runs' maximum. Even a run that never
+      stops early is then trained 5× past its early-stopping budget, at about 2.5 h per
+      run and 24.5 h for the subset on the laptop.
+    - Rejected:
+      - 300,000 steps (3×; cheaper, but little room past a late stop);
+      - 1,000,000 steps (10×; 49 h for the subset).
+    - With both stages at about 55 h in the worst case, the laptop can finish the grid
+      before G2 (18 Oct). TACC stays the fallback.
