@@ -39,7 +39,9 @@ Gate G3 (13 Nov): every main-text claim backed.
 | `lens/core.py` | The original kink_core.py. **Frozen**: change only if `tests/test_core_regression.py` still passes bit for bit |
 | `lens/geometry.py` | The lens from weights (numpy float64): `lens(E, b, eps)` → z*, c⊥, κ, principal widths/directions, Σ, degenerate flag; `line()` (r*_ℓ and r_eff along a line), `lens_distance` (ρ), `gnomonic` (Theorem 1) |
 | `lens/__init__.py` | Imports core (and therefore JAX) |
-| `plants/`, `control/` | Empty packages, for the quadrotor plant and LQR/MPC (session 3) |
+| `plants/quadrotor.py` | The P-I quadrotor (JAX float64, 12 states, 4 rotor thrusts; approved cf2x.urdf parameters; X-mixer; `f`, `rk4_step`, `hover_equilibrium`, `linearize`, `linearize_step`) |
+| `control/` | LQR and the hover linearisation check (P-I infrastructure) |
+| `docs/DECISIONS.md`, `docs/plans/` | The decision log for choices the specs leave open, and per-task plans |
 | `experiments/initial_lens/` | Initial-lens check: `run.py`, `config.yaml`. 1,000 draws per (H, k, ε, init) for inits (a) zero bias, (b) torch default, (c) Flax, (d) TD-MPC2. Results in `results/initial_lens/` |
 | `experiments/r6_tdmpc2/` | R6 (below) |
 | `prereg/` | `r6.md` and deviations parts 1–3 (all tagged) |
@@ -90,11 +92,14 @@ regression in tolerance mode: `LENS_TOL=1 python -m pytest -q tests/test_core_re
 | `test_d4_regeneration.py` | `regenerate_d4.py` logic |
 | `test_planner_collect.py` | remap, gate rule, controls, halting, manifests (no checkpoints or GPU needed) |
 | `test_criterion.py` | criterion stage, synthetic arrays only |
+| `test_quadrotor.py` | hover equilibrium, Jacobians against central differences, signs, the hover linearisation, RK4's order |
 
 ## 3. Branches, merge policy, tags
 
-- **Development branch: `r6-criterion`**, created from `main` at 31be62e. Never
-  commit on `main`.
+- **Working branches:** `r6-criterion` (R6; to be merged into `main` by the author's PR)
+  and `quadrotor-sim` (session 3 onwards, created from `r6-criterion` at 732aa44).
+  Never commit on `main`. Own working branches may be pushed after each completed
+  queue item (CLAUDE.md).
 - `main` is at 31be62e (PR #8, which merged `claude/new-session-0r0qe0`). It
   contains everything up to this handoff, including the planner results (3d52d3d)
   and the WIP criterion stage (eb8835a). Changes reach `main` only through pull
@@ -280,14 +285,17 @@ there, and the stage prints the `git add -f` list. Tests: `tests/test_criterion.
 commit 4c3f129, the guarantee `results/r6/PROVENANCE.md` rests on
 (`test_d4_regeneration.py`). Their listing, added in 55f1358, was reverted.
 
-**(e) Next: session 3.** The quadrotor simulator (`plants/quadrotor.py`; 12 states, 4
-inputs, exact Jacobians by autodiff; see plan.md P-I). The author is choosing its
-parameters, checked against gym-pybullet-drones' `cf2x.urdf` (learnsyslab, last changed
-at 889ce4a5c068ae4d811df1442ceb4f4d6cdf43eb, unchanged at `main` 7ebad1e on 3 Oct 2026):
-mass 0.027 kg, arm 0.0397 m, inertia diag(1.4e-5, 1.4e-5, 2.17e-5) kg·m², kf 3.16e-10,
-km 7.94e-12 (per RPM², as `BaseAviary` uses them), thrust-to-weight 2.25, drag
-coefficients 9.1785e-7 (xy) and 10.311e-7 (z). Max RPM is not in the URDF: `BaseAviary`
-derives 21,702.6 from thrust-to-weight with g = 9.8 (hover 14,468.4).
+**(e) Session 3: the quadrotor simulator.** Done on `quadrotor-sim`: `plants/quadrotor.py`
+with the approved parameters (m 0.027 kg, L 0.0397 m X configuration, J diag(1.4e-5,
+1.4e-5, 2.17e-5) kg·m², kf 3.16e-10, km 7.94e-12, c = km/kf, thrust-to-weight 2.25,
+f_max = 2.25 m g/4, g = 9.81; gym-pybullet-drones uses 9.8), from gym-pybullet-drones'
+`cf2x.urdf` (889ce4a5c068ae4d811df1442ceb4f4d6cdf43eb, SHA-256 81494018…884b). Linear
+drag is behind a flag with no approved coefficients. Choices: `docs/DECISIONS.md`.
+
+**(e2) P-I infrastructure** (author-approved queue, 4 Oct 2026): data generation,
+surrogates, training with lens logging, analysis, the hover linearisation check; built
+and tested on synthetic problems only. No surrogate is trained on quadrotor data and no
+lens quantity is computed on a trained quadrotor surrogate before the tag `prereg-p1`.
 
 **(g) Then `prereg/p1.md`**, written and tagged before any P-I outcome is computed. It
 will include a prospective test of lens migration and widening during training.
@@ -300,6 +308,14 @@ the recompile_limit (8) warning (14:51:36 UTC, walker-run s1).
 
 **(f) Colab notebooks' `BRANCH`.** Done: each of the four notebooks now opens with a
 marked `BRANCH` parameter cell, set to `r6-criterion`.
+
+## Questions for the author
+
+Non-blocking; work continues on everything that does not depend on the answers.
+
+1. Linear drag (`plants/quadrotor.py`, flag off by default): no linear coefficient is in
+   the approved set. Keep drag off for P-I, or approve coefficients (for example, the
+   URDF's rotor drag linearised at hover gives about 5.6e-3 N/(m/s) for xy)?
 
 ## 7. Known issues
 
