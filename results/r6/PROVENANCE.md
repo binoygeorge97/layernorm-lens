@@ -86,3 +86,7 @@ seed 1.
   aa5baf5610162ca118a0822582fdf493f9e04a337b90e7fd050431c53be1421d, the original
   Drive copy's). 2f9764c adds `.gitattributes` with `results/** -text`, so result
   files are stored byte for byte whatever platform commits them.
+
+## Addendum, 3 October 2026 (meta_list.json)
+
+- `meta_list.json` is from `extract.py list` on the laptop, 24 Sep 2026 20:00:20 UTC, at bb69b54 (clean), Python 3.12.1; committed now, unchanged (SHA-256 b06ca7acd4d3c6f7c60c162683d80935c4010207fb54c2f730b92891c9fe39d2).
