@@ -1,0 +1,457 @@
+{
+  "summary": {
+    "problems": [],
+    "files": {
+      "train/train_summary.csv": 40,
+      "train_long/train_summary.csv": 10,
+      "analyse.csv": 40,
+      "analyse_long.csv": 50,
+      "hover.csv": 40,
+      "hover_trims.csv": 8000,
+      "p5_train.csv": 40,
+      "p5_train_long.csv": 10,
+      "p5_train_cells.csv": 4,
+      "p5_train_long_cells.csv": 2,
+      "analyse_lens.npz": 160
+    },
+    "p1_cells": [
+      [
+        "normedlinear",
+        1,
+        0,
+        false
+      ],
+      [
+        "normedlinear",
+        3,
+        0,
+        false
+      ],
+      [
+        "prenorm",
+        1,
+        0,
+        false
+      ],
+      [
+        "prenorm",
+        3,
+        0,
+        false
+      ]
+    ],
+    "p1_overall": {
+      "holds": false,
+      "n_cells_hold": 0,
+      "n_cells": 4
+    },
+    "g2": {
+      "passes": false,
+      "n_cells_hold": 0,
+      "p3_cells": []
+    },
+    "p2": {
+      "a_holds": true,
+      "holds": false
+    },
+    "p3": {
+      "rho": 0.695492143621037,
+      "holds": false,
+      "within": {
+        "torch_default": 0.7562317994623827,
+        "zero_bias": 0.7385531655762763
+      }
+    },
+    "p4": {
+      "holds": true,
+      "median": 0.7733847743675886,
+      "consistent": false
+    },
+    "p5": {
+      "holds": true
+    },
+    "h1": {
+      "holds": true
+    },
+    "race": [
+      {
+        "arch": "normedlinear",
+        "n_blocks": 1,
+        "p1_and_p5": 0,
+        "p1_only": 0,
+        "p5_only": 5,
+        "neither": 0,
+        "diverged": 0
+      },
+      {
+        "arch": "normedlinear",
+        "n_blocks": 3,
+        "p1_and_p5": 0,
+        "p1_only": 0,
+        "p5_only": 5,
+        "neither": 0,
+        "diverged": 0
+      },
+      {
+        "arch": "prenorm",
+        "n_blocks": 1,
+        "p1_and_p5": 0,
+        "p1_only": 0,
+        "p5_only": 5,
+        "neither": 0,
+        "diverged": 0
+      },
+      {
+        "arch": "prenorm",
+        "n_blocks": 3,
+        "p1_and_p5": 0,
+        "p1_only": 0,
+        "p5_only": 0,
+        "neither": 5,
+        "diverged": 0
+      }
+    ]
+  },
+  "predictions": {
+    "p1": [
+      {
+        "arch": "normedlinear",
+        "n_blocks": 1,
+        "n": 5,
+        "n_diverged": 0,
+        "n_a": 0,
+        "n_b": 0,
+        "n_pass": 0,
+        "holds": false,
+        "seeds_pass": {
+          "0": false,
+          "1": false,
+          "2": false,
+          "3": false,
+          "4": false
+        },
+        "seeds_diverged": {
+          "0": false,
+          "1": false,
+          "2": false,
+          "3": false,
+          "4": false
+        }
+      },
+      {
+        "arch": "normedlinear",
+        "n_blocks": 3,
+        "n": 5,
+        "n_diverged": 0,
+        "n_a": 0,
+        "n_b": 0,
+        "n_pass": 0,
+        "holds": false,
+        "seeds_pass": {
+          "0": false,
+          "1": false,
+          "2": false,
+          "3": false,
+          "4": false
+        },
+        "seeds_diverged": {
+          "0": false,
+          "1": false,
+          "2": false,
+          "3": false,
+          "4": false
+        }
+      },
+      {
+        "arch": "prenorm",
+        "n_blocks": 1,
+        "n": 5,
+        "n_diverged": 0,
+        "n_a": 5,
+        "n_b": 0,
+        "n_pass": 0,
+        "holds": false,
+        "seeds_pass": {
+          "0": false,
+          "1": false,
+          "2": false,
+          "3": false,
+          "4": false
+        },
+        "seeds_diverged": {
+          "0": false,
+          "1": false,
+          "2": false,
+          "3": false,
+          "4": false
+        }
+      },
+      {
+        "arch": "prenorm",
+        "n_blocks": 3,
+        "n": 5,
+        "n_diverged": 0,
+        "n_a": 5,
+        "n_b": 0,
+        "n_pass": 0,
+        "holds": false,
+        "seeds_pass": {
+          "0": false,
+          "1": false,
+          "2": false,
+          "3": false,
+          "4": false
+        },
+        "seeds_diverged": {
+          "0": false,
+          "1": false,
+          "2": false,
+          "3": false,
+          "4": false
+        }
+      }
+    ],
+    "p1_overall": {
+      "holds": false,
+      "n_cells_hold": 0,
+      "n_cells": 4
+    },
+    "g2": {
+      "passes": false,
+      "n_cells_hold": 0,
+      "p3_cells": []
+    },
+    "p2": {
+      "a_n": 20,
+      "a_n_pass": 20,
+      "a_holds": true,
+      "b_cells": [
+        {
+          "arch": "normedlinear",
+          "n_blocks": 1,
+          "n": 5,
+          "n_pass": 3,
+          "holds": false
+        },
+        {
+          "arch": "normedlinear",
+          "n_blocks": 3,
+          "n": 5,
+          "n_pass": 4,
+          "holds": true
+        },
+        {
+          "arch": "prenorm",
+          "n_blocks": 1,
+          "n": 5,
+          "n_pass": 0,
+          "holds": false
+        },
+        {
+          "arch": "prenorm",
+          "n_blocks": 3,
+          "n": 5,
+          "n_pass": 5,
+          "holds": true
+        }
+      ],
+      "holds": false
+    },
+    "p3": {
+      "n": 40,
+      "n_diverged": 0,
+      "rho": 0.695492143621037,
+      "holds": false,
+      "n_tied_score": 0,
+      "n_tied_target": 12,
+      "within_init": {
+        "torch_default": {
+          "rho": 0.7562317994623827,
+          "n": 20,
+          "n_tied_score": 0,
+          "n_tied_target": 3
+        },
+        "zero_bias": {
+          "rho": 0.7385531655762763,
+          "n": 20,
+          "n_tied_score": 0,
+          "n_tied_target": 7
+        }
+      }
+    },
+    "p4": {
+      "cells": [
+        {
+          "arch": "normedlinear",
+          "init": "torch_default",
+          "n": 5,
+          "n_pass": 5,
+          "holds": true,
+          "median": 0.7509612387949598
+        },
+        {
+          "arch": "normedlinear",
+          "init": "zero_bias",
+          "n": 5,
+          "n_pass": 5,
+          "holds": true,
+          "median": 0.7733847743675886
+        }
+      ],
+      "holds": true,
+      "zero_bias_median": 0.7733847743675886,
+      "n_point": 5,
+      "point_consistent": false,
+      "reported_prenorm_cells": [
+        {
+          "arch": "prenorm",
+          "init": "torch_default",
+          "n": 5,
+          "n_pass": 2,
+          "holds": false,
+          "median": 1.0704809273981182
+        },
+        {
+          "arch": "prenorm",
+          "init": "zero_bias",
+          "n": 5,
+          "n_pass": 5,
+          "holds": true,
+          "median": 0.31592742762219717
+        }
+      ],
+      "reported_head_ratio_medians": {
+        "normedlinear/torch_default": 1.3476983374627183,
+        "normedlinear/zero_bias": 1.0183141005069516,
+        "prenorm/torch_default": 0.9031004304227268,
+        "prenorm/zero_bias": 0.37336745672737714
+      }
+    },
+    "h1": {
+      "cells": [
+        {
+          "arch": "normedlinear",
+          "n_blocks": 1,
+          "n": 5,
+          "n_pass": 5,
+          "n_diverged": 0,
+          "n_no_stabilising_gain": 0,
+          "holds": true
+        },
+        {
+          "arch": "normedlinear",
+          "n_blocks": 3,
+          "n": 5,
+          "n_pass": 5,
+          "n_diverged": 0,
+          "n_no_stabilising_gain": 0,
+          "holds": true
+        },
+        {
+          "arch": "prenorm",
+          "n_blocks": 1,
+          "n": 5,
+          "n_pass": 5,
+          "n_diverged": 0,
+          "n_no_stabilising_gain": 0,
+          "holds": true
+        },
+        {
+          "arch": "prenorm",
+          "n_blocks": 3,
+          "n": 5,
+          "n_pass": 5,
+          "n_diverged": 0,
+          "n_no_stabilising_gain": 0,
+          "holds": true
+        }
+      ],
+      "holds": true
+    },
+    "p5": {
+      "holds": true,
+      "long_cells": [
+        {
+          "arch": "normedlinear",
+          "n": "5",
+          "n_pass": "5",
+          "holds": "True"
+        },
+        {
+          "arch": "prenorm",
+          "n": "5",
+          "n_pass": "5",
+          "holds": "True"
+        }
+      ],
+      "es_cells": [
+        {
+          "arch": "normedlinear",
+          "n_blocks": "1",
+          "n": "5",
+          "n_pass": "5",
+          "holds": "True"
+        },
+        {
+          "arch": "normedlinear",
+          "n_blocks": "3",
+          "n": "5",
+          "n_pass": "5",
+          "holds": "True"
+        },
+        {
+          "arch": "prenorm",
+          "n_blocks": "1",
+          "n": "5",
+          "n_pass": "5",
+          "holds": "True"
+        },
+        {
+          "arch": "prenorm",
+          "n_blocks": "3",
+          "n": "5",
+          "n_pass": "0",
+          "holds": "False"
+        }
+      ]
+    },
+    "race": [
+      {
+        "arch": "normedlinear",
+        "n_blocks": 1,
+        "p1_and_p5": 0,
+        "p1_only": 0,
+        "p5_only": 5,
+        "neither": 0,
+        "diverged": 0
+      },
+      {
+        "arch": "normedlinear",
+        "n_blocks": 3,
+        "p1_and_p5": 0,
+        "p1_only": 0,
+        "p5_only": 5,
+        "neither": 0,
+        "diverged": 0
+      },
+      {
+        "arch": "prenorm",
+        "n_blocks": 1,
+        "p1_and_p5": 0,
+        "p1_only": 0,
+        "p5_only": 5,
+        "neither": 0,
+        "diverged": 0
+      },
+      {
+        "arch": "prenorm",
+        "n_blocks": 3,
+        "p1_and_p5": 0,
+        "p1_only": 0,
+        "p5_only": 0,
+        "neither": 5,
+        "diverged": 0
+      }
+    ]
+  }
+}

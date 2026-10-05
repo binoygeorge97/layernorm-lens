@@ -1,0 +1,7 @@
+{
+  "manifest_mismatch": "refusing P-I data train.npz: SHA-256 9516cf0983ce3a563607d66c9d2a0b37285d92b943824189e11eca92934d5aec != expected 8037c5852f373b280f79c23124180bdb09f4fd17feff87aaf5c58109092f4361.",
+  "injected_nan": "prenorm-zero_bias-b1-s0: diverged = True at step 500",
+  "dirty_worktree_at_gather": "gather: a run ran on a dirty tree: [('6de7d31628074363c6c716e6e64529b7e1759337', True)]",
+  "missing_run": "gather: missing-run: run JSON or manifest missing",
+  "corollary1_deviation": "prenorm-zero_bias-b1-s0: Corollary 1 deviation 1e-06 > 1e-10: stopping (a code error, not a result)"
+}

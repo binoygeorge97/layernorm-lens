@@ -506,3 +506,58 @@ not approved for tagging yet", items A1–A9 and P1–P5.
 
     `run.py`'s analyse and hover loops became functions (`stage_analyse`,
     `stage_hover`) so the pre-flight and the tests call the same code as the stages.
+
+49. **A7, the execution configuration.**
+    - Three parallel processes, each single-threaded: `launch.py` with
+      `XLA_FLAGS=--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1`,
+      `OMP`/`MKL`/`OPENBLAS`/`NUMEXPR_NUM_THREADS=1`, `JAX_PLATFORMS=cpu`,
+      `PYTHONHASHSEED=0`.
+    - Single-run speed doesn't depend on the XLA thread flags. One pre-norm 3-block
+      run took 50–51 ms per step with the default, 1 or 2 threads, so the work is
+      effectively single-threaded at these sizes, and the flags are pinned for
+      determinism.
+    - Throughput on random targets (`throughput.py` at 6de7d31,
+      `results/p1/throughput/`), mean over the 8 configurations:
+
+      | Processes | ms per step, per process | Steps per second, total | Grid upper bound |
+      | --- | --- | --- | --- |
+      | 1 | 29.3 | 34.1 | 32.6 h |
+      | 2 | 38.8 | 51.6 | 21.5 h |
+      | 3 | 48.6 | 61.7 | 18.0 h |
+
+      Three processes are chosen, the best of the measured settings.
+    - Determinism (`determinism.py` at 6de7d31, `results/p1/determinism/`): two runs
+      (pre-norm zero-bias 3-block seed 0; NormedLinear PyTorch-default 3-block seed 1)
+      at the real configuration, cut to 2,000 steps on the synthetic plant. Each was run
+      alone, alone again, and alongside two other training processes. The best
+      parameters, history CSV and history NPZ were byte-identical in all three.
+    - Runtime at 3 processes (upper bounds, no early stop; per-configuration ms per step
+      under 3-process load): grid 18.0 h (18.4 h as scheduled), long runs 13.6 h
+      (15.0 h as scheduled), about 33 h in all. On one process it was 54.7 h.
+    - Rejected: four or more processes (not measured, as asked); per-process
+      multi-threading (no gain).
+
+54. **P2, read from the pre-flight's tables** (`results/p1_preflight/`, 6de7d31, synthetic
+    plant):
+    - `check_outputs` found every promised column and file: 40 + 10 runs, 50 snapshot
+      rows, 8,000 trim rows, every predictions key.
+    - Corollary 1 deviations were 6–9e-16. After training, every lens was non-degenerate,
+      and step 0 of every zero-bias long run was degenerate, as expected.
+    - Two observations, neither a code defect:
+      - B's relative error in physical units can be large while the standardised
+        Jacobian error is small. Thrust's standard deviation is small, so B's columns
+        carry little weight in the standardised Frobenius norm. This is a property of
+        the pre-registered metrics, reported for the author.
+      - The trims' variation error inherits a large hover error. For zero-bias models,
+        hover sits at the lens centre.
+    - No code change was needed after the run.
+
+55. **P4, every stopping rule triggered on purpose** (`preflight.py stops`;
+    `results/p1_preflight/preflight_stops.json`):
+    - a data-manifest mismatch: refused, with both hashes;
+    - an injected NaN: diverged at step 500, recorded;
+    - a dirty tree at gather: refused;
+    - a missing run: refused, naming it;
+    - a forced Corollary 1 deviation: stopped, naming the model.
+
+    Each is also a test in `tests/test_p1_pipeline.py`.
