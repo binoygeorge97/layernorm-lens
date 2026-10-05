@@ -3,7 +3,7 @@
     python experiments/p1_quadrotor/run.py --config experiments/p1_quadrotor/config.yaml STAGE
         [--index I] [--out-root DIR] [--data-dir DIR] [--of train|train_long]
 
-- generate, train, train_long, gather, analyse, analyse_long, hover, p5: refuse to run
+- generate, train, train_long, gather, analyse, analyse_long, hover, p5, predictions: refuse to run
   unless the annotated tag prereg-p1 exists and prereg/p1.md matches it (CLAUDE.md: no
   outcome before the tag), and the working tree is clean. They run on quadrotor data.
   - train: the 40-model grid (early stopping). train_long: the long-budget subset
@@ -15,11 +15,16 @@
     data manifest is always the committed one in the repository.
   - analyse: predictions 1–4's quantities on the 40 models; analyse_long: prediction 1's
     statistic and the lens at every snapshot of the long runs (the race of the draft);
-    p5: prediction 5 from the lens logs of both stages.
+    hover: the hover check, H1's per-model flag and the trim check; p5: prediction 5
+    from the lens logs of both stages; predictions: every pre-registered rule
+    (p1_rules.py) applied to those outputs, with G2.
 - benchmark: not gated; times every grid configuration on RANDOM targets (no quadrotor
   data) to estimate the cost of the grid and the long-budget subset.
 - init_lens: not gated; the initial lens of every seed from initialisation alone, on
   synthetic i.i.d. uniform inputs (no quadrotor data): the p1 draft's initial values.
+- trims: not gated; samples the hover check's 200 steady-flight trims with a fixed seed
+  and verifies them on the simulator (no surrogate). Run once before any training; a
+  rerun must reproduce the committed file byte for byte.
 
 The stage functions take a `Plant` (p1_data.py), so tests drive them with synthetic plants.
 Every stage writes its config, the git commit and the package versions next to its
@@ -53,13 +58,14 @@ for p_ in (ROOT, HERE, os.path.join(ROOT, "experiments", "r6_tdmpc2")):
         sys.path.insert(0, p_)
 import p1_data as pdata  # noqa: E402
 import p1_hover as phover  # noqa: E402
+import p1_rules as rules  # noqa: E402
 import provenance as pv  # noqa: E402
 from lens import analysis as an  # noqa: E402
 from lens import geometry as geo  # noqa: E402
 from lens import models  # noqa: E402
 from lens import train as tr  # noqa: E402
 
-GATED = ("generate", "train", "train_long", "gather", "analyse", "analyse_long", "hover", "p5")
+GATED = ("generate", "train", "train_long", "gather", "analyse", "analyse_long", "hover", "p5", "predictions")
 GRIDS = {"train": "grid", "train_long": "long_budget"}
 
 
@@ -337,6 +343,10 @@ def analyse_one(cfg, spec, p, ds, seed=None):
                 for x0, d in lines]
         out["corollary1_max_rel_dev"] = float(max(devs))
     if spec.n_blocks > 1:
+        for dname, d in (("u_min", um), ("d1", d1)):
+            sr = an.attenuation_S(spec, p, L, d)
+            out.update({f"p4_S_out_{dname}": sr["S_out"], f"p4_S_block1_{dname}": sr["S_block1"],
+                        f"p4_ratio_{dname}": sr["ratio"]})
         for dname, d in (("d1", d1), ("u_min", um)):
             at = an.attenuation(spec, p, L, d, Ztr, int(a["attenuation"]["n_grid"]), float(a["attenuation"]["t_range"]))
             pre = "" if dname == "d1" else "u_min_"
@@ -425,13 +435,83 @@ def stage_p5(cfg, res, which):
     return out, p5_cells([r for r in out if r["init"] == "zero_bias"], keys, int(q["min_seeds"]))
 
 
-def hover_one(cfg, spec, p, ds, plant, hx, hu):
+def hover_one(cfg, spec, p, ds, plant, hx, hu, trims=None, truth=None):
+    """The hover check at hover (with H1's per-model flag), and, if trims are given, the
+    trim check: per-trim rows, summarised per model by Spearman correlations of the
+    variation error and of A's and B's errors with the trims' lens distance, and their
+    medians. Returns (summary, trim rows)."""
     J_std = np.asarray(jax.jacfwd(lambda z: models.forward(spec, p, z))(jnp.asarray(ds["trim"]["Z"])))
     A_s, B_s = phover.physical_jacobian(J_std, ds["scalers"], plant.n_x)
     A_t, B_t = phover.true_y_jacobians(plant)
     Q, R = phover.bryson(hx, hu)
-    r = phover.hover_check(A_s, B_s, A_t, B_t, Q, R, float(cfg["hover"]["sign_rel_threshold"]))
-    return {k: v for k, v in r.items() if not isinstance(v, np.ndarray)}
+    thr = float(cfg["hover"]["sign_rel_threshold"])
+    r = phover.hover_check(A_s, B_s, A_t, B_t, Q, R, thr)
+    out = {k: v for k, v in r.items() if not isinstance(v, np.ndarray)}
+    if trims is None:
+        return out, []
+    E, b = (np.asarray(m) for m in models.first_layer(spec, p))
+    L = geo.lens(E, b, spec.eps)
+    Jb = jax.jit(jax.vmap(jax.jacfwd(lambda z: models.forward(spec, p, z))))
+    trows = phover.trim_check(lambda Z: Jb(jnp.asarray(Z, jnp.float64)), ds["scalers"], plant, trims, truth,
+                              ds["trim"]["Z"], lambda Z: an.lens_distances(L, Z)[0], thr)
+    dist = np.array([t["lens_distance"] for t in trows])
+    for key in ("variation_err", "rel_err_A", "rel_err_B"):
+        v = np.array([t[key] for t in trows])
+        out[f"trims_{key}_median"] = float(np.median(v))
+        out[f"trims_spearman_dist_{key}"] = float(stats.spearmanr(dist, v).statistic)
+    out["trims_sign_agree_min"] = float(min(min(t["sign_agree_A"], t["sign_agree_B"]) for t in trows))
+    return out, trows
+
+
+def stage_trims(cfg, plant, hx, out_dir):
+    """Sample the trims (hover.trims: n, seed), verify each is a trim of the simulator and
+    inside the training box, and write trims.csv, its SHA-256 manifest and meta. If
+    trims.csv exists, the regenerated bytes must match it (regeneration identity)."""
+    t = cfg["hover"]["trims"]
+    X = phover.sample_trims(plant, hx, int(t["n"]), int(t["seed"]))
+    inside, dev = phover.check_trims(plant, X, hx)
+    if not inside or dev > float(t["step_tol"]):
+        raise pv.ProvenanceError(f"trims: inside the box {inside}, max step deviation {dev}")
+    rows = [dict(trim=i, **{f"x{j}": repr(float(v)) for j, v in enumerate(x)}) for i, x in enumerate(X)]
+    path = os.path.join(out_dir, "trims.csv")
+    new = os.path.join(out_dir, "trims.csv.new")
+    write_csv(new, rows)
+    if os.path.exists(path):
+        with open(path, "rb") as f1, open(new, "rb") as f2:
+            same = f1.read() == f2.read()
+        os.remove(new)
+        if not same:
+            raise pv.ProvenanceError(f"trims: the regenerated trims differ from {path}")
+    else:
+        os.replace(new, path)
+    pv.write_manifest(os.path.join(out_dir, "trims_manifest.csv"), [path], out_dir)
+    write_json(os.path.join(out_dir, "meta_trims.json"),
+               meta(cfg, "trims", dict(n=len(X), inside_box=inside, max_step_deviation=dev)))
+    return X, dev
+
+
+def load_trims(cfg, res):
+    """The committed trims, after verifying trims.csv against its manifest."""
+    d = os.path.join(res, cfg["hover"]["trims"]["out"])
+    m = pv.read_manifest(os.path.join(d, "trims_manifest.csv"))
+    pv.verify_sha256(os.path.join(d, "trims.csv"), m[0]["sha256"], "trims.csv")
+    rows = read_csv(os.path.join(d, "trims.csv"))
+    n_x = len([k for k in rows[0] if k.startswith("x")])
+    return np.array([[float(r[f"x{j}"]) for j in range(n_x)] for r in rows])
+
+
+def stage_predictions(cfg, res):
+    """Apply every pre-registered rule (p1_rules.py) to the stage outputs."""
+    q = cfg["predictions"]
+    an_rows = read_csv(os.path.join(res, "analyse.csv"))
+    hv_rows = read_csv(os.path.join(res, "hover.csv"))
+    p1c = rules.p1(an_rows, q)
+    out = dict(p1=p1c, g2=rules.g2(p1c, q), p2=rules.p2(an_rows, q), p3=rules.p3(an_rows, q),
+               p4=rules.p4(an_rows, q), h1=rules.h1(hv_rows, q),
+               p5=rules.p5(read_csv(os.path.join(res, "p5_train_long_cells.csv")),
+                           read_csv(os.path.join(res, "p5_train_cells.csv"))),
+               race=rules.race(p1c, read_csv(os.path.join(res, "p5_train.csv"))))
+    return out
 
 
 # --------------------------------------------------------------------------- #
@@ -562,7 +642,7 @@ def stage_benchmark(cfg, out_dir, members=None, steps=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
-    ap.add_argument("stage", choices=list(GATED) + ["benchmark", "init_lens"])
+    ap.add_argument("stage", choices=list(GATED) + ["benchmark", "init_lens", "trims"])
     ap.add_argument("--index", type=int, help="run only this member of the stage's grid (a Slurm array task)")
     ap.add_argument("--out-root", help="data, checkpoints and results under this directory (e.g. $SCRATCH)")
     ap.add_argument("--data-dir", help="the data directory, if not <out-root>/<paths.data>")
@@ -578,6 +658,17 @@ def main():
             print(r)
         print(summary)
         pv.print_commit_listing([os.path.join(out, f) for f in ("benchmark.csv", "meta_benchmark.json")])
+        return
+    if args.stage == "trims":
+        plant, _ = pdata.quadrotor_plant(cfg["plant"])
+        hx, _ = pdata.quadrotor_half_widths(cfg["sampling"]["half_widths"], plant.u0)
+        out = os.path.join(res, cfg["hover"]["trims"]["out"])
+        try:
+            X, dev = stage_trims(cfg, plant, hx, out)
+        except pv.ProvenanceError as e:
+            sys.exit(str(e))
+        print(f"{len(X)} trims, inside the box, max step deviation {dev:.3e}")
+        pv.print_commit_listing([os.path.join(out, f) for f in ("trims.csv", "trims_manifest.csv", "meta_trims.json")])
         return
     if args.stage == "init_lens":
         out = os.path.join(res, cfg["init_lens"]["out"])
@@ -608,6 +699,12 @@ def main():
             sys.exit(str(e))
         print(f"gather {args.of}: every run present, every SHA-256 verified, one clean commit")
         return
+    if args.stage == "predictions":
+        out = stage_predictions(cfg, res)
+        write_json(os.path.join(res, "predictions.json"), meta(cfg, "predictions", dict(results=out)))
+        print(json.dumps(out, indent=1, default=_json))
+        pv.print_commit_listing([os.path.join(res, "predictions.json")])
+        return
     if args.stage == "p5":
         runs, cells = stage_p5(cfg, res, args.of)
         write_csv(os.path.join(res, f"p5_{args.of}.csv"), runs)
@@ -630,12 +727,20 @@ def main():
     if args.stage == "analyse_long":
         rows = stage_analyse_long(cfg, ds, os.path.join(P["ck"], "long"), grid(cfg, "long_budget"))
     else:
-        rows = []
+        rows, trim_rows, trims, truth = [], [], None, None
+        if args.stage == "hover":
+            trims = load_trims(cfg, os.path.join(ROOT, *cfg["paths"]["results"].split("/")))
+            truth = phover.trim_truth(plant, trims)
         for name, spec, seed in grid(cfg):
             p = load_params(os.path.join(P["ck"], f"{name}.npz"))
-            r = (analyse_one(cfg, spec, p, ds, seed) if args.stage == "analyse"
-                 else hover_one(cfg, spec, p, ds, plant, hx, hu))
+            if args.stage == "analyse":
+                r = analyse_one(cfg, spec, p, ds, seed)
+            else:
+                r, tr_ = hover_one(cfg, spec, p, ds, plant, hx, hu, trims, truth)
+                trim_rows += [dict(name=name, **t) for t in tr_]
             rows.append(dict(name=name, arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, seed=seed, **r))
+        if trim_rows:
+            write_csv(os.path.join(res, "hover_trims.csv"), trim_rows)
     extra = dict(p3_spearman=p3_spearman(rows)) if args.stage == "analyse" else {}
     write_csv(os.path.join(res, f"{args.stage}.csv"), rows)
     write_json(os.path.join(res, f"meta_{args.stage}.json"), meta(cfg, args.stage, extra))

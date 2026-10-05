@@ -13,6 +13,8 @@ which is what the first layer receives. Lens quantities come from lens/geometry.
 - `corollary1_line`: theory.md Corollary 1 along an arbitrary line, with the line's own
   closest approach, c⊥,ℓ, κ_ℓ and r*_ℓ.
 - `attenuation`: how the first layer's Lorentzian profile survives through the stack.
+- `attenuation_S`: prediction 4's ratio S_out/S_block1, the output's slope at block 1's
+  lens centre against that of the model truncated after block 1.
 """
 
 import jax
@@ -179,3 +181,17 @@ def attenuation(spec, p, L, d, X, n_grid=4001, t_range=3.0):
     s_out = sharp(out)
     return dict(T=float(T), n_grid=int(n_grid), sharpness_blocks=s_blocks, sharpness_out=s_out,
                 attenuation_blocks=[s / s_blocks[0] for s in s_blocks], attenuation_out=s_out / s_blocks[0])
+
+
+def attenuation_S(spec, p, L, d):
+    """Prediction 4 (p1 draft, D10): along the line z* + t·d through block 1's lens
+    centre, S_out = ‖∂y/∂t‖ at t = 0 for the full model and S_block1 = the same for the
+    model truncated after block 1 (models.trace(..., upto=1): the head applied to block
+    1's output). The ratio S_out/S_block1 is below 1 when the later blocks attenuate the
+    slope the first block's lens puts at its centre. S is the peak slope at the lens
+    centre (theory.md, Diagnostics: the susceptibility)."""
+    zs, dd = jnp.asarray(L.z_star, jnp.float64), jnp.asarray(d, jnp.float64)
+    slope = lambda fn: float(jnp.linalg.norm(jax.jvp(fn, (zs,), (dd,))[1]))  # noqa: E731
+    s_out = slope(lambda z: models.trace(spec, p, z)[0])
+    s_1 = slope(lambda z: models.trace(spec, p, z, upto=1)[0])
+    return dict(S_out=s_out, S_block1=s_1, ratio=s_out / s_1 if s_1 > 0 else np.inf)

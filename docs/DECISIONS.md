@@ -345,3 +345,60 @@ the task, the choice, the reasoning, and the alternatives rejected.
     The draft's operationalisations are already implemented in `run.py`. The exceptions
     wait for D16: H1's cell rule (its per-model quantities, sign agreement and
     stability, are already computed) and the trims.
+
+## 2026-10-05, the author's decisions on the draft (`docs/plans/p1-prereg.md`)
+
+37. **D3, the thrust range stays u0 (1 ± 0.5) = [0.5, 1.5] × hover thrust.**
+    - It is symmetric about hover thrust and lies inside [0, f_max] = [0, 2.25 × hover
+      thrust], so it is never clipped. Every box range is symmetric about hover, so the
+      standardised mean is hover in every input dimension, up to sampling noise.
+    - Rejected: the author's example [0, 2 × hover thrust]. It is symmetric too, but its
+      zero-thrust corner is free fall, and it would double the input range for no gain
+      in symmetry.
+
+38. **D10: E1b's definition is not in the repository.**
+    - Searched every commit for "e1b", "attenuation" and "local-affine": E1b appears
+      only in theory.md's Scope remark. `lens/core.py` has `local_geometry` (the
+      local-affine validity radius that E1b measured as 0.35–0.69 r*), but no
+      attenuation ratio, and `notebooks/` holds only a README.
+    - So the author's fallback is used: ratio = S_out/S_block1 along z* + t·u_min
+      through block 1's lens centre, with S the slope ‖∂y/∂t‖ at t = 0.
+    - S_block1 is read as the same slope for the model truncated after block 1:
+      `models.trace(..., upto=1)`, with the head applied to block 1's output.
+    - Rejected:
+      - block 1's own ĥ slope, which is in different units from the output;
+      - core.py's freeze ablation, which has no meaning for the NormedLinear stack
+        (there is no skip connection).
+    - The sharpness-ratio attenuation of entry 16 stays as a reported quantity.
+
+39. **D16 (a), "no stabilising gain":** the Riccati solve for the surrogate's (A, B)
+    fails, or its gain does not make A_s − B_s K_s Hurwitz. It is recorded per model,
+    and counts as a failure for H1 (`h1_fail`). This replaces entry 17's "a failed
+    solve counts as unstable", which missed a solve that returns a non-stabilising gain.
+
+40. **D16 (b) and (c), the trims.**
+    - 200 no-drag trims, from `default_rng(20261005)`: position, velocity and yaw
+      uniform in the training box; roll, pitch and rates 0; thrust u0.
+    - The stage `trims` (ungated, simulator only) checks that every trim is in the box
+      and is a trim of the RK4 map (|step(x, u0) − x − dt·(v, 0, …)| ≤ 1e-12). It
+      commits `results/p1/trims/` with a SHA-256 manifest before any training, and a
+      rerun must reproduce the file byte for byte.
+    - The truth depends on a trim only through yaw (tested to 1e-10). The author's
+      premise that "the truth is nearly constant across the family" therefore holds
+      exactly in position and velocity but not in yaw.
+    - So the variation is reported as an error:
+      ‖(J_s(trim) − J_s(hover)) − (J_t(trim) − J_t(hover))‖_F / ‖J_t(hover)‖_F.
+      Per model, its median and its Spearman correlation with the trims' lens distance
+      are reported, as are those of the A and B errors.
+    - Rejected: fixing yaw at 0 (it would drop a free direction of the family), and
+      the raw variation ‖J_s(trim) − J_s(hover)‖, which is wrong for yawed trims.
+
+41. **Every rule now has code, in `p1_rules.py`**, applied by the gated stage
+    `predictions`. Aggregations the draft left implicit:
+    - prediction 2 holds if (a) holds for every PyTorch-default model and (b) holds in
+      every cell;
+    - prediction 4 holds if all four 3-block cells hold;
+    - H1 holds if all four zero-bias cells hold;
+    - prediction 5 holds if both architectures hold.
+
+    Spearman ties get average ranks (scipy).

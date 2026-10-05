@@ -98,20 +98,25 @@ def mish(x):
     return x * jnp.tanh(jax.nn.softplus(x))
 
 
-def trace(spec, p, z):
+def trace(spec, p, z, upto=None):
     """Forward pass of one input z (k,), returning (y, [ĥ_1, ..., ĥ_n]): the output and
-    each block's pre-affine LayerNorm output."""
+    each block's pre-affine LayerNorm output. With `upto=j`, only blocks 1..j run and the
+    head reads their output (the residual stream after block j for "prenorm", block j's
+    activation for "normedlinear"): the model truncated after block j."""
     hats = []
+    n = spec.n_blocks if upto is None else int(upto)
+    if not 1 <= n <= spec.n_blocks:
+        raise ValueError(f"upto must be in [1, {spec.n_blocks}]")
     if spec.arch == "prenorm":
         h = p["E"] @ z + p["b"]
-        for j in range(spec.n_blocks):
+        for j in range(n):
             v = layer_norm(h, spec.eps)
             hats.append(v)
             a = jax.nn.gelu(p[f"W1_{j}"] @ (p[f"g{j}"] * v + p[f"be{j}"]) + p[f"b1_{j}"], approximate=False)
             h = h + p[f"W2_{j}"] @ a + p[f"b2_{j}"]
         return p["Wo"] @ h + p["bo"], hats
     x = z
-    for j in range(spec.n_blocks):
+    for j in range(n):
         v = layer_norm(p[f"W{j}"] @ x + p[f"b{j}"], spec.eps)
         hats.append(v)
         x = mish(p[f"g{j}"] * v + p[f"be{j}"])

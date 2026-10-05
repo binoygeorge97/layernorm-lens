@@ -146,8 +146,11 @@ def test_surrogate_equal_to_the_truth_gives_zero_error(synthetic):
     assert np.max(err) < 1e-12
     out = prun.analyse_one(_small_cfg(), spec, p, ds)
     assert out["err_median"] < 1e-12 and out["nf_near"] < 1e-12 and out["corollary1_max_rel_dev"] < 1e-10
-    r = prun.hover_one(_small_cfg(), spec, p, ds, plant, hx, hu)
+    trims = phover.sample_trims(plant, hx, 7, 0)
+    r, trows = prun.hover_one(_small_cfg(), spec, p, ds, plant, hx, hu, trims, phover.trim_truth(plant, trims))
     assert r["rel_err_A"] < 1e-10 and r["rel_err_B"] < 1e-10 and r["rel_err_K"] < 1e-8
+    assert not r["h1_fail"] and not r["no_stabilising_gain"]
+    assert len(trows) == 7 and max(t["variation_err"] for t in trows) < 1e-10 and r["trims_rel_err_A_median"] < 1e-10
     assert r["sign_agree_A"] == 1.0 and r["sign_agree_B"] == 1.0 and r["stable"]
     assert r["spectral_abscissa"] == pytest.approx(r["true_closed_loop_abscissa"], rel=1e-8)
 
@@ -298,8 +301,9 @@ def test_train_and_analyse_stages_on_the_synthetic_plant(synthetic, tmp_path):
         assert 0.0 <= out["affected_frac"] <= 1.0
         if not out["degenerate"]:
             assert out["corollary1_max_rel_dev"] < 1e-10
-        r = prun.hover_one(cfg, spec, p, ds, plant, hx, hu)
-        assert {"rel_err_A", "rel_err_B", "sign_agree_A"} <= set(r)
+        r, _ = prun.hover_one(cfg, spec, p, ds, plant, hx, hu)
+        assert {"rel_err_A", "rel_err_B", "sign_agree_A", "h1_fail", "no_stabilising_gain"} <= set(r)
+        assert "p4_ratio_u_min" in out and "p4_ratio_d1" in out
 
 
 def test_benchmark_stage_runs_on_random_targets(tmp_path):
@@ -461,3 +465,129 @@ def test_first_layer_is_shared_across_architectures_and_depths():
         Eb = [models.first_layer(s, models.init_params(s, seed)) for s in (
             models.SurrogateSpec(arch=a, n_blocks=nb, init="torch_default") for a in models.ARCHS for nb in (1, 3))]
         assert all(np.array_equal(Eb[0][0], e) and np.array_equal(Eb[0][1], b) for e, b in Eb)
+
+
+# --------------------------------------------------------------------------- #
+# the author's decisions of 5 Oct: P4's S ratio, H1, trims, the rules           #
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("arch", models.ARCHS)
+def test_truncated_trace_and_attenuation_S(arch):
+    spec = models.SurrogateSpec(arch=arch, n_blocks=3, H=32, init="torch_default", branch_width=16)
+    p = models.init_params(spec, 1)
+    z = jnp.asarray(np.random.default_rng(0).standard_normal(16))
+    assert np.array_equal(models.trace(spec, p, z, upto=3)[0], models.forward(spec, p, z))
+    y1, hats = models.trace(spec, p, z, upto=1)
+    spec1 = models.SurrogateSpec(arch=arch, n_blocks=1, H=32, init="torch_default", branch_width=16)
+    if arch == "normedlinear":
+        p1 = {k: p[k] for k in ("W0", "b0", "g0", "be0", "Wo", "bo")}
+    else:
+        p1 = {k: p[k] for k in ("E", "b", "g0", "be0", "W1_0", "b1_0", "W2_0", "b2_0", "Wo", "bo")}
+    assert np.allclose(y1, models.forward(spec1, p1, z), rtol=0, atol=1e-14) and len(hats) == 1
+    with pytest.raises(ValueError):
+        models.trace(spec, p, z, upto=4)
+    E, b = (np.asarray(m) for m in models.first_layer(spec, p))
+    L = geo.lens(E, b, spec.eps)
+    d = an.u_min(L)
+    r = an.attenuation_S(spec, p, L, d)
+    h = 1e-6
+    fd = np.linalg.norm((np.asarray(models.forward(spec, p, jnp.asarray(L.z_star + h * d)))
+                         - np.asarray(models.forward(spec, p, jnp.asarray(L.z_star - h * d)))) / (2 * h))
+    assert r["S_out"] == pytest.approx(fd, rel=1e-6) and r["ratio"] == pytest.approx(r["S_out"] / r["S_block1"])
+    r1 = an.attenuation_S(spec1, p1, L, d)
+    assert r1["ratio"] == pytest.approx(1.0, rel=1e-14)
+
+
+def test_no_stabilising_gain_counts_for_h1():
+    A_t = np.array([[0.0, 1.0], [0.0, 0.0]])
+    B_t = np.array([[0.0], [1.0]])
+    Q, R = np.eye(2), np.eye(1)
+    ok = phover.hover_check(A_t, B_t, A_t, B_t, Q, R)
+    assert ok["lqr_ok"] and not ok["no_stabilising_gain"] and not ok["h1_fail"]
+    # an unstable mode the input cannot reach: no stabilising LQR solution
+    r = phover.hover_check(np.diag([1.0, 0.0]), np.array([[0.0], [1.0]]), A_t, B_t, Q, R)
+    assert r["no_stabilising_gain"] and not r["stable"] and r["h1_fail"]
+    # a sign flip alone is a failure too
+    r = phover.hover_check(A_t, -B_t, A_t, B_t, Q, R)
+    assert r["sign_agree_B"] < 1.0 and r["h1_fail"]
+
+
+def test_quadrotor_trims_are_trims_inside_the_box():
+    plant, _ = pdata.quadrotor_plant(CFG["plant"])
+    hx, _ = pdata.quadrotor_half_widths(CFG["sampling"]["half_widths"], plant.u0)
+    X = phover.sample_trims(plant, hx, 12, 3)
+    inside, dev = phover.check_trims(plant, X, hx)
+    assert inside and dev < 1e-12
+    assert np.all(X[:, [6, 7, 9, 10, 11]] == 0.0) and np.all(np.abs(X - plant.x0) <= hx)
+    A, B = phover.trim_truth(plant, X)
+    A0, B0 = phover.true_y_jacobians(plant)
+    # the truth depends on the trim only through yaw
+    X2 = X.copy()
+    X2[:, 8] = 0.0
+    A2, B2 = phover.trim_truth(plant, X2)
+    assert np.allclose(A2, A0[None], rtol=0, atol=1e-10) and np.allclose(B2, B0[None], rtol=0, atol=1e-10)
+    assert np.allclose(A[0], phover.true_y_jacobians(plant, X[0], plant.u0)[0], rtol=0, atol=1e-12)
+
+
+def test_trims_stage_regeneration_identity(tmp_path):
+    cfg = copy.deepcopy(CFG)
+    cfg["hover"]["trims"].update(n=6)
+    plant, _ = pdata.quadrotor_plant(cfg["plant"])
+    hx, _ = pdata.quadrotor_half_widths(cfg["sampling"]["half_widths"], plant.u0)
+    out = tmp_path / "trims"
+    X, dev = prun.stage_trims(cfg, plant, hx, str(out))
+    prun.stage_trims(cfg, plant, hx, str(out))  # a rerun reproduces the file byte for byte
+    assert np.array_equal(prun.load_trims(cfg, str(tmp_path)), X)
+    import provenance as pv
+    cfg["hover"]["trims"]["seed"] += 1
+    with pytest.raises(pv.ProvenanceError, match="differ"):
+        prun.stage_trims(cfg, plant, hx, str(out))
+    (out / "trims.csv").write_text((out / "trims.csv").read_text() + "\n")
+    with pytest.raises(pv.ProvenanceError):
+        prun.load_trims(cfg, str(tmp_path))
+
+
+def _rows(vals):
+    """analyse-like rows for the 40-model grid; vals(arch, init, nb, seed) -> dict."""
+    return [dict(name=n, arch=s.arch, init=s.init, n_blocks=str(s.n_blocks), seed=str(seed),
+                 **{k: str(v) for k, v in vals(s.arch, s.init, s.n_blocks, seed).items()})
+            for n, s, seed in prun.grid(CFG)]
+
+
+def test_prediction_rules_on_constructed_rows():
+    import p1_rules as rules
+    q = CFG["predictions"]
+
+    def vals(arch, init, nb, seed):
+        zero = init == "zero_bias"
+        # P1 holds in the prenorm cells only; seed 4 of every cell fails clause (b)
+        ratio = (5.0 if arch == "prenorm" else 2.0) if zero else 1.5
+        ratio = 2.9 if seed == 4 and zero else ratio
+        return dict(z_star_to_mean=0.05 if zero else 0.4, nf_ratio=ratio, r_star_init_median=0.94,
+                    u_min_sharpness=10.0 * ratio + seed, affected_frac=ratio / 10.0 + seed / 1000.0,
+                    p4_ratio_u_min=0.25 if nb == 3 else 1.0, h1_fail=zero and seed != 0,
+                    no_stabilising_gain=False)
+    rows = _rows(vals)
+    p1 = rules.p1(rows, q)
+    assert [(c["arch"], c["n_blocks"], c["n_pass"], c["holds"]) for c in p1] == [
+        ("normedlinear", 1, 0, False), ("normedlinear", 3, 0, False), ("prenorm", 1, 4, True), ("prenorm", 3, 4, True)]
+    g = rules.g2(p1, q)
+    assert g["passes"] and g["p3_cells"] == [("prenorm", 1), ("prenorm", 3)]
+    p2 = rules.p2(rows, q)
+    assert p2["a_holds"] and p2["a_n"] == 20 and p2["holds"]
+    p3 = rules.p3(rows, q)
+    assert p3["holds"] and p3["rho"] > 0.7
+    p4 = rules.p4(rows, q)
+    assert p4["holds"] and len(p4["cells"]) == 4 and p4["point_consistent"] and p4["zero_bias_median"] == 0.25
+    h1 = rules.h1(rows, q)
+    assert h1["holds"] and all(c["n_pass"] == 4 for c in h1["cells"])
+    p5 = rules.p5([dict(arch="normedlinear", holds="True"), dict(arch="prenorm", holds="False")], [])
+    assert not p5["holds"]
+    es = [dict(arch=r["arch"], init=r["init"], n_blocks=r["n_blocks"], seed=r["seed"], passes=str(r["arch"] == "prenorm"))
+          for r in rows]
+    race = rules.race(p1, es)
+    assert race[2] == dict(arch="prenorm", n_blocks=1, p1_and_p5=4, p1_only=0, p5_only=1, neither=0)
+    # a negative correlation fails prediction 3, whatever its size
+    neg = [dict(r, affected_frac=str(-float(r["affected_frac"]))) for r in rows]
+    assert not rules.p3(neg, q)["holds"]

@@ -75,8 +75,21 @@ p5:                         # prediction 5 (p1 draft), along u_min: ratio = r_ef
   min_seeds: 4              #   in at least 4 of 5 seeds per cell
 
 hover:
-  sign_rel_threshold: 1.0e-3   # OPEN: sign agreement on entries with |truth| > thr * max|truth|
-  q_r: bryson                  # OPEN: Q = diag(1/h_x^2) from the sampling half-widths, R = diag(1/(0.5 u0)^2)
+  sign_rel_threshold: 1.0e-3   # sign agreement on entries with |truth| > thr * max|truth| (per matrix)
+  q_r: bryson                  # Q = diag(1/h_x^2) from the sampling half-widths, R = diag(1/(0.5 u0)^2)
+  trims:                       # D16: no-drag steady-flight trims inside the training box, fixed before training
+    n: 200
+    seed: 20261005
+    step_tol: 1.0e-12          # |step(x, u0) - x - dt (v, 0, ...)| for a trim
+    out: trims                 # under results/p1/
+
+predictions:                   # prereg/p1.md; applied by run.py predictions (p1_rules.py)
+  min_seeds: 4                 # "holds in a cell": at least 4 of the 5 seeds
+  p1: {z_star_max: 0.1, ratio_min: 3.0}
+  p2: {r_star_estimate: 0.935, factor: 2.0}
+  p3: {score: u_min_sharpness, target: affected_frac, rho_min: 0.7}
+  p4: {key: p4_ratio_u_min, ratio_max: 1.0, point: 0.2, factor: 2.0}
+  g2: {min_cells: 2}
 
 init_lens:                     # initial values from initialisation alone (no quadrotor data); not gated
   n_seeds: 1000                # seeds 0..999 of each initialisation (the grid's seeds 0-4 among them)
