@@ -35,6 +35,7 @@ class Plant:
     u_lo: np.ndarray
     u_hi: np.ndarray
     dt: float
+    f: object = None        # the continuous vector field (x, u) -> ẋ, if known (hover check's sign mask)
 
     @property
     def n_x(self):
@@ -50,7 +51,8 @@ def quadrotor_plant(cfg_plant):
     dt = float(cfg_plant["dt"])
     x0, u0 = quad.hover_equilibrium(params)
     return Plant(step=lambda x, u: quad.rk4_step(x, u, params, dt), x0=np.asarray(x0), u0=np.asarray(u0),
-                 u_lo=np.zeros(4), u_hi=np.full(4, params.f_max), dt=dt), params
+                 u_lo=np.zeros(4), u_hi=np.full(4, params.f_max), dt=dt,
+                 f=lambda x, u: quad.f(x, u, params)), params
 
 
 def quadrotor_half_widths(hw, u0):

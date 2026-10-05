@@ -407,3 +407,102 @@ the task, the choice, the reasoning, and the alternatives rejected.
     config `analysis.corollary1.tol`). It applies to a trained model with a
     non-degenerate lens, and a NaN deviation also stops it. Until now the deviation was
     only recorded, while the draft (D18) and `prereg/p1.md` say the stage stops.
+
+## 2026-10-05, the author's review of `prereg/p1.md` at ade76d6
+
+Source for entries 43–55: the author's message "Author review of prereg/p1.md at ade76d6:
+not approved for tagging yet", items A1–A9 and P1–P5.
+
+43. **A1, the sign test uses the vector field.**
+    - The mask is |∂f| > 1e-3 × max|∂f| per matrix, from `plants/quadrotor.f`'s
+      Jacobians at hover (`p1_hover.true_f_jacobians`). The signs of the surrogate's
+      y-map (A, B) are compared with the true y-map's on that mask.
+    - Before every comparison, at hover and at each trim, `mask_sign_check` verifies that
+      the true y-map has ∂f's sign on the mask. It holds at hover and at all 200
+      committed trims (tested).
+    - At hover the mask has 8 entries in A and 16 in B. The y-map's own threshold would
+      add 4 entries in A (∂y_p/∂θ = ±g·dt/2 = ±0.04905, exactly the predicted O(dt)
+      term) and 12 in B (the attitude rows, through ∂ω̇/∂u·dt/2). The disagreement count
+      on that unmasked set is reported without a rule.
+    - `Plant` gained the field `f`.
+
+44. **A2, prediction 4 is scoped to the stack:** the rule covers the two NormedLinear
+    3-block cells, and the point prediction is the median over the five zero-bias
+    NormedLinear 3-block models. Pre-norm 3-block cells are reported without a rule.
+
+45. **A3, prediction 4's primary ratio is unit-free** (`analysis.attenuation_P`):
+    - P = s(0)/median over 2,001 points uniform on [−D(u_min), D(u_min)], with s(0)
+      evaluated at t = 0 exactly;
+    - s_out = ‖∂y/∂t‖ (standardised output), and s_1 = ‖∂h₁/∂t‖ (`models.hidden`, block
+      1's output in feature space);
+    - ratio = P_out/P_1.
+
+    The head-on-block-1 ratio of entry 38 stays, without a rule. A test shows that P is
+    unchanged by scaling the head.
+
+46. **A4, prediction 1's overall verdict:** it holds if it holds in every zero-bias cell
+    (`p1_rules.p1_overall`). G2 is unchanged: 2 of 4 cells, a planning gate.
+
+47. **A5.**
+    - **ρ_eff everywhere:** within a model ρ = (1 + κ)·ρ_eff, a constant factor, so the
+      ordering is identical (tested, including the stable-sort order). R, the affected
+      fraction and the trims' correlations use ρ_eff, and the switch in
+      `analysis.lens_distances` is gone.
+    - **The lens log** records both r* and r_eff widths, without a switch.
+    - **The numeric criterion:** theory.md defines degeneracy exactly, c⊥ = 0 (Remark 1;
+      convention 4), with no numeric tolerance. `lens/geometry.py` (used unchanged by R6,
+      so not changeable) treats ‖c⊥‖ ≤ 1e-12·‖b‖ as zero.
+    - Per A5, I stopped before committing `prereg/p1.md` and proposed a criterion to the
+      author. Nothing in the code depends on the choice except the degenerate flag and
+      the Corollary 1 stop's applicability.
+      - Prediction 5's κ ≤ 0.1 needs ‖c⊥‖² ≥ 10·Hε = 0.0128, so any lens under either
+        criterion fails it.
+
+48. **A6, failures and interruptions.**
+    - A non-finite training or held-out MSE, or any non-finite parameter, at an
+      evaluation stops the run, which is recorded as diverged (`train.py`).
+    - A diverged run fails every rule it enters (`p1_rules`):
+      - a per-seed rule does not count the seed;
+      - a pooled rule (prediction 3) fails;
+      - H1 does not count it;
+      - the race tables count it in its own column.
+
+      No seed is replaced.
+    - Outputs are written atomically (temporary file, then `os.replace`), and the
+      per-run manifest is written last. A run is complete exactly when its manifest
+      verifies (`run_complete`). Complete runs are skipped, and any other run restarts
+      from step 0 with its seed, after its stale manifest is removed.
+    - Resuming from a snapshot is not implemented, so the byte-identity condition for
+      resuming never arises.
+    - `.npz` files are written with fixed zip timestamps (`save_npz`), so equal arrays
+      give equal bytes. A test shows that a restart reproduces the files byte for byte.
+
+50. **A8:**
+    - (a) clause 2(a) is stated as carrying no evidential weight;
+    - (b) within-initialisation Spearman correlations (n = 20 each) are reported in
+      `p1_rules.p3`;
+    - (c) ‖z* − hover_std‖ is added (`z_star_to_hover`).
+
+51. **A9, yaw is not wrapped.** `plants/quadrotor.py` has no modulo on any state. A test
+    draws 400 states from the box with yaw within 1° of ±π:
+    - every target is far from 2π/dt = 628;
+    - the Euler-rate targets are under 10 rad/s;
+    - yaw leaves ±π continuously.
+
+52. **P1, the pre-flight (`preflight.py`, `preflight_override.yaml`).**
+    - It runs `run.py`'s own stage functions on a synthetic linear plant,
+      ẋ = A(x − x0) + B(u − u0), with Euler steps (so the y-map is exactly (A, B)), the
+      quadrotor's dimensions, trim and box, and the real config.
+    - The override file cuts the budgets and redirects outputs to
+      `results/p1_preflight/`; the tagged `config.yaml` doesn't contain it. The gate is
+      not bypassed: `run.py`'s command line still refuses quadrotor stages.
+    - `check_outputs` verifies every quantity p1.md promises. `preflight.py stops`
+      injects the five stopping faults.
+
+53. **Additions found while tracing p1.md to code (P2):**
+    - the Jacobian error distribution (quantiles 5–99);
+    - held-out rel-MSE on validation and test, which p1.md promises for prediction 2(b);
+    - the final lens arrays (`analyse_lens.npz`).
+
+    `run.py`'s analyse and hover loops became functions (`stage_analyse`,
+    `stage_hover`) so the pre-flight and the tests call the same code as the stages.

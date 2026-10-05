@@ -7,14 +7,20 @@ which is what the first layer receives. Lens quantities come from lens/geometry.
 - `jacobians`, `jacobian_error`: the surrogate's input-output Jacobian at each state,
   and its per-state error against a reference Jacobian.
 - `lens_distances`, `near_far`: Jacobian error against lens distance: the 10% of states
-  nearest the lens centre against the 50% farthest, by ρ (theory.md convention 2), or
-  by ρ_eff = ‖A(z − z*)‖²/(‖c⊥‖² + Hε) when the lens is degenerate (r6.md's definition).
+  nearest the lens centre against the 50% farthest, ranked by ρ_eff =
+  ‖A(z − z*)‖²/(‖c⊥‖² + Hε) (r6.md's definition) for every lens. Within one model
+  ρ = (1 + κ)·ρ_eff (theory.md convention 2; κ = Hε/‖c⊥‖²), a constant factor, so the
+  ordering, and every set and rank built from it, is the same as by ρ wherever ρ is
+  defined, and ρ_eff stays finite when c⊥ = 0.
 - `direction_sharpness`: coverage and sharpness from the weights along a direction.
 - `corollary1_line`: theory.md Corollary 1 along an arbitrary line, with the line's own
   closest approach, c⊥,ℓ, κ_ℓ and r*_ℓ.
 - `attenuation`: how the first layer's Lorentzian profile survives through the stack.
-- `attenuation_S`: prediction 4's ratio S_out/S_block1, the output's slope at block 1's
-  lens centre against that of the model truncated after block 1.
+- `attenuation_P`: prediction 4's primary ratio, unit-free: the peak-to-median ratio of
+  the output's slope along u_min through block 1's lens centre, over that of block 1's
+  output in feature space.
+- `attenuation_S`: prediction 4's reported ratio S_out/S_block1, the output's slope at
+  block 1's lens centre against that of the model truncated after block 1.
 """
 
 import jax
@@ -49,12 +55,11 @@ def jacobian_error(J_s, J_true, kind="rel_fro"):
 
 
 def lens_distances(L, Z):
-    """(distance, kind): ρ for a non-degenerate lens, ρ_eff for a degenerate one."""
+    """(ρ_eff, "rho_eff") for every lens: ρ_eff = ‖A(z − z*)‖²/(‖c⊥‖² + Hε). Within a
+    model ρ = (1 + κ)ρ_eff, so ranking by ρ_eff is ranking by ρ (module docstring)."""
     dz = np.asarray(Z, np.float64) - L.z_star
     Adz2 = np.sum((dz @ L.A.T) ** 2, axis=-1)
-    if L.degenerate:
-        return Adz2 / (L.norm_c_perp ** 2 + L.H * L.eps), "rho_eff"
-    return Adz2 / L.norm_c_perp ** 2, "rho"
+    return Adz2 / (L.norm_c_perp ** 2 + L.H * L.eps), "rho_eff"
 
 
 def near_far(err, dist, near_frac=0.1, far_frac=0.5, stat="median"):
@@ -195,3 +200,24 @@ def attenuation_S(spec, p, L, d):
     s_out = slope(lambda z: models.trace(spec, p, z)[0])
     s_1 = slope(lambda z: models.trace(spec, p, z, upto=1)[0])
     return dict(S_out=s_out, S_block1=s_1, ratio=s_out / s_1 if s_1 > 0 else np.inf)
+
+
+def attenuation_P(spec, p, L, d, D, n_grid=2001):
+    """Prediction 4's primary ratio (prereg/p1.md), unit-free. Along z(t) = z* + t·d (z*
+    and d from block 1's lens), s_out(t) = ‖∂y/∂t‖ (y the surrogate's standardised output)
+    and s_1(t) = ‖∂h₁/∂t‖ (h₁ block 1's output in feature space, no head,
+    models.hidden). P = s(0)/median of s(t) over n_grid points uniform on [−D, D], with
+    s(0) evaluated exactly at t = 0. Returns P_out, P_1 and ratio = P_out/P_1."""
+    zs, dd = jnp.asarray(L.z_star, jnp.float64), jnp.asarray(d, jnp.float64)
+
+    def speeds(t):
+        z = lambda s: zs + s * dd  # noqa: E731
+        so = jnp.linalg.norm(jax.jvp(lambda s: models.forward(spec, p, z(s)), (t,), (1.0,))[1])
+        s1 = jnp.linalg.norm(jax.jvp(lambda s: models.hidden(spec, p, z(s), 1), (t,), (1.0,))[1])
+        return so, s1
+
+    grid = jnp.asarray(np.linspace(-float(D), float(D), int(n_grid)))
+    so, s1 = (np.asarray(v) for v in jax.vmap(speeds)(grid))
+    so0, s10 = (float(v) for v in speeds(jnp.float64(0.0)))
+    P_out, P_1 = so0 / float(np.median(so)), s10 / float(np.median(s1))
+    return dict(P_out=P_out, P_1=P_1, ratio=P_out / P_1, D=float(D), n_grid=int(n_grid))

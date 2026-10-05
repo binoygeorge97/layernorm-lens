@@ -1,0 +1,16 @@
+# P-I pre-flight ONLY (preflight.py). NOT part of the pre-registered configuration:
+# prereg/p1.md runs with config.yaml alone. These keys override config.yaml for the
+# pre-flight on a SYNTHETIC linear plant (no quadrotor data): the budgets are cut, and
+# every output goes under results/p1_preflight/.
+training:
+  max_steps: 2000
+long_budget:
+  max_steps: 4000
+  snapshot_every: 1000
+paths:
+  data: results/p1_preflight/data
+  manifest: results/p1_preflight/data_manifest.csv
+  checkpoints: results/p1_preflight/checkpoints
+  results: results/p1_preflight
+synthetic_plant:
+  seed: 0              # numpy.random.default_rng(seed): A = 0.3 N(0, 1) - I (12 x 12), B = N(0, 1) (12 x 4)

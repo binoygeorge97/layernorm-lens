@@ -98,13 +98,11 @@ def mish(x):
     return x * jnp.tanh(jax.nn.softplus(x))
 
 
-def trace(spec, p, z, upto=None):
-    """Forward pass of one input z (k,), returning (y, [ĥ_1, ..., ĥ_n]): the output and
-    each block's pre-affine LayerNorm output. With `upto=j`, only blocks 1..j run and the
-    head reads their output (the residual stream after block j for "prenorm", block j's
-    activation for "normedlinear"): the model truncated after block j."""
+def _run(spec, p, z, n):
+    """Blocks 1..n on one input: (the hidden state after block n, [ĥ_1, ..., ĥ_n]). The
+    hidden state is the residual stream h for "prenorm" and block n's activation for
+    "normedlinear": the block's output in feature space, before any head."""
     hats = []
-    n = spec.n_blocks if upto is None else int(upto)
     if not 1 <= n <= spec.n_blocks:
         raise ValueError(f"upto must be in [1, {spec.n_blocks}]")
     if spec.arch == "prenorm":
@@ -114,13 +112,28 @@ def trace(spec, p, z, upto=None):
             hats.append(v)
             a = jax.nn.gelu(p[f"W1_{j}"] @ (p[f"g{j}"] * v + p[f"be{j}"]) + p[f"b1_{j}"], approximate=False)
             h = h + p[f"W2_{j}"] @ a + p[f"b2_{j}"]
-        return p["Wo"] @ h + p["bo"], hats
+        return h, hats
     x = z
     for j in range(n):
         v = layer_norm(p[f"W{j}"] @ x + p[f"b{j}"], spec.eps)
         hats.append(v)
         x = mish(p[f"g{j}"] * v + p[f"be{j}"])
-    return p["Wo"] @ x + p["bo"], hats
+    return x, hats
+
+
+def trace(spec, p, z, upto=None):
+    """Forward pass of one input z (k,), returning (y, [ĥ_1, ..., ĥ_n]): the output and
+    each block's pre-affine LayerNorm output. With `upto=j`, only blocks 1..j run and the
+    head reads their output (the residual stream after block j for "prenorm", block j's
+    activation for "normedlinear"): the model truncated after block j."""
+    h, hats = _run(spec, p, z, spec.n_blocks if upto is None else int(upto))
+    return p["Wo"] @ h + p["bo"], hats
+
+
+def hidden(spec, p, z, upto):
+    """Block `upto`'s output in feature space (no head): the residual stream after that
+    block for "prenorm", its activation for "normedlinear"."""
+    return _run(spec, p, z, int(upto))[0]
 
 
 def forward(spec, p, z):

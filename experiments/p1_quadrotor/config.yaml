@@ -67,6 +67,7 @@ analysis:
   r_star_init: {n_directions: 64, rng_seed: 0}   # prediction 2: median r*(d) at initialisation (convention 4)
   corollary1: {n_state_lines: 10, rng_seed: 0, n_grid: 2001, t_range: 3.0, tol: 1.0e-10}  # stop above tol
   attenuation: {n_grid: 4001, t_range: 3.0}
+  p4_grid: 2001             # prediction 4's ratio: s(0) / median s(t) on 2,001 points uniform on [-D(u_min), D(u_min)]
 
 p5:                         # prediction 5 (p1 draft), along u_min: ratio = r_eff(u_min)/D(u_min)
   fold: 10.0                #   ratio_end >= 10 x ratio at step 0
@@ -88,7 +89,7 @@ predictions:                   # prereg/p1.md; applied by run.py predictions (p1
   p1: {z_star_max: 0.1, ratio_min: 3.0}
   p2: {r_star_estimate: 0.935, factor: 2.0}
   p3: {score: u_min_sharpness, target: affected_frac, rho_min: 0.7}
-  p4: {key: p4_ratio_u_min, ratio_max: 1.0, point: 0.2, factor: 2.0}
+  p4: {arch: normedlinear, key: p4_P_ratio_u_min, key_head: p4_S_ratio_u_min, ratio_max: 1.0, point: 0.2, factor: 2.0}
   g2: {min_cells: 2}
 
 init_lens:                     # initial values from initialisation alone (no quadrotor data); not gated

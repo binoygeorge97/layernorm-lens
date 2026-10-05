@@ -36,12 +36,14 @@ import csv
 import datetime
 import glob
 import importlib.metadata as md
+import io
 import json
 import os
 import platform
 import socket
 import sys
 import time
+import zipfile
 
 import jax
 
@@ -103,22 +105,63 @@ def _json(o):
     return str(o)
 
 
-def write_json(path, obj):
+def atomic_write(path, data):
+    """Write bytes to path atomically: a temporary file in the same directory, then
+    os.replace (prereg/p1.md, stopping rules: outputs are written atomically)."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(obj, f, indent=2, default=_json)
+    tmp = f"{path}.tmp{os.getpid()}"
+    with open(tmp, "wb") as f:
+        f.write(data)
+    os.replace(tmp, path)
+
+
+def write_json(path, obj):
+    atomic_write(path, json.dumps(obj, indent=2, default=_json).encode("utf-8"))
 
 
 def write_csv(path, rows):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
     fields = []
     for r in rows:
         fields += [k for k in r if k not in fields]
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=fields)
-        w.writeheader()
-        for r in rows:
-            w.writerow({k: (repr(float(v)) if isinstance(v, float) else v) for k, v in r.items()})
+    buf = io.StringIO(newline="")
+    w = csv.DictWriter(buf, fieldnames=fields)
+    w.writeheader()
+    for r in rows:
+        w.writerow({k: (repr(float(v)) if isinstance(v, float) else v) for k, v in r.items()})
+    atomic_write(path, buf.getvalue().encode("utf-8"))
+
+
+def save_npz(path, arrays):
+    """A deterministic .npz (numpy's format; fixed zip timestamps, so equal arrays give
+    equal bytes), written atomically. np.load reads it."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
+        for k, v in arrays.items():
+            a = io.BytesIO()
+            np.lib.format.write_array(a, np.asarray(v), allow_pickle=False)
+            zf.writestr(zipfile.ZipInfo(f"{k}.npy", date_time=(1980, 1, 1, 0, 0, 0)), a.getvalue())
+    atomic_write(path, buf.getvalue())
+
+
+def write_manifest(path, files, base):
+    """provenance.write_manifest, made atomic: the manifest marks a run complete."""
+    tmp = f"{path}.tmp{os.getpid()}"
+    rows = pv.write_manifest(tmp, files, base)
+    os.replace(tmp, path)
+    return rows
+
+
+def run_complete(res_dir, base, name):
+    """A run is complete if its manifest exists and every file in it verifies (SHA-256);
+    a driver skips such runs (prereg/p1.md, stopping rules)."""
+    mf = os.path.join(res_dir, "runs", f"{name}_manifest.csv")
+    if not os.path.exists(mf):
+        return False
+    for r in pv.read_manifest(mf):
+        path = os.path.join(base, *r["file"].replace("\\", "/").split("/"))
+        if not os.path.exists(path) or pv.sha256(path) != r["sha256"]:
+            return False
+    return True
 
 
 def read_csv(path):
@@ -155,8 +198,7 @@ def paths(cfg, out_root=None, data_dir=None):
 
 
 def save_params(path, p):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    np.savez(path, **{k: np.asarray(v) for k, v in p.items()})
+    save_npz(path, {k: np.asarray(v) for k, v in p.items()})
 
 
 def load_params(path):
@@ -224,20 +266,32 @@ def history_arrays(hist):
     logged = [h for h in hist if "z_star" in h]
     stack = lambda key: np.stack([h[key] for h in logged]) if logged and key in logged[0] else np.zeros((0,))  # noqa: E731
     arrays = dict(step=np.array([h["step"] for h in logged]), z_star=stack("z_star"), widths=stack("widths"),
-                  u_min=stack("u_min"))
+                  widths_eff=stack("widths_eff"), u_min=stack("u_min"))
     return scal, arrays
 
 
-def stage_train(cfg, ds, ck_dir, res_dir, members=None, long=False, base=None, summary=True):
+def stage_train(cfg, ds, ck_dir, res_dir, members=None, long=False, base=None, summary=True, skip_complete=True):
     """Train each member and save: its parameters (the best held-out MSE's; for a long run
     also the last, and snapshots every `long_budget.snapshot_every` steps), its history,
     a per-run JSON (summary row, commit, versions, config, Slurm identity) and a per-run
     SHA-256 manifest of those files, with paths relative to `base`. `summary` writes
-    train_summary.csv for the members (off for a single array task; see stage_gather)."""
+    train_summary.csv for the members (off for a single array task; see stage_gather).
+
+    Every file is written atomically and the manifest last, so a run is complete exactly
+    when its manifest verifies (`run_complete`); complete runs are skipped. Any other run
+    starts from step 0 with its seed, after its stale manifest is removed (no resume). A
+    run whose loss or parameters become non-finite stops and is recorded as diverged."""
     base = base or ROOT
     stage = "train_long" if long else "train"
     rows = []
     for name, spec, seed in (members or grid(cfg, GRIDS[stage])):
+        if skip_complete and run_complete(res_dir, base, name):
+            with open(os.path.join(res_dir, "runs", f"{name}.json"), encoding="utf-8") as f:
+                rows.append(json.load(f)["run"])
+            continue
+        mf = os.path.join(res_dir, "runs", f"{name}_manifest.csv")
+        if os.path.exists(mf):
+            os.remove(mf)
         files, last = [], {}
         on_eval = None
         if long:
@@ -250,6 +304,8 @@ def stage_train(cfg, ds, ck_dir, res_dir, members=None, long=False, base=None, s
                     save_params(path, p)
                     files.append(path)
         p, hist, info = train_one(cfg, spec, seed, ds, long, on_eval)
+        if info["diverged"]:
+            print(f"{name}: DIVERGED at step {info['stopped_step']} (non-finite loss or parameters); recorded")
         files.append(os.path.join(ck_dir, f"{name}.npz"))
         save_params(files[-1], p)
         if long:
@@ -258,14 +314,14 @@ def stage_train(cfg, ds, ck_dir, res_dir, members=None, long=False, base=None, s
         scal, arrays = history_arrays(hist)
         hcsv, hnpz = (os.path.join(res_dir, "history", f"{name}.{e}") for e in ("csv", "npz"))
         write_csv(hcsv, scal)
-        np.savez(hnpz, **arrays)
+        save_npz(hnpz, arrays)
         row = dict(name=name, stage=stage, arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, seed=seed,
                    best_step=info["best_step"], best_val=info["best_val"], stopped_step=info["stopped_step"],
-                   stopped_early=info["stopped_early"], seconds=info["seconds"], n_params=info["n_params"],
-                   d1_eigen_ratio=info["d1_eigen_ratio"])
+                   stopped_early=info["stopped_early"], diverged=info["diverged"], seconds=info["seconds"],
+                   n_params=info["n_params"], d1_eigen_ratio=info["d1_eigen_ratio"])
         rjson = os.path.join(res_dir, "runs", f"{name}.json")
         write_json(rjson, meta(cfg, stage, dict(run=row, slurm=slurm_env(), train_info=info)))
-        pv.write_manifest(os.path.join(res_dir, "runs", f"{name}_manifest.csv"), files + [hcsv, hnpz, rjson], base)
+        write_manifest(mf, files + [hcsv, hnpz, rjson], base)
         rows.append(row)
     if summary:
         write_csv(os.path.join(res_dir, "train_summary.csv"), rows)
@@ -319,14 +375,21 @@ def analyse_one(cfg, spec, p, ds, seed=None):
     Ztr = ds["train"]["Z"]
     E, b = (np.asarray(m) for m in models.first_layer(spec, p))
     L = geo.lens(E, b, spec.eps)
-    err = an.jacobian_error(an.jacobians(spec, p, Zt), Jt, a["jacobian_error"])
+    J_s = an.jacobians(spec, p, Zt)
+    err = an.jacobian_error(J_s, Jt, a["jacobian_error"])
+    f = models.batched(spec)
+    rel_mse = {s: float(np.mean((np.asarray(f(p, jnp.asarray(ds[s]["Z"]))) - ds[s]["Y"]) ** 2)
+                        / np.mean(np.var(ds[s]["Y"], axis=0))) for s in ("val", "test")}
     dist, kind = an.lens_distances(L, Zt)
     nf = an.near_far(err, dist, float(a["near_frac"]), float(a["far_frac"]), a["stat"])
     d1, ratio = an.data_d1(Ztr)
     um = an.u_min(L)
-    out = dict(degenerate=L.degenerate, kappa=float(L.kappa), norm_z_star=float(np.linalg.norm(L.z_star)),
+    out = dict(diverged=False, degenerate=L.degenerate, kappa=float(L.kappa), norm_c_perp=float(L.norm_c_perp),
+               norm_z_star=float(np.linalg.norm(L.z_star)),
                z_star_to_mean=float(np.linalg.norm(L.z_star - Ztr.mean(0))),
-               dist_kind=kind, d1_eigen_ratio=ratio, err_median=float(np.median(err)),
+               z_star_to_hover=float(np.linalg.norm(L.z_star - np.asarray(ds["trim"]["Z"]))),
+               dist_kind=kind, d1_eigen_ratio=ratio, err_median=float(np.median(err)), **error_distribution(err),
+               rel_mse_val=rel_mse["val"], rel_mse_test=rel_mse["test"],
                affected_frac=float(np.mean(err > float(a["affected_factor"]) * nf["far"])),
                **{f"nf_{k}": v for k, v in nf.items()})
     if seed is not None:
@@ -344,15 +407,66 @@ def analyse_one(cfg, spec, p, ds, seed=None):
         out["corollary1_max_rel_dev"] = float(max(devs))
     if spec.n_blocks > 1:
         for dname, d in (("u_min", um), ("d1", d1)):
+            pr = an.attenuation_P(spec, p, L, d, an.half_width(Ztr, d)[0], int(a["p4_grid"]))
+            out.update({f"p4_P_out_{dname}": pr["P_out"], f"p4_P_1_{dname}": pr["P_1"],
+                        f"p4_P_ratio_{dname}": pr["ratio"]})
             sr = an.attenuation_S(spec, p, L, d)
             out.update({f"p4_S_out_{dname}": sr["S_out"], f"p4_S_block1_{dname}": sr["S_block1"],
-                        f"p4_ratio_{dname}": sr["ratio"]})
+                        f"p4_S_ratio_{dname}": sr["ratio"]})
         for dname, d in (("d1", d1), ("u_min", um)):
             at = an.attenuation(spec, p, L, d, Ztr, int(a["attenuation"]["n_grid"]), float(a["attenuation"]["t_range"]))
             pre = "" if dname == "d1" else "u_min_"
             out.update({f"{pre}attenuation_out": at["attenuation_out"],
                         **{f"{pre}attenuation_block{j + 1}": v for j, v in enumerate(at["attenuation_blocks"])}})
     return out
+
+
+def error_distribution(err, qs=(5, 25, 50, 75, 95, 99)):
+    """The Jacobian error distribution, summarised by quantiles (reported regardless)."""
+    return {f"err_q{q}": float(np.percentile(err, q)) for q in qs}
+
+
+def _row(name, spec, seed, **r):
+    return dict(name=name, arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, seed=seed, **r)
+
+
+def stage_analyse(cfg, ds, ck_dir, summ, members):
+    """analyse_one for every member (a diverged run is recorded, not analysed); stops with
+    RuntimeError on a Corollary 1 deviation above the tolerance (check_corollary1).
+    Returns (rows, arrays): arrays holds each model's final lens, <name>/z_star, /widths
+    (r*), /widths_eff (r_eff) and /u_min (reported regardless; analyse_lens.npz)."""
+    rows, arrays = [], {}
+    for name, spec, seed in members:
+        if rules.diverged(summ[name]):
+            rows.append(_row(name, spec, seed, diverged=True))
+            continue
+        p = load_params(os.path.join(ck_dir, f"{name}.npz"))
+        L = geo.lens(*(np.asarray(m) for m in models.first_layer(spec, p)), spec.eps)
+        arrays.update({f"{name}/z_star": L.z_star, f"{name}/widths": L.principal_widths,
+                       f"{name}/widths_eff": L.principal_widths_eff, f"{name}/u_min": an.u_min(L)})
+        r = analyse_one(cfg, spec, p, ds, seed)
+        try:
+            check_corollary1(r, cfg["analysis"]["corollary1"]["tol"])
+        except RuntimeError as e:
+            raise RuntimeError(f"{name}: {e}") from None
+        rows.append(_row(name, spec, seed, **r))
+    return rows, arrays
+
+
+def stage_hover(cfg, ds, ck_dir, summ, members, plant, hx, hu, trims):
+    """hover_one with the trim check for every member (a diverged run is recorded, not
+    checked). Returns (rows, per-trim rows)."""
+    truth = phover.trim_truth(plant, trims)
+    rows, trim_rows = [], []
+    for name, spec, seed in members:
+        if rules.diverged(summ[name]):
+            rows.append(_row(name, spec, seed, diverged=True))
+            continue
+        r, tr_ = hover_one(cfg, spec, load_params(os.path.join(ck_dir, f"{name}.npz")), ds, plant, hx, hu, trims,
+                           truth)
+        trim_rows += [dict(name=name, **t) for t in tr_]
+        rows.append(_row(name, spec, seed, **r))
+    return rows, trim_rows
 
 
 def check_corollary1(r, tol):
@@ -367,6 +481,7 @@ def p3_spearman(rows, scores=("u_min_sharpness", "d1_sharpness", "u_min_coverage
                 target="affected_frac"):
     """Prediction 3: Spearman's rank correlation, over the models, between each
     weight-based score and the affected-data fraction."""
+    rows = [r for r in rows if not rules.diverged(r)]
     y = np.array([float(r[target]) for r in rows])
     return {s: float(stats.spearmanr(np.array([float(r[s]) for r in rows]), y).statistic) for s in scores}
 
@@ -434,11 +549,16 @@ def stage_p5(cfg, res, which):
     summ = {r["name"]: r for r in read_csv(os.path.join(rd, "train_summary.csv"))}
     out = []
     for name, spec, seed in grid(cfg, GRIDS[which]):
+        if rules.diverged(summ[name]):
+            out.append(dict(name=name, stage=which, arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, seed=seed,
+                            diverged=True, passes=False))
+            continue
         h = [r for r in read_csv(os.path.join(rd, "history", f"{name}.csv")) if r.get("kappa", "") != ""]
         end = int(summ[name]["best_step"] if which == "train" else summ[name]["stopped_step"])
         r = p5_run([int(x["step"]) for x in h], [float(x["r_eff_over_D_u_min"]) for x in h],
                    [float(x["kappa"]) for x in h], end, float(q["fold"]), float(q["floor"]), float(q["kappa_max"]))
-        out.append(dict(name=name, stage=which, arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, seed=seed, **r))
+        out.append(dict(name=name, stage=which, arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, seed=seed,
+                        diverged=False, **r))
     keys = ("arch", "n_blocks") if which == "train" else ("arch",)
     return out, p5_cells([r for r in out if r["init"] == "zero_bias"], keys, int(q["min_seeds"]))
 
@@ -451,9 +571,10 @@ def hover_one(cfg, spec, p, ds, plant, hx, hu, trims=None, truth=None):
     J_std = np.asarray(jax.jacfwd(lambda z: models.forward(spec, p, z))(jnp.asarray(ds["trim"]["Z"])))
     A_s, B_s = phover.physical_jacobian(J_std, ds["scalers"], plant.n_x)
     A_t, B_t = phover.true_y_jacobians(plant)
+    F_x, F_u = phover.true_f_jacobians(plant)
     Q, R = phover.bryson(hx, hu)
     thr = float(cfg["hover"]["sign_rel_threshold"])
-    r = phover.hover_check(A_s, B_s, A_t, B_t, Q, R, thr)
+    r = dict(diverged=False, **phover.hover_check(A_s, B_s, A_t, B_t, Q, R, F_x, F_u, thr))
     out = {k: v for k, v in r.items() if not isinstance(v, np.ndarray)}
     if trims is None:
         return out, []
@@ -514,7 +635,7 @@ def stage_predictions(cfg, res):
     an_rows = read_csv(os.path.join(res, "analyse.csv"))
     hv_rows = read_csv(os.path.join(res, "hover.csv"))
     p1c = rules.p1(an_rows, q)
-    out = dict(p1=p1c, g2=rules.g2(p1c, q), p2=rules.p2(an_rows, q), p3=rules.p3(an_rows, q),
+    out = dict(p1=p1c, p1_overall=rules.p1_overall(p1c), g2=rules.g2(p1c, q), p2=rules.p2(an_rows, q), p3=rules.p3(an_rows, q),
                p4=rules.p4(an_rows, q), h1=rules.h1(hv_rows, q),
                p5=rules.p5(read_csv(os.path.join(res, "p5_train_long_cells.csv")),
                            read_csv(os.path.join(res, "p5_train_cells.csv"))),
@@ -735,23 +856,16 @@ def main():
     if args.stage == "analyse_long":
         rows = stage_analyse_long(cfg, ds, os.path.join(P["ck"], "long"), grid(cfg, "long_budget"))
     else:
-        rows, trim_rows, trims, truth = [], [], None, None
-        if args.stage == "hover":
+        summ = {r["name"]: r for r in read_csv(os.path.join(res, "train", "train_summary.csv"))}
+        if args.stage == "analyse":
+            try:
+                rows, arrays = stage_analyse(cfg, ds, P["ck"], summ, grid(cfg))
+            except RuntimeError as e:
+                sys.exit(str(e))
+            save_npz(os.path.join(res, "analyse_lens.npz"), arrays)
+        else:
             trims = load_trims(cfg, os.path.join(ROOT, *cfg["paths"]["results"].split("/")))
-            truth = phover.trim_truth(plant, trims)
-        for name, spec, seed in grid(cfg):
-            p = load_params(os.path.join(P["ck"], f"{name}.npz"))
-            if args.stage == "analyse":
-                r = analyse_one(cfg, spec, p, ds, seed)
-                try:
-                    check_corollary1(r, cfg["analysis"]["corollary1"]["tol"])
-                except RuntimeError as e:
-                    sys.exit(f"{name}: {e}")
-            else:
-                r, tr_ = hover_one(cfg, spec, p, ds, plant, hx, hu, trims, truth)
-                trim_rows += [dict(name=name, **t) for t in tr_]
-            rows.append(dict(name=name, arch=spec.arch, init=spec.init, n_blocks=spec.n_blocks, seed=seed, **r))
-        if trim_rows:
+            rows, trim_rows = stage_hover(cfg, ds, P["ck"], summ, grid(cfg), plant, hx, hu, trims)
             write_csv(os.path.join(res, "hover_trims.csv"), trim_rows)
     extra = dict(p3_spearman=p3_spearman(rows)) if args.stage == "analyse" else {}
     write_csv(os.path.join(res, f"{args.stage}.csv"), rows)

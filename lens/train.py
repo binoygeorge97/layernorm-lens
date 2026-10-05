@@ -13,6 +13,9 @@
   Training stops once `patience` steps pass without an improvement. The returned
   parameters are those with the lowest held-out MSE of any evaluation.
   `patience_frac=None` disables early stopping (a fixed budget).
+- Divergence (prereg/p1.md, stopping rules): if, at an evaluation, the training or
+  held-out MSE or any parameter is non-finite, training stops and info["diverged"] is
+  True. Such a run is recorded as diverged and fails every rule it enters.
 - Lens logging every `log_every` steps (a multiple of `eval_every`), through
   lens/geometry.py on the first layer: see `lens_record`.
 - `on_eval(step, params)`, if given, is called after every evaluation (step 0 included),
@@ -37,8 +40,9 @@ DEFAULTS = dict(lr=3e-3, adam=(0.9, 0.999, 1e-8), max_steps=100_000, eval_every=
 
 
 def lens_record(spec, p, directions=None, D=None, Z=None):
-    """The first layer's lens (theory.md): degenerate flag, ‖c⊥‖, κ, z*, ‖z*‖, principal
-    widths (ε-limited if degenerate, convention 4) and, for each named unit direction d
+    """The first layer's lens (theory.md): degenerate flag, ‖c⊥‖, κ, z*, ‖z*‖, the
+    principal widths r*ᵢ = ‖c⊥‖/sᵢ (convention 1) and r_eff,ᵢ = √(‖c⊥‖² + Hε)/sᵢ
+    (convention 6; the ε-limited widths of convention 4 when c⊥ = 0) and, for each named unit direction d
     (layer-input coordinates): r*(d), r_eff(d) along d through z*, D(d)/r_eff(d) and
     r_eff(d)/D(d) if a data half-width D(d) is given, and the susceptibility
     S(d) = ‖J(z*) d‖, the slope of the surrogate output at z* along d (D6 (g):
@@ -49,10 +53,11 @@ def lens_record(spec, p, directions=None, D=None, Z=None):
     D(u_min) = analysis.half_width(Z, u_min), and u_min itself."""
     E, b = models.first_layer(spec, p)
     L = geo.lens(np.asarray(E), np.asarray(b), spec.eps)
-    widths = L.principal_widths_eff if L.degenerate else L.principal_widths
+    weff = np.asarray(L.principal_widths_eff)
     rec = dict(degenerate=bool(L.degenerate), norm_c_perp=float(L.norm_c_perp), kappa=float(L.kappa),
                z_star=np.asarray(L.z_star), norm_z_star=float(np.linalg.norm(L.z_star)),
-               widths=np.asarray(widths), width_min=float(widths.min()), width_max=float(widths.max()))
+               widths=np.asarray(L.principal_widths), widths_eff=weff,
+               width_eff_min=float(weff.min()), width_eff_max=float(weff.max()))
     zs = jnp.asarray(L.z_star)
     dirs, Ds = dict(directions or {}), dict(D or {})
     if Z is not None:
@@ -127,11 +132,17 @@ def train(spec, p, data, cfg=None, directions=None, D=None, verbose=False, lens_
         on_eval(0, p)
     best, best_step, best_p = hist[0]["val_mse"], 0, p
     ref, last_imp = best, 0
-    t_start, step, stopped_early = time.time(), 0, False
+    t_start, step, stopped_early, diverged = time.time(), 0, False, False
     while step < c["max_steps"]:
         p, m, v = run_chunk(p, m, v, float(step))
         step += chunk
         rec = dict(step=step, train_mse=float(eval_mse(p, Z, Y)), val_mse=float(eval_mse(p, Zv, Yv)))
+        if not (np.isfinite(rec["train_mse"]) and np.isfinite(rec["val_mse"])
+                and all(bool(jnp.all(jnp.isfinite(a))) for a in jax.tree.leaves(p))):
+            rec["diverged"] = True
+            hist.append(rec)
+            diverged = True
+            break
         if c["log_every"] and step % c["log_every"] == 0:
             rec.update(lens_record(spec, p, directions, D, lens_Z))
         hist.append(rec)
@@ -146,7 +157,7 @@ def train(spec, p, data, cfg=None, directions=None, D=None, verbose=False, lens_
         if patience is not None and step - last_imp >= patience:
             stopped_early = step < c["max_steps"]
             break
-    info = dict(best_step=best_step, best_val=best, stopped_step=step, stopped_early=stopped_early,
+    info = dict(best_step=best_step, best_val=best, stopped_step=step, stopped_early=stopped_early, diverged=diverged,
                 patience=patience, seconds=time.time() - t_start, n_params=models.n_params(p),
                 cfg={k: (list(v) if isinstance(v, tuple) else v) for k, v in c.items()})
     return best_p, hist, info

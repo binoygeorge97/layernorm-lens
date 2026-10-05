@@ -1,15 +1,22 @@
-"""The hover linearisation check (docs/plan.md): the surrogate's (A, B) at hover against
-the simulator's, both by autodiff and in the same (physical) coordinates.
+"""The hover linearisation check (docs/plan.md; prereg/p1.md): the surrogate's (A, B) at
+hover against the simulator's, both by autodiff and in the same (physical) coordinates.
 
-The surrogate models the scaled increment y = (x_{t+1} − x_t)/dt, so its Jacobian at
-hover is compared with the true y-map's: A_y = (A_d − I)/dt, B_y = B_d/dt, (A_d, B_d)
-the RK4 map's Jacobians. (A_y, B_y) is used as a continuous-time model ẋ ≈ A x + B u for
-the LQR gain and the closed-loop spectrum (spectral abscissa).
+The surrogate models the scaled increment y = (x_{t+1} − x_t)/dt. A := ∂y/∂x and
+B := ∂y/∂u in physical units, taken the same way for the truth (the RK4 map,
+A_y = (A_d − I)/dt, B_y = B_d/dt) and for the surrogate. (A, B) is used as a
+continuous-time model ẋ ≈ A x + B u for the LQR gain and the closed-loop spectrum
+(spectral abscissa).
 
-Reported: relative Frobenius errors of A and B; sign agreement on the entries whose true
-magnitude exceeds sign_rel_threshold · max|truth| (per matrix); the LQR gain from the
-surrogate with fixed Q, R against the true gain; the closed-loop eigenvalues of the
-surrogate's gain on the true linearisation (stable or not, spectral abscissa).
+Sign test (prereg/p1.md, author's change A1). RK4 adds O(dt) cross-terms to the y-map
+that are zero in the physics (e.g. ∂y_p/∂θ ≈ g·dt/2). So the entries compared are those
+that are physically meaningful: the mask is the set of entries of the continuous vector
+field's Jacobians ∂f/∂x, ∂f/∂u (taken from the simulator's vector field, not the RK4 map)
+with |∂f| > sign_rel_threshold · max|∂f|, per matrix. On the mask, the signs of the
+surrogate's (A, B) are compared with those of the true (A, B). A precondition, checked
+every time: on the mask, every true y-map entry has the sign of the vector field's
+(`mask_sign_check`). The disagreement count on the unmasked set (entries with
+|true y-map| > threshold · max|true y-map|, which includes the O(dt) integration terms)
+is reported without a rule.
 
 "No stabilising gain" (author, D16 (a)): the Riccati solve for the surrogate's (A, B)
 fails, or its gain does not stabilise the surrogate's own (A, B). It is recorded, and
@@ -39,16 +46,31 @@ if ROOT not in sys.path:
 from control import lqr  # noqa: E402
 
 
-def true_y_jacobians(plant, x=None, u=None):
-    """(A_y, B_y) of y = (step(x, u) − x)/dt at (x, u), by default the plant's trim."""
+def _z(plant, x, u):
     x = plant.x0 if x is None else x
     u = plant.u0 if u is None else u
-    z0 = jnp.asarray(np.concatenate([np.asarray(x), np.asarray(u)]), jnp.float64)
+    return jnp.asarray(np.concatenate([np.asarray(x), np.asarray(u)]), jnp.float64)
 
+
+def true_y_jacobians(plant, x=None, u=None):
+    """(A, B) = (∂y/∂x, ∂y/∂u) of y = (step(x, u) − x)/dt at (x, u), by default the
+    plant's trim (hover)."""
     def y(z):
         x, u = z[:plant.n_x], z[plant.n_x:]
         return (plant.step(x, u) - x) / plant.dt
-    J = np.asarray(jax.jacfwd(y)(z0))
+    J = np.asarray(jax.jacfwd(y)(_z(plant, x, u)))
+    return J[:, :plant.n_x], J[:, plant.n_x:]
+
+
+def true_f_jacobians(plant, x=None, u=None):
+    """(∂f/∂x, ∂f/∂u) of the continuous vector field ẋ = f(x, u) at (x, u), by default
+    hover. The sign mask comes from these, not from the RK4 map."""
+    if plant.f is None:
+        raise ValueError("the plant has no vector field f: the sign mask needs ∂f (prereg/p1.md)")
+
+    def f(z):
+        return plant.f(z[:plant.n_x], z[plant.n_x:])
+    J = np.asarray(jax.jacfwd(f)(_z(plant, x, u)))
     return J[:, :plant.n_x], J[:, plant.n_x:]
 
 
@@ -64,17 +86,45 @@ def bryson(hx, hu):
     return np.diag(1.0 / np.asarray(hx) ** 2), np.diag(1.0 / np.asarray(hu) ** 2)
 
 
-def sign_agreement(M_s, M_t, rel_threshold):
+def sign_mask(F, rel_threshold):
+    """The physically meaningful entries: |F| > rel_threshold · max|F| (one matrix)."""
+    F = np.asarray(F, np.float64)
+    return np.abs(F) > rel_threshold * np.max(np.abs(F))
+
+
+def masked_sign_agreement(M_s, M_t, mask):
+    """(fraction of mask entries where sign(M_s) = sign(M_t), number of disagreements,
+    mask size)."""
+    agree = np.sign(np.asarray(M_s)[mask]) == np.sign(np.asarray(M_t)[mask])
+    return float(np.mean(agree)), int(np.sum(~agree)), int(mask.sum())
+
+
+def mask_sign_check(M_t, F, mask):
+    """The precondition of the sign test: on the mask, every true y-map entry has the
+    vector field's sign. Raises ValueError otherwise."""
+    bad = np.sign(np.asarray(M_t)[mask]) != np.sign(np.asarray(F)[mask])
+    if np.any(bad):
+        raise ValueError(f"{int(bad.sum())} masked entries of the true y-map differ in sign from ∂f")
+
+
+def unmasked_disagreements(M_s, M_t, rel_threshold):
+    """Reported without a rule: sign disagreements on the entries with |M_t| > thr · max|M_t|
+    (the true y-map's own large entries, O(dt) integration terms included)."""
     big = np.abs(M_t) > rel_threshold * np.max(np.abs(M_t))
-    return float(np.mean(np.sign(M_s[big]) == np.sign(M_t[big]))), int(big.sum())
+    return int(np.sum(np.sign(np.asarray(M_s)[big]) != np.sign(np.asarray(M_t)[big]))), int(big.sum())
 
 
-def hover_check(A_s, B_s, A_t, B_t, Q, R, sign_rel_threshold=1e-3):
+def hover_check(A_s, B_s, A_t, B_t, Q, R, F_x, F_u, sign_rel_threshold=1e-3):
+    """The hover check for one surrogate (module docstring). F_x, F_u: the vector
+    field's Jacobians at the same point, for the sign mask."""
     A_s, B_s, A_t, B_t = (np.asarray(m, np.float64) for m in (A_s, B_s, A_t, B_t))
     out = dict(rel_err_A=float(np.linalg.norm(A_s - A_t) / np.linalg.norm(A_t)),
                rel_err_B=float(np.linalg.norm(B_s - B_t) / np.linalg.norm(B_t)))
-    out["sign_agree_A"], out["n_sign_A"] = sign_agreement(A_s, A_t, sign_rel_threshold)
-    out["sign_agree_B"], out["n_sign_B"] = sign_agreement(B_s, B_t, sign_rel_threshold)
+    for nm, Ms, Mt, F in (("A", A_s, A_t, F_x), ("B", B_s, B_t, F_u)):
+        mask = sign_mask(F, sign_rel_threshold)
+        mask_sign_check(Mt, F, mask)
+        out[f"sign_agree_{nm}"], out[f"n_sign_disagree_{nm}"], out[f"n_sign_{nm}"] = masked_sign_agreement(Ms, Mt, mask)
+        out[f"n_sign_disagree_unmasked_{nm}"], out[f"n_unmasked_{nm}"] = unmasked_disagreements(Ms, Mt, sign_rel_threshold)
     K_t = lqr.lqr_continuous(A_t, B_t, Q, R)
     out["true_closed_loop_abscissa"] = lqr.spectral_abscissa(A_t - B_t @ K_t)
     try:
@@ -96,9 +146,9 @@ def hover_check(A_s, B_s, A_t, B_t, Q, R, sign_rel_threshold=1e-3):
 
 
 def h1_fail(r):
-    """H1 for one model at hover (p1 draft, D16): the linearisation is wrong in sign (any
-    sign disagreement above the threshold in A or B) or in stability (no stabilising
-    gain, or the surrogate's gain leaves the true closed loop unstable)."""
+    """H1 for one model at hover (prereg/p1.md): the linearisation is wrong in sign (any
+    sign disagreement on the mask, in A or B) or in stability (no stabilising gain, or the
+    surrogate's gain leaves the true closed loop unstable)."""
     return bool(r["sign_agree_A"] < 1.0 or r["sign_agree_B"] < 1.0 or r.get("no_stabilising_gain", False)
                 or not r["stable"])
 
@@ -139,24 +189,30 @@ def check_trims(plant, X, hx, tol=1e-12):
 
 
 def trim_truth(plant, X):
-    """The true (A_y, B_y) at every trim (x, u0), stacked: (n, n_x, n_x), (n, n_x, n_u).
-    The truth does not depend on the surrogate, so it is computed once."""
+    """At every trim (x, u0): the true (A, B) of the y-map and the vector field's
+    (∂f/∂x, ∂f/∂u), stacked: dict(A, B, F_x, F_u). Computed once (independent of the
+    surrogate)."""
     u0 = np.asarray(plant.u0, np.float64)
     Z = jnp.asarray(np.hstack([np.asarray(X, np.float64), np.tile(u0, (len(X), 1))]), jnp.float64)
+    n_x = plant.n_x
 
     def y(z):
-        x, u = z[:plant.n_x], z[plant.n_x:]
-        return (plant.step(x, u) - x) / plant.dt
+        return (plant.step(z[:n_x], z[n_x:]) - z[:n_x]) / plant.dt
+
+    def f(z):
+        return plant.f(z[:n_x], z[n_x:])
     J = np.asarray(jax.jit(jax.vmap(jax.jacfwd(y)))(Z))
-    return J[:, :, :plant.n_x], J[:, :, plant.n_x:]
+    F = np.asarray(jax.jit(jax.vmap(jax.jacfwd(f)))(Z))
+    return dict(A=J[:, :, :n_x], B=J[:, :, n_x:], F_x=F[:, :, :n_x], F_u=F[:, :, n_x:])
 
 
 def trim_check(J_std_batch, scalers, plant, X, truth, Z_hover, lens_distance_fn, sign_rel_threshold=1e-3):
     """Per trim: the surrogate's (A, B) against the truth at that trim (`truth` from
-    `trim_truth`), both in physical units: relative Frobenius errors, sign agreement, the
-    trim's lens distance (`lens_distance_fn(Z)` on standardised trims), and the error in
-    the surrogate's variation relative to hover (module docstring). J_std_batch(Z) gives
-    the surrogate's standardised Jacobians at the rows of Z."""
+    `trim_truth`), both in physical units: relative Frobenius errors, sign agreement on
+    that trim's vector-field mask (after `mask_sign_check`), the trim's lens distance
+    (`lens_distance_fn(Z)` on standardised trims), and the error in the surrogate's
+    variation relative to hover (module docstring). J_std_batch(Z) gives the surrogate's
+    standardised Jacobians at the rows of Z."""
     n_x = plant.n_x
     X = np.asarray(X, np.float64)
     Zt = (np.hstack([X, np.tile(np.asarray(plant.u0), (len(X), 1))]) - scalers["mu_z"]) / scalers["sd_z"]
@@ -169,14 +225,17 @@ def trim_check(J_std_batch, scalers, plant, X, truth, Z_hover, lens_distance_fn,
     rows = []
     for i in range(len(X)):
         A_s, B_s = J_phys[i][:, :n_x], J_phys[i][:, n_x:]
-        A_t, B_t = truth[0][i], truth[1][i]
+        A_t, B_t = truth["A"][i], truth["B"][i]
         Jt = np.hstack([A_t, B_t])
         dvar = (J_phys[i] - Jsh) - (Jt - Jth)
-        rows.append(dict(trim=i, lens_distance=float(dist[i]),
-                         rel_err_A=float(np.linalg.norm(A_s - A_t) / np.linalg.norm(A_t)),
-                         rel_err_B=float(np.linalg.norm(B_s - B_t) / np.linalg.norm(B_t)),
-                         sign_agree_A=sign_agreement(A_s, A_t, sign_rel_threshold)[0],
-                         sign_agree_B=sign_agreement(B_s, B_t, sign_rel_threshold)[0],
-                         variation_err=float(np.linalg.norm(dvar) / np.linalg.norm(Jth)),
-                         true_variation=float(np.linalg.norm(Jt - Jth) / np.linalg.norm(Jth))))
+        row = dict(trim=i, lens_distance=float(dist[i]),
+                   rel_err_A=float(np.linalg.norm(A_s - A_t) / np.linalg.norm(A_t)),
+                   rel_err_B=float(np.linalg.norm(B_s - B_t) / np.linalg.norm(B_t)),
+                   variation_err=float(np.linalg.norm(dvar) / np.linalg.norm(Jth)),
+                   true_variation=float(np.linalg.norm(Jt - Jth) / np.linalg.norm(Jth)))
+        for nm, Ms, Mt, F in (("A", A_s, A_t, truth["F_x"][i]), ("B", B_s, B_t, truth["F_u"][i])):
+            mask = sign_mask(F, sign_rel_threshold)
+            mask_sign_check(Mt, F, mask)
+            row[f"sign_agree_{nm}"] = masked_sign_agreement(Ms, Mt, mask)[0]
+        rows.append(row)
     return rows
