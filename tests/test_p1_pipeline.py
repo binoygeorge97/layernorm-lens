@@ -591,3 +591,12 @@ def test_prediction_rules_on_constructed_rows():
     # a negative correlation fails prediction 3, whatever its size
     neg = [dict(r, affected_frac=str(-float(r["affected_frac"]))) for r in rows]
     assert not rules.p3(neg, q)["holds"]
+
+
+def test_corollary1_deviation_stops_the_analysis():
+    prun.check_corollary1(dict(corollary1_max_rel_dev=3e-14), 1e-10)
+    prun.check_corollary1(dict(degenerate=True), 1e-10)  # degenerate: no Corollary 1 line, nothing to check
+    for bad in (2e-10, float("nan")):
+        with pytest.raises(RuntimeError, match="code error"):
+            prun.check_corollary1(dict(corollary1_max_rel_dev=bad), 1e-10)
+    assert CFG["analysis"]["corollary1"]["tol"] == 1e-10

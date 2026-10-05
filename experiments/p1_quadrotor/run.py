@@ -355,6 +355,14 @@ def analyse_one(cfg, spec, p, ds, seed=None):
     return out
 
 
+def check_corollary1(r, tol):
+    """The analysis stops on a Corollary 1 deviation above `tol` on a trained model with a
+    non-degenerate lens (prereg/p1.md, stopping rules): it indicates a code error."""
+    dev = r.get("corollary1_max_rel_dev")
+    if dev is not None and not dev <= float(tol):
+        raise RuntimeError(f"Corollary 1 deviation {dev} > {tol}: stopping (a code error, not a result)")
+
+
 def p3_spearman(rows, scores=("u_min_sharpness", "d1_sharpness", "u_min_coverage", "d1_coverage"),
                 target="affected_frac"):
     """Prediction 3: Spearman's rank correlation, over the models, between each
@@ -735,6 +743,10 @@ def main():
             p = load_params(os.path.join(P["ck"], f"{name}.npz"))
             if args.stage == "analyse":
                 r = analyse_one(cfg, spec, p, ds, seed)
+                try:
+                    check_corollary1(r, cfg["analysis"]["corollary1"]["tol"])
+                except RuntimeError as e:
+                    sys.exit(f"{name}: {e}")
             else:
                 r, tr_ = hover_one(cfg, spec, p, ds, plant, hx, hu, trims, truth)
                 trim_rows += [dict(name=name, **t) for t in tr_]

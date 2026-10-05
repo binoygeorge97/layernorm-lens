@@ -402,3 +402,8 @@ the task, the choice, the reasoning, and the alternatives rejected.
     - prediction 5 holds if both architectures hold.
 
     Spearman ties get average ranks (scipy).
+
+42. **The analysis stops on a Corollary 1 deviation above 1e-10** (`check_corollary1`;
+    config `analysis.corollary1.tol`). It applies to a trained model with a
+    non-degenerate lens, and a NaN deviation also stops it. Until now the deviation was
+    only recorded, while the draft (D18) and `prereg/p1.md` say the stage stops.

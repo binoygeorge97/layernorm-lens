@@ -1,4 +1,4 @@
-# Project state (handoff), 4 October 2026, updated after the P-I revision queue
+# Project state (handoff), 5 October 2026, updated with prereg/p1.md awaiting its tag
 
 For a fresh Claude Code session with no other context. Read this, then `CLAUDE.md`
 (rules; they override defaults), `docs/theory.md` (definitions; authoritative) and
@@ -25,9 +25,9 @@ The argument has two halves:
 - **Harm (quadrotor, P-I / hover check / P-III / P-II):** in quadrotor
   surrogates, Jacobian error concentrates near the lens, which damages
   linearisation (LQR) and gradient-based MPC; fixes are compared at equal accuracy.
-  Predictions: the author's protocol amendments v3, item 3
-  (`docs/protocol_amendments_v3.md`), operationalised in `prereg/drafts/p1-draft.md`
-  (v2), which becomes `prereg/p1.md` once agreed; gate G2 (18 Oct).
+  Pre-registered in `prereg/p1.md` (predictions 1–4 from the author's protocol
+  amendments v3, item 3, plus prediction 5 and H1). It awaits the author's tag
+  `prereg-p1`. Gate G2 (18 Oct).
 
 Gate G3 (13 Nov): every main-text claim backed.
 
@@ -45,11 +45,11 @@ Gate G3 (13 Nov): every main-text claim backed.
 | `plants/quadrotor.py` | The P-I quadrotor (JAX float64, 12 states, 4 rotor thrusts; approved cf2x.urdf parameters; X-mixer; `f`, `rk4_step`, `hover_equilibrium`, `linearize`, `linearize_step`) |
 | `control/lqr.py` | Continuous and discrete LQR, closed-loop eigenvalues, spectral abscissa and radius |
 | `lens/models.py`, `lens/train.py`, `lens/analysis.py` | P-I surrogates (pre-norm residual block; NormedLinear stack; zero-bias and PyTorch-default inits), training with early stopping and lens logging, and analysis (Jacobian error against lens distance, coverage and sharpness, Corollary 1 on trained models, attenuation) |
-| `experiments/p1_quadrotor/` | P-I: `config.yaml` (minibatch Adam, batch 2,048; the long-budget subset), `p1_data.py` (sampling, target, standardisation, Jacobians, manifest), `p1_hover.py` (hover linearisation check), `run.py`: stages generate, train, train_long, gather, analyse, analyse_long, hover, p5, all gated on `prereg-p1`; `--index`/`--out-root` for one run per Slurm array task with a per-run JSON and SHA-256 manifest; ungated: benchmark (random targets) and init_lens (initialisation alone) |
+| `experiments/p1_quadrotor/` | P-I: `config.yaml` (minibatch Adam, batch 2,048; the long-budget subset; trims; the predictions' thresholds), `p1_data.py` (sampling, target, standardisation, Jacobians, manifest), `p1_hover.py` (hover check, H1's flag, "no stabilising gain", trims), `p1_rules.py` (every pre-registered rule), `run.py`: stages generate, train, train_long, gather, analyse, analyse_long, hover, p5, predictions, all gated on `prereg-p1`; `--index`/`--out-root` for one run per Slurm array task with a per-run JSON and SHA-256 manifest; ungated: benchmark (random targets), init_lens (initialisation alone), trims (simulator only) |
 | `docs/DECISIONS.md`, `docs/plans/` | The decision log for choices the specs leave open, and per-task plans |
 | `experiments/initial_lens/` | Initial-lens check: `run.py`, `config.yaml`. 1,000 draws per (H, k, ε, init) for inits (a) zero bias, (b) torch default, (c) Flax, (d) TD-MPC2. Results in `results/initial_lens/` |
 | `experiments/r6_tdmpc2/` | R6 (below) |
-| `prereg/` | `r6.md` and deviations parts 1–3 (all tagged) |
+| `prereg/` | `r6.md` and deviations parts 1–4 (all tagged); `p1.md` (committed, awaiting the tag `prereg-p1`); `drafts/p1-draft.md` (v3, final) |
 | `tests/` | pytest suite; `tests/golden/` holds core.py regression outputs |
 | `figures/` | The only source of paper figures (empty so far) |
 | `notebooks/` | Exploration only |
@@ -176,6 +176,9 @@ regression in tolerance mode: `LENS_TOL=1 python -m pytest -q tests/test_core_re
 | d7b2cb3 | Minibatch default, u_min lens log, `train_long`, `gather`, `analyse_long`, `p5`, Slurm scripts |
 | 74058c0 | `results/p1/benchmark_bs2048/`: minibatch runtime on random targets |
 | 1b7ee27, 07b21b4 | `init_lens` stage; `results/p1/init_lens/` |
+| c6e8f04 | Draft v2, STATE, DECISIONS |
+| e7a0660 | Trims, H1 and "no stabilising gain", prediction 4's S ratio, `p1_rules.py` and the `predictions` stage |
+| 0966917 | `results/p1/trims/`: the 200 trims, sampled before any training (trims.csv SHA-256 5b5f7105…9f95) |
 
 ## 4. R6 status
 
@@ -334,12 +337,17 @@ surrogate, before the tag `prereg-p1`.
 - Initial lens values from initialisation alone: `results/p1/init_lens/` (1b7ee27).
 - TACC fallback: `slurm/` (Stampede3 arrays; queue, allocation and wall time marked
   EDIT).
-- Still to write, after the author's D16: the hover-check trims and H1's cell rule.
+- Trims, H1, prediction 4's S ratio and every rule (`p1_rules.py`, stage
+  `predictions`): done (e7a0660). The trims were sampled before any training (0966917).
 
-**(g) `prereg/p1.md`.** Draft v2 committed: `prereg/drafts/p1-draft.md` (not a prereg
-file), for the author and advisor. Next: the author's decisions, then `prereg/p1.md`
-committed alone and tagged `prereg-p1` by the author. Only then may any P-I stage touch
+**(g) `prereg/p1.md`.** Written from the final draft (v3, the author's decisions of 5
+Oct applied) and committed alone, in the commit after this STATE update. It awaits the author's review with the advisor and the
+annotated tag `prereg-p1`, which the author creates. Only then may any P-I stage touch
 quadrotor data.
+- After the tag, run on the laptop: generate; the 40-model grid; the 10 long runs;
+  then analyse, hover, p5 (`--of train` and `--of train_long`), analyse_long and
+  predictions.
+- The draft's history:
 - Predictions 1–4 are quoted exactly from the amendments' item 3, each with a proposed
   operationalisation.
 - Prediction 5 (zero bias): along u_min, r_eff/D rises at least 10× and reaches at
@@ -364,34 +372,13 @@ marked `BRANCH` parameter cell, set to `r6-criterion`.
 
 Non-blocking; work continues on everything that does not depend on the answers.
 
-Answered on 4 Oct 2026:
-- linear drag: off for P-I, a modelling choice in the draft;
-- compute: minibatch Adam, with TACC Slurm arrays as the fallback;
-- predictions 1–4: `docs/protocol_amendments_v3.md`.
+Answered on 5 Oct 2026:
+- the 18 draft decisions (applied in draft v3 and `prereg/p1.md`);
+- E1b: not found in the repository, so the author's fallback S ratio is used;
+- TACC: not needed (the scripts are kept);
+- the provenance sentence: added to `prereg/p1.md`.
 
-Open:
-
-1. The 18 decisions (D1–D18) at the end of `prereg/drafts/p1-draft.md`, each with a
-   recommendation. Most consequential:
-   - D7: whether prediction 1 needs both the centre clause and the ratio clause;
-   - D9: the affected-data fraction;
-   - D11 and D12: prediction 5's primary test and the 500k-step budget;
-   - D15: G2;
-   - D16: H1 and the trims.
-2. Prediction 4 quotes "E1b's median ratio of about 0.2", but E1b's definition of that
-   ratio is not in the repository. The draft proposes output-over-block-1 sharpness
-   along u_min. What did E1b measure?
-3. TACC, only if the fallback is used: which system, queue and allocation? The scripts
-   assume Stampede3 and mark these lines EDIT.
-4. For the record: the amendments' preamble says their items are committed "before G1
-   on 4 October". The file was committed on 4 Oct (d6b822b), after G1 was evaluated on
-   3 Oct.
-   - Item 2's criterion was already tagged in `prereg/r6.md` (prereg-r6) before any R6
-     data.
-   - Item 3's predictions will be fixed by `prereg-p1` before any quadrotor data.
-
-   Nothing was therefore fixed after seeing a result, but the paper's provenance note
-   may want to say so.
+Open: none. Waiting for the tag `prereg-p1` on origin.
 
 ## 7. Known issues
 

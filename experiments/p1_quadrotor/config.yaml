@@ -65,7 +65,7 @@ analysis:
   directions: [d1, u_min]
   affected_factor: 3.0      # prediction 3: a test state is affected if its error > 3 x the far set's median
   r_star_init: {n_directions: 64, rng_seed: 0}   # prediction 2: median r*(d) at initialisation (convention 4)
-  corollary1: {n_state_lines: 10, rng_seed: 0, n_grid: 2001, t_range: 3.0}
+  corollary1: {n_state_lines: 10, rng_seed: 0, n_grid: 2001, t_range: 3.0, tol: 1.0e-10}  # stop above tol
   attenuation: {n_grid: 4001, t_range: 3.0}
 
 p5:                         # prediction 5 (p1 draft), along u_min: ratio = r_eff(u_min)/D(u_min)

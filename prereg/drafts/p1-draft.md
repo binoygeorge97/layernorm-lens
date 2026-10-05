@@ -1,4 +1,4 @@
-# DRAFT v2: Pre-registration P-I, quadrotor surrogates
+# DRAFT v3 (final): Pre-registration P-I, quadrotor surrogates
 
 **Status: draft for the author and advisor. This is not a pre-registration file.**
 When agreed, it becomes `prereg/p1.md`, committed alone. The author tags it
@@ -11,9 +11,18 @@ When agreed, it becomes `prereg/p1.md`, committed alone. The author tags it
   - prediction 5 rewritten (u_min, the long-budget subset, a race with prediction 1);
   - drag off, minibatch Adam, the evaluation interval and the budgets stated;
   - every open decision given a recommendation.
+- v3 (5 Oct 2026): the author's decisions on D1–D18 applied (accepted as recommended:
+  D1, D2, D4–D8, D11–D14, D17, D18; changed: D3, D9, D10, D15, D16). The trim code was
+  written and the trims were sampled before any training. `prereg/p1.md` is written
+  from this version.
 
-Everything below the quotes (how each prediction is evaluated) is a proposal, listed as
-a decision at the end. The amendments say the thresholds are confirmed "after the
+**Provenance of the predictions.** `docs/protocol_amendments_v3.md` was committed on
+4 October 2026 (d6b822b), after G1 was evaluated on 3 October. Its R6 item (item 2) had
+been tagged in `prereg/r6.md` (prereg-r6) before any R6 data. Its P-I items precede any
+quadrotor data: none had been generated when this was written.
+
+Everything below the quotes (how each prediction is evaluated) was settled by the
+author's decisions of 5 October (end). The amendments say the thresholds are confirmed "after the
 initial-lens sampling check, never after seeing trained quadrotor models". The check is
 done (`results/initial_lens/`), and no quadrotor model has been trained.
 
@@ -54,8 +63,12 @@ widen the lens until it no longer matters (prediction 5)?
 - **Sampling** (D3):
   - i.i.d. uniform in a box around hover: position ±1 m, velocity ±1 m/s, roll and
     pitch ±30°, yaw ±180°, body rates ±2 rad/s;
-  - thrust u_i = u0 (1 ± 0.5) with u0 = m g/4 (within [0, f_max] = [0, 2.25 u0], so
-    never clipped);
+  - thrust u_i = u0 (1 ± 0.5) with u0 = m g/4, the hover thrust: [0.5 u0, 1.5 u0],
+    symmetric about hover thrust and inside [0, f_max] = [0, 2.25 u0], so never clipped
+    (D3);
+  - every range is symmetric about hover (position 0, velocity 0, attitude 0, yaw 0,
+    rates 0, thrust u0), so the standardised mean is hover in every input dimension, up
+    to sampling noise;
   - 20,000 train, 5,000 validation and 5,000 test states, from
     `numpy.random.default_rng(0)` drawn in that order.
   - Every coordinate is independent and uniform, so the standardised inputs are i.i.d.
@@ -142,7 +155,7 @@ U(−√3, √3)¹⁶ draws, z-scored, standing in for the training inputs (see 
 ## Predictions
 
 Predictions 1–4 are quoted exactly from the protocol amendments v3, item 3. Below each
-quote is how it is evaluated (proposed; the decisions are referenced).
+quote is how it is evaluated (the decisions are referenced).
 
 - **Cells:** each initialisation has 4 cells (architecture × depth) of 5 seeds.
 - **"Holds in a cell"** means it holds in at least 4 of the 5 seeds (D14).
@@ -204,7 +217,9 @@ Evaluated once, over all 40 surrogates (D9):
 - **Affected-data fraction:** the fraction of a model's test states whose Jacobian error
   exceeds 3× the median error of its 50% farthest states (prediction 1's far set and
   factor).
-- **Test:** Spearman's ρ_s between the score and the affected fraction is at least 0.7.
+- **Test:** a positive Spearman correlation, ρ_s ≥ +0.7, between the score and the
+  affected fraction over the 40 surrogates. Ties get average ranks
+  (`scipy.stats.spearmanr`). A negative correlation fails, whatever its size.
 - Why a positive relation is expected: along a Lorentzian of width r, the slope is at
   least 3× its value at the data edge D wherever |s| ≤ √((D² − 2r²)/3). That band grows
   from nothing at r = D/√2 to D/√3 as r → 0, so a sharper lens affects more of the
@@ -217,15 +232,20 @@ Evaluated once, over all 40 surrogates (D9):
 
 Evaluated on the 3-block models (D10):
 
-- **The ratio:** along z* + t·u_min, on a grid uniform in t over the data's extent, the
-  sharpness (peak/median) of the output's speed ‖∂y/∂t‖, divided by that of block 1's
-  normalised feature ‖∂ĥ₁/∂t‖. Block 1's profile is Corollary 1's Lorentzian.
+- **The ratio** (D10): S_out/S_block1 along the line z* + t·u_min through block 1's
+  lens centre, with S the peak slope at the lens centre, ‖∂y/∂t‖ at t = 0.
+  - S_out is taken for the full model.
+  - S_block1 is taken for the model truncated after block 1, with the head applied to
+    block 1's output.
+  - A ratio below 1 means the later blocks attenuate the slope that the first block's
+    lens puts at its centre.
 - **Attenuated:** in each of the four 3-block cells (both architectures, both
   initialisations), the ratio is below 1 in at least 4 of the 5 seeds.
 - **The point prediction:** the median ratio over the ten zero-bias 3-block models is
   reported against 0.2, as consistent if it lies within a factor of 2 ([0.1, 0.4]).
-- E1b's exact definition of its ratio is not in the repository (question for the
-  author). If it differs, it replaces this one.
+- E1b's code and notes are not in the repository or its history: E1b is named only in
+  theory.md's Scope remark. This ratio approximates E1b's measure. The sharpness ratio
+  (peak/median of the speed profiles) is reported alongside.
 
 ### Prediction 5 (new): the lens widens during training
 
@@ -249,7 +269,7 @@ seeds per architecture, with κ ≤ 0.1 at the end.
 - **Secondary and comparison:**
   - The same quantities along d₁ are secondary and reported.
   - Trained TD-MPC2 encoder lenses (R6, exploratory E3) sit at r_eff(d₁)/D of
-    0.25–1.2. That range is a comparison, not a threshold.
+    0.25–1.17. That range is a comparison, not a threshold.
 - **Scope:** prediction 5 is made for zero bias only. The PyTorch-default start is
   already at 0.37 along u_min (0.36–0.38 for seeds 0–4), a factor of 2.7 short of 1.
   Its trajectory is reported (D11).
@@ -285,7 +305,7 @@ result, and the analysis stage stops (D18).
 ## Hover linearisation check (amendments: new)
 
 For each surrogate, its (A, B) at hover is compared with the simulator's. Both are taken
-by autodiff, on the y-map, in physical units (D16):
+by autodiff, on the y-map, in physical units (D16). The comparison reports:
 
 - the relative Frobenius error of A and of B;
 - sign agreement on every entry whose true magnitude exceeds 1e-3 × max|truth| (per
@@ -294,26 +314,42 @@ by autodiff, on the y-map, in physical units (D16):
   continuous-time, with Bryson Q and R from the sampling half-widths: Q = diag(1/h_x²),
   R = diag(1/(0.5 u0)²);
 - the closed-loop eigenvalues of the surrogate's gain on the true linearisation: stable
-  or not, and the spectral abscissa.
+  or not, and the spectral abscissa;
+- **"no stabilising gain"**, recorded when the surrogate's (A, B) has no stabilising LQR
+  solution: the Riccati solve fails, or its gain does not stabilise the surrogate's own
+  (A, B). It counts as a failure for H1.
 
-**Trims** (proposed, D16): 200 steady-flight trims, sampled once with a fixed seed from
-the no-drag trim family inside the box. Positions, velocities and yaw are uniform;
-attitude is level, rates are zero and thrust is u0. Each trim's errors are reported
-against its lens distance. The trims are fixed before training, so they cannot be
-chosen after seeing a lens.
+**Trims** (D16): 200 no-drag steady-flight trims, sampled before any training from
+`numpy.random.default_rng(20261005)` and committed in `results/p1/trims/trims.csv`
+(SHA-256 5b5f71051dd4780fac6fb33b16a27154fdb4703a66c2acdd5d334f73305c9f95, commit
+0966917).
+
+- Position, velocity and yaw are uniform in the training box. Roll, pitch and rates are
+  0, and thrust is u0.
+- Every trim lies inside the training box, and is a trim of the RK4 map to 1.1e-16.
+- **What is reported per trim:** the errors of A and B, sign agreement, the trim's lens
+  distance, and the variation error.
+- **Variation error:** the true linearisation depends on the trim only through yaw. The
+  error in the surrogate's variation across trims is therefore reported as
+  ‖(J_s(trim) − J_s(hover)) − (J_t(trim) − J_t(hover))‖_F/‖J_t(hover)‖_F.
+- **Per model:** its median, and its Spearman correlation with the trims' lens distance.
 
 **H1, the ledger's new claim:** "under zero bias, the surrogate's hover linearisation is
-wrong in sign or stability." Proposed as a pre-registered prediction (D16):
-
-- in each zero-bias cell, at least 4 of the 5 seeds have either:
-  - at least one sign disagreement in A or B at hover (above the threshold), or
+wrong in sign or stability." Pre-registered (D16). H1 holds if, in each zero-bias
+cell, at least 4 of the 5 seeds have at least one of:
+  - a sign disagreement in A or B at hover (above the threshold);
+  - no stabilising gain;
   - an unstable true closed loop under the surrogate's gain.
 - Reported regardless: the paired comparison of the (A, B) errors, zero bias against
   PyTorch default, by seed.
 
 ## Gate G2
 
-Proposed (D15): G2 passes if prediction 1 holds in at least 3 of the 4 zero-bias cells.
+G2 passes if prediction 1 holds in at least 2 of the 4 zero-bias cells. P-III then runs on
+the cells where it holds.
+
+G2 is a planning gate, not a scientific claim. It decides where P-III's effort goes;
+prediction 1's result is reported per cell regardless.
 
 ## Reported regardless of outcome
 
@@ -328,173 +364,27 @@ For every model:
 - for every stage: the config, the commit, the package versions, the data manifest,
   and the per-run output manifests.
 
-## Decisions for the author, each with a recommendation
+## Decisions (settled by the author on 5 October 2026)
 
-1. **D1. Predictions 1–4's wording.**
-   - Recommendation: the exact quotes above, with the operationalisations in D7–D10.
-   - Why: the amendments are the author's text, and they win over plan.md.
-   - Alternatives: none. v1's reconstructions are withdrawn; v1's prediction 3 (hover
-     damage) became H1, and v1's prediction 4 (Corollary 1) became a pipeline check.
-2. **D2. Plant.**
-   - Recommendation: g = 9.81, no drag, RK4 at dt = 0.01 s, position among the inputs
-     (k = 16).
-   - Why: these are the approved parameters, the author's no-drag decision, and
-     plan.md's k = 16 = 12 + 4.
-   - Alternatives:
-     - g = 9.8 (gym-pybullet-drones' value; not the approved one);
-     - dropping position, since the dynamics do not depend on it. That would make
-       k = 13 and break the plan's k = 16 and the initial-lens check's (H, k).
-3. **D3. Sampling design.**
-   - Recommendation: the i.i.d. uniform box above; 20,000 / 5,000 / 5,000; data seed 0.
-   - Why:
-     - The standardised inputs come out isotropic, so where the lens sits is not
-       confounded with the data's shape.
-     - The data mean is hover, which is what prediction 1's "(hover)" assumes.
-   - Alternatives:
-     - closed-loop trajectories (realistic, but anisotropic and correlated, and "near
-       hover" then depends on the controller);
-     - a Gaussian box (unbounded tails);
-     - wider tilt (±45°).
-4. **D4. Standardisation.**
-   - Recommendation: a per-coordinate z-score from the training split.
-   - Why: amendments item 1 says "standardised coordinates", and the initial-lens
-     check's conventions assume unit-scale inputs.
-   - Alternatives: fixed physical scaling by the box half-widths. For a uniform box it
-     agrees with the z-score up to a factor of √3 and sampling noise, but it does not
-     give unit variance.
-5. **D5. Jacobian error.**
-   - Recommendation: the relative Frobenius error ‖J_s − J‖_F/‖J‖_F per state, for the
-     full 12 × 16 standardised Jacobian of the scaled-increment map.
-   - Why: amendments item 1 (units), and the error is scale-free across states.
-   - Alternatives:
-     - the absolute Frobenius error (dominated by high-gain states);
-     - A and B blocks separately (reported in the hover check);
-     - physical units (appendix).
-6. **D6. Direction.**
-   - Recommendation: u_min is primary for predictions 3, 4 and 5; d₁ is secondary and
-     reported. D is (q97.5 − q2.5)/2 of the training inputs' projections.
-   - Why:
-     - d₁ is undetermined for isotropic standardised inputs (top-two eigenvalue ratio
-       near 1).
-     - u_min is defined by the lens itself, and it is the direction of the largest
-       amplification.
-   - Alternatives: d₁ (r6.md's definition), or the median over the principal
-     directions.
-7. **D7. Prediction 1.**
-   - Recommendation:
-     - (a) ‖z* − μ‖ ≤ 0.1, Euclidean in standardised coordinates, μ the training mean;
-     - (b) R ≥ 3 with ceil-sized 10% and 50% sets and medians;
-     - both clauses per seed, at the returned parameters.
-   - Why: this is the quote's literal reading. The Euclidean and Mahalanobis norms agree
-     here up to noise, because the covariance is close to I.
-   - Alternatives:
-     - clause (b) alone for G2, with (a) reported (if migration should not fail G2);
-     - distance to hover's standardised coordinates instead of μ.
-8. **D8. Prediction 2.**
-   - Recommendation:
-     - (a) the initial median r* over 64 directions in [0.47, 1.87];
-     - (b) R_torch < R_zero, paired by seed, in at least 4 of 5 seeds per cell, without
-       accuracy matching.
-   - Why:
-     - 64 directions is the sampling check's number.
-     - Pairing removes the weight and minibatch noise.
-     - The amendments put matched-accuracy comparisons in P-II, not P-I.
-   - Alternatives:
-     - matching held-out rel-MSE within 20% (P-II's rule);
-     - comparing the cells' median R.
-9. **D9. Prediction 3.**
-   - Recommendation:
-     - score D/r_eff along u_min;
-     - affected = error above 3× the model's far-set median;
-     - one Spearman test over all 40, at least 0.7.
-   - Why: it uses prediction 1's own sets and factor, so "affected" means "lens-like
-     error concentration", independent of each model's overall accuracy.
-   - Alternatives:
-     - an absolute error threshold pooled over models (e.g. the pooled 90th
-       percentile), which mixes in overall accuracy;
-     - a score from the weights alone (the minimum principal width), which ignores D;
-     - separate tests per initialisation (n = 20 each; low power).
-10. **D10. Prediction 4.**
-    - Recommendation:
-      - the output-over-block-1 sharpness ratio along u_min;
-      - attenuated if below 1 in at least 4 of 5 seeds in each of the four 3-block
-        cells;
-      - 0.2 reported as consistent within [0.1, 0.4] on the zero-bias median.
-    - Why:
-      - u_min is the closest analogue of a one-input lens.
-      - The factor of 2 matches prediction 2's tolerance for an estimate.
-    - Alternatives:
-      - zero-bias cells only;
-      - d₁;
-      - block 3's ĥ instead of the output;
-      - treating 0.2 as a pass/fail threshold.
-    - **Please supply E1b's definition of its ratio.**
-11. **D11. Prediction 5.**
-    - Recommendation: as written above (fold 10, floor 0.1, κ ≤ 0.1), evaluated at the
-      end.
-      - Primary: the long-budget subset, per architecture.
-      - At early stopping: per zero-bias cell, reported with prediction 1.
-      - Zero bias only.
-    - Why:
-      - The floor sits an order of magnitude above the zero-bias start, and the fold
-        guards against a start that is already wide.
-      - Evaluating at the end, not at the best moment, avoids rewarding a transient.
-    - Alternatives:
-      - a floor of 0.25, the low end of TD-MPC2's range (the author made that range a
-        comparison, not a threshold);
-      - "reaches at any time" (reported as `ratio_max`);
-      - κ ≤ 0.01;
-      - also predicting the PyTorch-default arm.
-12. **D12. The long budget.**
-    - Recommendation: 500,000 steps, 5× the 40 runs' maximum, with snapshots every
-      10,000 steps.
-    - Why: every run is then trained to at least 5× its early-stopping budget. The
-      benchmark puts the subset at no more than 24.5 h on the laptop, so about 55 h with
-      the grid, which fits before G2.
-    - Alternatives:
-      - 300,000 steps (3×; cheaper, but less room past a late stop);
-      - 1,000,000 steps (10×; doubles the cost).
-13. **D13. The race.**
-    - Recommendation: state the expected relation and report it (the 2 × 2 tables and
-      the long-run traces), with no pass/fail test.
-    - Why: it is a mechanism read across two predictions that are each tested.
-    - Alternatives: a formal test, such as Spearman(R, r_eff/D) ≤ −0.5 across the 20
-      zero-bias runs at early stopping.
-14. **D14. The seeds rule.**
-    - Recommendation: "holds in a cell" means at least 4 of 5 seeds.
-    - Why: it tolerates one bad seed without allowing a split decision.
-    - Alternatives: 5 of 5 (one outlier fails a cell); the median over seeds.
-15. **D15. G2.**
-    - Recommendation: prediction 1 holds in at least 3 of the 4 zero-bias cells.
-    - Why: plan.md's G2 question is prediction 1, and 3 of 4 tolerates one architecture
-      × depth exception.
-    - Alternatives: all 4 cells; clause (b) alone; also requiring H1.
-16. **D16. Hover check.**
-    - Recommendation:
-      - continuous LQR on the y-map's (A, B), Bryson Q and R, and a per-matrix sign
-        threshold of 1e-3 × max|truth|;
-      - H1 pre-registered as written;
-      - 200 fixed trims from the no-drag trim family.
-    - Why:
-      - The y-map is the map the surrogate learns.
-      - Bryson's rule makes Q and R unit-free.
-      - Fixed trims cannot be chosen after the fact.
-    - Alternatives:
-      - discrete LQR on the RK4 map;
-      - H1 reported only;
-      - trims chosen by lens distance after training (rejected: chosen after seeing the
-        model).
-    - The trim code is not written yet. It follows this decision, before the tag.
-17. **D17. Training.**
-    - Recommendation: as in Training above.
-    - Why: minibatch Adam, batch 2,048 and the evaluation interval are the author's
-      decision of 4 Oct. lr 3e-3 and the GELU branch of width H follow lens/core.py.
-    - Alternatives:
-      - an lr sweep (it would need its own pre-registered selection rule);
-      - evaluating every 1,000 steps (coarser early stopping).
-18. **D18. Stopping rules.**
-    - Recommendation: the analysis stops on any Corollary 1 deviation above 1e-10 (a
-      code error) and on any manifest mismatch. `gather` refuses on any missing run,
-      any SHA-256 mismatch, more than one commit, or a dirty tree.
-    - Why: R6's rules, extended to array runs.
-    - Alternatives: none proposed.
+- Accepted as recommended in v2: D1, D2, D4, D5, D6, D7, D8, D11, D12, D13, D14, D17,
+  D18.
+- **D3:** accepted. The thrust range is symmetric about hover thrust, and every box range
+  is listed (Sampling).
+- **D9:** accepted, with the direction stated: a positive Spearman ρ_s ≥ 0.7, with ties
+  given average ranks.
+- **D10:** E1b's definition was searched for and not found. The ratio is S_out/S_block1
+  at block 1's lens centre along u_min, and 0.2 is consistent if within a factor of 2.
+- **D15:** G2 at 2 of the 4 zero-bias cells, with P-III on those cells. G2 is a planning
+  gate.
+- **D16:** accepted, with three additions:
+  - "no stabilising gain" counts as a failure for H1;
+  - the trims lie inside the training box;
+  - the variation across trims is reported against lens distance.
+
+  The trims were sampled before any training.
+- **Compute:** the laptop; TACC is not needed. The scripts are kept.
+- Aggregations made explicit in code (`p1_rules.py`):
+  - prediction 2 holds if (a) holds for every model and (b) holds in every cell;
+  - prediction 4 holds if every 3-block cell holds;
+  - H1 holds if every zero-bias cell holds;
+  - prediction 5 holds if both architectures hold.
