@@ -836,3 +836,67 @@ def test_preflight_override_is_outside_the_pre_registered_config():
     A, B = phover.true_y_jacobians(plant)
     Fx, Fu = phover.true_f_jacobians(plant)
     assert np.allclose(A, Fx, rtol=0, atol=1e-12) and np.allclose(B, Fu, rtol=0, atol=1e-12)  # Euler: exact
+
+
+def test_sampling_order_seed_and_box(synthetic):
+    """prereg/p1.md, Data: train, val, test drawn in that order from default_rng(seed),
+    uniform in the box (clipping inactive for the quadrotor's thrust range)."""
+    plant, _, _, hx, hu, ds, _ = synthetic
+    cfg = _small_cfg()
+    rng = np.random.default_rng(int(cfg["sampling"]["seed"]))
+    for split, n in (("train", 400), ("val", 100), ("test", 100)):
+        x, u = pdata.sample(plant, hx, hu, n, rng)
+        assert np.array_equal(ds[split]["z"], np.concatenate([x, u], 1))
+    q, _ = pdata.quadrotor_plant(CFG["plant"])
+    qhx, qhu = pdata.quadrotor_half_widths(CFG["sampling"]["half_widths"], q.u0)
+    assert np.allclose(qhu, 0.5 * q.u0) and np.all(q.u0 + qhu < q.u_hi) and np.all(q.u0 - qhu > q.u_lo)
+    assert np.allclose(qhx, [1, 1, 1, 1, 1, 1, np.pi / 6, np.pi / 6, np.pi, 2, 2, 2])
+    s = CFG["sampling"]
+    assert (s["n_train"], s["n_val"], s["n_test"], s["seed"]) == (20000, 5000, 5000, 0)
+
+
+def test_analyse_one_quantities_as_defined(synthetic, tmp_path):
+    """prereg/p1.md, Definitions: every analysed quantity recomputed from scratch."""
+    _, _, _, _, _, ds, _ = synthetic
+    cfg = _small_cfg()
+    name, spec, seed = [m for m in prun.grid(cfg) if m[1].arch == "normedlinear" and m[1].n_blocks == 3][1]
+    prun.stage_train(cfg, ds, str(tmp_path / "ck"), str(tmp_path / "tr"), [(name, spec, seed)], base=str(tmp_path))
+    p = prun.load_params(str(tmp_path / "ck" / f"{name}.npz"))
+    out = prun.analyse_one(cfg, spec, p, ds, seed)
+    Zt, Ztr = ds["test"]["Z"], ds["train"]["Z"]
+    E, b = (np.asarray(m) for m in models.first_layer(spec, p))
+    L = geo.lens(E, b, spec.eps)
+    # Jacobian error, per state, relative Frobenius on the full 12 x 16 standardised Jacobian
+    Js = np.stack([np.asarray(jax.jacfwd(lambda z: models.forward(spec, p, z))(jnp.asarray(z))) for z in Zt])
+    err = np.linalg.norm((Js - ds["test"]["J_std"]).reshape(len(Zt), -1), axis=1) / np.linalg.norm(
+        ds["test"]["J_std"].reshape(len(Zt), -1), axis=1)
+    # R by rho_eff: ceil(0.1 n) nearest against ceil(0.5 n) farthest, medians
+    dz = Zt - L.z_star
+    rho_eff = np.sum((dz @ L.A.T) ** 2, 1) / (L.norm_c_perp ** 2 + L.H * L.eps)
+    o = np.argsort(rho_eff, kind="stable")
+    n = len(Zt)
+    near, far = np.median(err[o[:int(np.ceil(0.1 * n))]]), np.median(err[o[n - int(np.ceil(0.5 * n)):]])
+    assert out["nf_ratio"] == pytest.approx(near / far, rel=1e-10) and out["dist_kind"] == "rho_eff"
+    assert out["affected_frac"] == pytest.approx(np.mean(err > 3.0 * far), abs=0)
+    assert out["err_q95"] == pytest.approx(np.percentile(err, 95), rel=1e-10)
+    assert out["z_star_to_mean"] == pytest.approx(np.linalg.norm(L.z_star - Ztr.mean(0)), rel=1e-12)
+    assert out["z_star_to_hover"] == pytest.approx(np.linalg.norm(L.z_star - ds["trim"]["Z"]), rel=1e-12)
+    # sharpness D/r_eff along u_min, D = (q97.5 - q2.5)/2 of the training projections
+    u = L.principal_dirs[:, 0]
+    pr = (Ztr - Ztr.mean(0)) @ u
+    D = (np.percentile(pr, 97.5) - np.percentile(pr, 2.5)) / 2
+    r_eff = np.sqrt(L.norm_c_perp ** 2 + L.H * L.eps) / L.sing[0]
+    assert out["u_min_sharpness"] == pytest.approx(D / r_eff, rel=1e-10)
+    assert out["kappa"] == pytest.approx(L.H * L.eps / L.norm_c_perp ** 2, rel=1e-12)
+    # rel-MSE = MSE / mean per-coordinate variance of the standardised targets
+    f = models.batched(spec)
+    for s in ("val", "test"):
+        mse = np.mean((np.asarray(f(p, jnp.asarray(ds[s]["Z"]))) - ds[s]["Y"]) ** 2)
+        assert out[f"rel_mse_{s}"] == pytest.approx(mse / np.mean(np.var(ds[s]["Y"], 0)), rel=1e-12)
+    # prediction 4's primary ratio on the configured 2,001-point grid over [-D(u_min), D(u_min)]
+    assert cfg["analysis"]["p4_grid"] == 2001
+    r = an.attenuation_P(spec, p, L, an.u_min(L), D, 2001)
+    assert out["p4_P_ratio_u_min"] == pytest.approx(r["ratio"], rel=1e-12)
+    # Bryson Q, R from the half-widths
+    Q, R = phover.bryson(np.full(12, 2.0), np.full(4, 0.5))
+    assert np.allclose(np.diag(Q), 0.25) and np.allclose(np.diag(R), 4.0)
