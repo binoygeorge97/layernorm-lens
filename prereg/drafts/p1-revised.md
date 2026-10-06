@@ -105,6 +105,8 @@ before the early-stopping budget freezes the defect in (prediction 1)?
   `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OPENBLAS_NUM_THREADS` and `NUMEXPR_NUM_THREADS`
   all 1, `JAX_PLATFORMS=cpu` and `PYTHONHASHSEED=0`. With this environment the outputs
   were byte-identical across repeated and concurrent runs (`results/p1/determinism/`).
+  Every stage writes on local disk (`--out-root`); results reach Google Drive only through
+  SHA-256-verified copies (`copy_verified.py`).
 
 ## Definitions
 
@@ -122,9 +124,9 @@ LayerNorm's, in the surrogate's standardised input coordinates.
 - **D(d):** (q97.5(p) − q2.5(p))/2 of p = (z − μ)·d over the training inputs, with
   numpy's default (linear) percentile method.
 - **κ:** Hε/‖c⊥‖² (theory.md, Setting); κ = ∞ for a degenerate lens.
-- **Degenerate lens:** c⊥ = 0 (theory.md, Remark 1 and convention 4). Numerically, a
-  lens is degenerate when ‖c⊥‖ ≤ 1e-12·‖b‖, the test `lens/geometry.py` applies
-  (`DEGENERATE_RTOL`). A zero bias meets it exactly.
+- **Degenerate lens:** c⊥ = 0 (theory.md, Remark 1 and convention 4), read
+  numerically as ‖c⊥‖ ≤ 1e-12·‖b‖ (`DEGENERATE_RTOL` in `lens/geometry.py`, as used for
+  R6). A zero bias meets it exactly.
 - **r_eff(d):** √(‖c⊥‖² + Hε)/‖A d‖ = r*(d)·√(1 + κ) (convention 6). For a degenerate
   lens this is the ε-limited width of convention 4.
 - **Lens distance:** ρ_eff = ‖A(z − z*)‖²/(‖c⊥‖² + Hε), for every lens. Within one
@@ -326,9 +328,18 @@ before any training from `numpy.random.default_rng(20261005)`.
 ## Stopping rules
 
 - **Corollary 1.** The analysis stops on any Corollary 1 deviation above 1e-10 on a
-  trained model whose lens is not degenerate (see Definitions). It is checked along
-  lines through μ and through 10 training states, along d₁. Such a deviation indicates a
-  code error.
+  trained model whose lens is not degenerate (see Definitions).
+  - The deviation is relative: on each line, the maximum over its grid of
+    ‖ĥ(s) − ĥ_Cor1(s)‖₂/‖ĥ_Cor1(s)‖₂, with ĥ the LayerNorm output computed from the
+    weights and ĥ_Cor1 Corollary 1's closed form with the line's own s*, c⊥,ℓ, κ_ℓ and
+    r*_ℓ. The maximum is then taken over the lines.
+  - The lines run through μ and through 10 training states, along d₁.
+  - Such a deviation indicates a code error. On random first layers, the check stayed at
+    or below 4e-12 for κ from 1e-4 to 1e10 and for ‖c⊥‖ just above the degeneracy
+    tolerance (`results/p1/corollary1_stress/`).
+- **Hover mask.** The hover stage stops if, on the vector-field mask at hover or at any
+  trim, a true y-map entry's sign differs from the vector field's. Such a difference
+  indicates a code error.
 - **Manifests.** Every stage stops on any data-manifest mismatch.
 - **Merging runs.** Merging the per-run outputs stops on any missing run, any SHA-256
   mismatch, more than one commit, or a dirty working tree.
@@ -377,6 +388,8 @@ quadrotor data. The following has been seen:
   synthetic linear plant: timings and byte comparisons only (`results/p1/benchmark/`,
   `results/p1/benchmark_bs2048/`, `results/p1/throughput/`,
   `results/p1/determinism/`).
+- **The Corollary 1 stress test** on random first layers with synthetic inputs
+  (`results/p1/corollary1_stress/`): maximum relative deviation 4.0e-12.
 - **R6** (`results/r6/criterion/`): G1 did not pass (0 of 4). No TD-MPC2 checkpoint met
   Inside, Populated and Sharp; Sharp failed for all 15, with D/r_eff(d₁) 0.85–4.08.
 - **R6 exploratory E3** (`results/r6/exploratory/`): trained TD-MPC2 encoder lenses at
