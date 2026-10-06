@@ -26,7 +26,8 @@ sys.path[:0] = [HERE, ROOT, os.path.join(ROOT, "experiments", "r6_tdmpc2")]
 def worker(cfg_path, steps, out):
     import numpy as np
     import yaml
-    import run as prun
+    import p1_load
+    prun = p1_load.run()
     from lens import models
     from lens import train as tr
     cfg = yaml.safe_load(open(cfg_path, encoding="utf-8"))
@@ -65,7 +66,8 @@ def main():
     import launch
     import numpy as np
     import yaml
-    import run as prun
+    import p1_load
+    prun = p1_load.run()
     cfg = yaml.safe_load(open(args.config, encoding="utf-8"))
     out_dir = os.path.join(ROOT, *cfg["paths"]["results"].split("/"), "throughput")
     os.makedirs(out_dir, exist_ok=True)

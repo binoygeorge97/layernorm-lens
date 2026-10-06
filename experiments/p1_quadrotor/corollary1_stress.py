@@ -32,7 +32,9 @@ sys.path[:0] = [HERE, ROOT, os.path.join(ROOT, "experiments", "r6_tdmpc2")]
 import numpy as np  # noqa: E402
 import yaml  # noqa: E402
 
-import run as prun  # noqa: E402
+import p1_load  # noqa: E402
+
+prun = p1_load.run()
 from lens import analysis as an  # noqa: E402
 from lens import geometry as geo  # noqa: E402
 from lens import models  # noqa: E402

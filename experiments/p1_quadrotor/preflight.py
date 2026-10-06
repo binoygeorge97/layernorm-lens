@@ -42,7 +42,8 @@ import launch  # noqa: E402
 import p1_data as pdata  # noqa: E402
 import p1_rules as rules  # noqa: E402
 import provenance as pv  # noqa: E402
-import run as prun  # noqa: E402
+import p1_load  # noqa: E402
+prun = p1_load.run()
 from lens import analysis as an  # noqa: E402
 
 OVERRIDE = os.path.join(HERE, "preflight_override.yaml")

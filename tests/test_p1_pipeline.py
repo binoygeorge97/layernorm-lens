@@ -982,3 +982,17 @@ def test_output_paths_are_run_time_arguments(tmp_path):
     r = subprocess.run([sys.executable, os.path.join(P1, "run.py"), "--help"], capture_output=True, text=True,
                        encoding="utf-8", cwd=ROOT)
     assert "--out-root" in r.stdout and "--data-dir" in r.stdout
+
+
+def test_p1_scripts_load_p1s_own_run_module():
+    """No P-I script imports a bare `run` (another experiment has a run.py too)."""
+    import re
+    import p1_load
+    for f in os.listdir(P1):
+        if f.endswith(".py"):
+            src = open(os.path.join(P1, f), encoding="utf-8").read()
+            assert not re.search(r"^\s*import run\b", src, flags=re.M), f
+    sys.modules.setdefault("run", type(sys)("run"))  # even with a foreign "run" loaded
+    m = p1_load.run()
+    assert m.__name__ == "p1_run" and os.path.samefile(m.__file__, os.path.join(P1, "run.py"))
+    assert hasattr(m, "stage_train") and hasattr(m, "corollary1_check")

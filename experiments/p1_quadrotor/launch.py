@@ -50,7 +50,8 @@ def env(base=None):
 
 def logs_dir(cfg, stage, extra=()):
     """<results>/<stage>/logs, under the --out-root passed through to the runs, if any."""
-    import run as prun
+    import p1_load
+    prun = p1_load.run()
     extra = list(extra)
     out_root = extra[extra.index("--out-root") + 1] if "--out-root" in extra else None
     return os.path.join(prun.paths(cfg, out_root)["res"], stage, "logs")
@@ -94,7 +95,8 @@ def main():
     ap.add_argument("extra", nargs=argparse.REMAINDER, help="after --: passed to every run")
     args = ap.parse_args()
     cfg = yaml.safe_load(open(args.config, encoding="utf-8"))
-    import run as prun  # noqa: E402
+    import p1_load  # noqa: E402
+    prun = p1_load.run()
     members = prun.grid(cfg, prun.GRIDS[args.stage])
     extra = [a for a in args.extra if a != "--"]
     logs = args.logs or logs_dir(cfg, args.stage, extra)

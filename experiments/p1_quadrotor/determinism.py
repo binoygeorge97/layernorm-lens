@@ -28,7 +28,8 @@ LOAD = ("normedlinear-zero_bias-b3-s2", "prenorm-torch_default-b3-s3")
 def worker(name, out_root):
     import preflight
     import p1_data as pdata
-    import run as prun
+    import p1_load
+    prun = p1_load.run()
     cfg = preflight.load_cfg(os.path.join(HERE, "config.yaml"))
     P = prun.paths(cfg)
     ds = pdata.load_dataset(P["data"], P["manifest"])
@@ -44,7 +45,8 @@ def main():
     import launch
     import preflight
     import provenance as pv
-    import run as prun
+    import p1_load
+    prun = p1_load.run()
     cfg = preflight.load_cfg(os.path.join(HERE, "config.yaml"))
     P = prun.paths(cfg)
     if not os.path.exists(P["manifest"]):
