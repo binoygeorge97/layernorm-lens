@@ -561,3 +561,49 @@ not approved for tagging yet", items A1–A9 and P1–P5.
     - a forced Corollary 1 deviation: stopped, naming the model.
 
     Each is also a test in `tests/test_p1_pipeline.py`.
+
+## 2026-10-05, the author's decisions after the second review
+
+Source for entries 56–59: the author's message beginning "A5 decision: use the existing
+lens/geometry.py test."
+
+56. **A5, the degeneracy criterion** (the author's decision). Quoting: "'Degenerate'
+    means c⊥ = 0 (theory.md Remark 1, convention 4), read numerically as
+    ‖c⊥‖ ≤ 1e-12·‖b‖ (DEGENERATE_RTOL in lens/geometry.py, as used for R6)."
+    - `prereg/p1.md` states exactly this; no code changed.
+    - Parallelism stays at 3 processes, and 4–6 are not measured (the author).
+
+57. **The hover-mask stopping rule.**
+    - `p1_hover.check_truth_masks` checks, on the vector-field mask at hover and at every
+      trim, that each true y-map entry has the field's sign. It runs once in
+      `run.stage_hover` before any surrogate is loaded.
+    - On failure it raises `MaskSignError`, naming the point and the matrix, and the
+      stage stops with "a code error, not a result". The per-model checks inside
+      `hover_check` and `trim_check` remain.
+    - Test: an injected wrong-sign field (all points) and a wrong sign at one trim.
+
+58. **The Corollary 1 check and its stress test.**
+    - The 1e-10 threshold applies to a relative deviation. Per line it is
+      max over the grid of ‖ĥ(s) − ĥ_Cor1(s)‖₂/‖ĥ_Cor1(s)‖₂ (`analysis.corollary1_line`),
+      and the analysis takes the maximum over the 11 lines. The code is unchanged;
+      `run.corollary1_check` now holds the line construction, so the stress test runs
+      the identical check.
+    - The stress test (`corollary1_stress.py`, `results/p1/corollary1_stress/`) uses
+      random first layers of both architectures (H = 128, k = 16). It sweeps κ over 30
+      log-uniform values in [1e-4, 1e10], and adds ‖c⊥‖ = 1.5, 3 and 10 × 1e-12·‖b‖.
+      μ is placed near z* (within 0.01 r_eff) and 3 units away.
+    - Result: maximum 6–8e-16 over the sweep; 3.3–4.0e-12 at the near-tolerance points
+      with μ near z*. That is within 1e-10 everywhere, so the sweep became a test and
+      the work continued, as the author specified.
+
+59. **Output paths.**
+    - Every output location is relative in the config and follows `--out-root`, so the
+      runs write to local disk (e.g. `C:\Users\binoy\p1_runs`). Temporary files and
+      `os.replace` stay inside the target directory, on that disk.
+    - Read-only from the repository: the committed data manifest and trims. The launcher's
+      logs now follow `--out-root` too (`launch.logs_dir`).
+    - Drive receives each stage's output directory through `copy_verified.py`: plain
+      copies, each SHA-256 rechecked at the destination, and `copy_manifest.csv`
+      written to both ends.
+    - P-I never writes to Drive during a stage. Tests cover the relative paths, the
+      `--out-root` redirection and the verified copy.

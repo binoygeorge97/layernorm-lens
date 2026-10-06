@@ -399,12 +399,7 @@ def analyse_one(cfg, spec, p, ds, seed=None):
         for k, v in an.direction_sharpness(L, Ztr, d).items():
             out[f"{dname}_{k}"] = v
     if not L.degenerate:
-        c1 = a["corollary1"]
-        lines = [(Ztr.mean(0), d1)] + [(Ztr[i], d1) for i in np.random.default_rng(int(c1["rng_seed"])).choice(
-            len(Ztr), int(c1["n_state_lines"]), replace=False)]
-        devs = [an.corollary1_line(L, E, b, x0, d, Ztr, int(c1["n_grid"]), float(c1["t_range"]))["max_rel_dev"]
-                for x0, d in lines]
-        out["corollary1_max_rel_dev"] = float(max(devs))
+        out["corollary1_max_rel_dev"] = corollary1_check(cfg, L, E, b, Ztr, d1)
     if spec.n_blocks > 1:
         for dname, d in (("u_min", um), ("d1", d1)):
             pr = an.attenuation_P(spec, p, L, d, an.half_width(Ztr, d)[0], int(a["p4_grid"]))
@@ -419,6 +414,19 @@ def analyse_one(cfg, spec, p, ds, seed=None):
             out.update({f"{pre}attenuation_out": at["attenuation_out"],
                         **{f"{pre}attenuation_block{j + 1}": v for j, v in enumerate(at["attenuation_blocks"])}})
     return out
+
+
+def corollary1_check(cfg, L, E, b, Ztr, d1):
+    """The analysis's Corollary 1 check (prereg/p1.md, stopping rules): lines through μ
+    and through `n_state_lines` training states (default_rng(rng_seed), without
+    replacement), all along d₁. For each line, analysis.corollary1_line gives the maximum
+    over its grid of the relative deviation ‖ĥ − ĥ_Cor1‖₂/‖ĥ_Cor1‖₂; returns the maximum
+    over the lines."""
+    c1 = cfg["analysis"]["corollary1"]
+    lines = [(Ztr.mean(0), d1)] + [(Ztr[i], d1) for i in np.random.default_rng(int(c1["rng_seed"])).choice(
+        len(Ztr), int(c1["n_state_lines"]), replace=False)]
+    return float(max(an.corollary1_line(L, E, b, x0, d, Ztr, int(c1["n_grid"]), float(c1["t_range"]))["max_rel_dev"]
+                     for x0, d in lines))
 
 
 def error_distribution(err, qs=(5, 25, 50, 75, 95, 99)):
@@ -455,8 +463,14 @@ def stage_analyse(cfg, ds, ck_dir, summ, members):
 
 def stage_hover(cfg, ds, ck_dir, summ, members, plant, hx, hu, trims):
     """hover_one with the trim check for every member (a diverged run is recorded, not
-    checked). Returns (rows, per-trim rows)."""
+    checked). Returns (rows, per-trim rows). Stops with RuntimeError if the hover mask's
+    precondition fails at hover or at any trim (prereg/p1.md, stopping rules): checked
+    once on the simulator before any surrogate, and again inside every model's check."""
     truth = phover.trim_truth(plant, trims)
+    try:
+        phover.check_truth_masks(plant, trims, truth, float(cfg["hover"]["sign_rel_threshold"]))
+    except phover.MaskSignError as e:
+        raise RuntimeError(f"{e}: stopping (a code error, not a result)") from None
     rows, trim_rows = [], []
     for name, spec, seed in members:
         if rules.diverged(summ[name]):
@@ -865,7 +879,10 @@ def main():
             save_npz(os.path.join(res, "analyse_lens.npz"), arrays)
         else:
             trims = load_trims(cfg, os.path.join(ROOT, *cfg["paths"]["results"].split("/")))
-            rows, trim_rows = stage_hover(cfg, ds, P["ck"], summ, grid(cfg), plant, hx, hu, trims)
+            try:
+                rows, trim_rows = stage_hover(cfg, ds, P["ck"], summ, grid(cfg), plant, hx, hu, trims)
+            except RuntimeError as e:
+                sys.exit(str(e))
             write_csv(os.path.join(res, "hover_trims.csv"), trim_rows)
     extra = dict(p3_spearman=p3_spearman(rows)) if args.stage == "analyse" else {}
     write_csv(os.path.join(res, f"{args.stage}.csv"), rows)

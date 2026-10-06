@@ -900,3 +900,85 @@ def test_analyse_one_quantities_as_defined(synthetic, tmp_path):
     # Bryson Q, R from the half-widths
     Q, R = phover.bryson(np.full(12, 2.0), np.full(4, 0.5))
     assert np.allclose(np.diag(Q), 0.25) and np.allclose(np.diag(R), 4.0)
+
+
+# --------------------------------------------------------------------------- #
+# the author's decisions of 5 Oct (second review): mask stop, Corollary 1      #
+# stress, output paths                                                          #
+# --------------------------------------------------------------------------- #
+
+
+def test_hover_mask_stop_on_an_injected_fault(synthetic, tmp_path):
+    """Hover-mask stopping rule: if a true y-map entry's sign on the vector-field mask
+    differs from the field's (here: a field with the wrong sign), the hover stage stops
+    before touching any surrogate."""
+    import dataclasses
+    plant, _, _, hx, hu, ds, _ = synthetic
+    cfg = _small_cfg()
+    trims = phover.sample_trims(plant, hx, 3, 0)
+    phover.check_truth_masks(plant, trims, phover.trim_truth(plant, trims))  # the real plant passes
+    bad = dataclasses.replace(plant, f=lambda x, u: -plant.f(x, u))
+    with pytest.raises(phover.MaskSignError, match="hover mask at hover"):
+        phover.check_truth_masks(bad, trims, phover.trim_truth(bad, trims))
+    with pytest.raises(RuntimeError, match="hover mask .* code error"):
+        prun.stage_hover(cfg, ds, str(tmp_path / "no_checkpoints"), {}, prun.grid(cfg)[:1], bad, hx, hu, trims)
+    # a fault at a single trim only is caught and named
+    T = phover.trim_truth(plant, trims)
+    T["F_u"] = T["F_u"].copy()
+    T["F_u"][2] = -T["F_u"][2]
+    with pytest.raises(phover.MaskSignError, match="trim 2, matrix B"):
+        phover.check_truth_masks(plant, trims, T)
+
+
+def test_corollary1_stress_sweep_stays_within_tolerance():
+    """Author's item 2: the analysis's own Corollary 1 check on random first layers of
+    both architectures, with κ swept log-uniformly over [1e-4, 1e10] (30 values) and
+    ‖c⊥‖ just above the degeneracy tolerance, μ near and far from z*, stays ≤ 1e-10."""
+    import corollary1_stress as cs
+    rows = cs.stress(CFG, n_kappa=30)
+    sweep = [r for r in rows if r["family"] == "sweep"]
+    kap = sorted({round(np.log10(r["kappa"]), 6) for r in sweep})
+    assert len(kap) == 30 and kap[0] == pytest.approx(-4) and kap[-1] == pytest.approx(10)
+    near = [r for r in rows if r["family"] == "near_tolerance"]
+    assert all(not r["degenerate"] and 1.0 < r["c_perp_over_b"] / 1e-12 < 11 for r in near)
+    assert {r["mu"] for r in rows} == {"near", "far"} and all(r["checked"] for r in rows)
+    for r in rows:
+        if r["mu"] == "near":
+            assert r["mu_to_z_star"] <= 0.01 * r["r_eff_min"]
+    assert max(r["max_rel_dev"] for r in rows) <= CFG["analysis"]["corollary1"]["tol"]
+
+
+def test_copy_verified_to_another_location(tmp_path, monkeypatch):
+    import copy_verified as cv
+    src, dest = tmp_path / "src", tmp_path / "drive"
+    (src / "a").mkdir(parents=True)
+    (src / "a" / "x.npz").write_bytes(b"abc")
+    (src / "y.csv").write_text("1,2\n")
+    (src / "z.csv.tmp123").write_text("partial")  # a temporary file is never copied
+    rows, problems = cv.copy_verified(str(src), str(dest))
+    assert not problems and sorted(r["file"] for r in rows) == ["a/x.npz", "y.csv"]
+    assert (dest / "a" / "x.npz").read_bytes() == b"abc" and not (dest / "z.csv.tmp123").exists()
+    assert (dest / cv.MANIFEST).exists() and (src / cv.MANIFEST).exists()
+    # a corrupted copy is reported, not accepted
+    import shutil
+    monkeypatch.setattr(shutil, "copyfile", lambda a, b: open(b, "wb").write(b"zzz"))
+    (dest / "y.csv").write_text("wrong\n")
+    rows, problems = cv.copy_verified(str(src), str(dest))
+    assert problems == ["y.csv: SHA-256 mismatch after copying"]
+
+
+def test_output_paths_are_run_time_arguments(tmp_path):
+    """Every output location is relative in the config and follows --out-root (local
+    disk); only the committed data manifest and trims are read from the repository."""
+    import launch
+    for k, v in CFG["paths"].items():
+        assert not os.path.isabs(v) and ":" not in v and v.startswith(("data/", "results/", "checkpoints/"))
+    root = str(tmp_path / "p1_runs")
+    P = prun.paths(CFG, root)
+    for k in ("data", "ck", "res"):
+        assert P[k].startswith(root)
+    assert launch.logs_dir(CFG, "train", ["--out-root", root]) == os.path.join(P["res"], "train", "logs")
+    assert launch.logs_dir(CFG, "train").startswith(prun.ROOT)
+    r = subprocess.run([sys.executable, os.path.join(P1, "run.py"), "--help"], capture_output=True, text=True,
+                       encoding="utf-8", cwd=ROOT)
+    assert "--out-root" in r.stdout and "--data-dir" in r.stdout

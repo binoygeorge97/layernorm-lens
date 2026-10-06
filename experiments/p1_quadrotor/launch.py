@@ -3,6 +3,8 @@
     python experiments/p1_quadrotor/launch.py --stage train       [--n-proc 3] [-- extra run.py args]
     python experiments/p1_quadrotor/launch.py --stage train_long  [--n-proc 3]
 
+Every run writes to local disk: pass `-- --out-root C:\\Users\\binoy\\p1_runs` (the logs follow it).
+
 Runs every member of the stage's grid as its own process (`run.py STAGE --index i`), at
 most N_PROC at a time, each with the pinned environment `ENV` (one thread per process
 for XLA and every BLAS). Each process skips a run whose manifest already verifies and
@@ -46,6 +48,14 @@ def env(base=None):
     return e
 
 
+def logs_dir(cfg, stage, extra=()):
+    """<results>/<stage>/logs, under the --out-root passed through to the runs, if any."""
+    import run as prun
+    extra = list(extra)
+    out_root = extra[extra.index("--out-root") + 1] if "--out-root" in extra else None
+    return os.path.join(prun.paths(cfg, out_root)["res"], stage, "logs")
+
+
 def command(script, config, stage, index, extra=()):
     return [sys.executable, script, "--config", config, stage, "--index", str(index), *extra]
 
@@ -87,7 +97,7 @@ def main():
     import run as prun  # noqa: E402
     members = prun.grid(cfg, prun.GRIDS[args.stage])
     extra = [a for a in args.extra if a != "--"]
-    logs = args.logs or os.path.join(ROOT, *cfg["paths"]["results"].split("/"), args.stage, "logs")
+    logs = args.logs or logs_dir(cfg, args.stage, extra)
     cmds = [command(args.script, args.config, args.stage, i, extra) for i in range(len(members))]
     codes = run_pool(cmds, args.n_proc, [os.path.join(logs, f"{n}.log") for n, _, _ in members])
     bad = [members[i][0] for i, c in enumerate(codes) if c != 0]

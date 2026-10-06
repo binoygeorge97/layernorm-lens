@@ -99,12 +99,32 @@ def masked_sign_agreement(M_s, M_t, mask):
     return float(np.mean(agree)), int(np.sum(~agree)), int(mask.sum())
 
 
+class MaskSignError(ValueError):
+    """The hover mask's precondition failed: a code error (prereg/p1.md, stopping rules)."""
+
+
 def mask_sign_check(M_t, F, mask):
     """The precondition of the sign test: on the mask, every true y-map entry has the
-    vector field's sign. Raises ValueError otherwise."""
+    vector field's sign. Raises MaskSignError otherwise."""
     bad = np.sign(np.asarray(M_t)[mask]) != np.sign(np.asarray(F)[mask])
     if np.any(bad):
-        raise ValueError(f"{int(bad.sum())} masked entries of the true y-map differ in sign from ∂f")
+        raise MaskSignError(f"{int(bad.sum())} masked entries of the true y-map differ in sign from ∂f")
+
+
+def check_truth_masks(plant, trims, truth, sign_rel_threshold=1e-3):
+    """The hover stage's stopping rule, before any surrogate is touched: on the
+    vector-field mask at hover and at every trim, each true y-map entry has the vector
+    field's sign. Raises MaskSignError naming the point and matrix otherwise."""
+    A, B = true_y_jacobians(plant)
+    F_x, F_u = true_f_jacobians(plant)
+    points = [("hover", A, B, F_x, F_u)] + [(f"trim {i}", truth["A"][i], truth["B"][i], truth["F_x"][i],
+                                              truth["F_u"][i]) for i in range(len(trims))]
+    for where, A_t, B_t, Fx, Fu in points:
+        for nm, M, F in (("A", A_t, Fx), ("B", B_t, Fu)):
+            try:
+                mask_sign_check(M, F, sign_mask(F, sign_rel_threshold))
+            except MaskSignError as e:
+                raise MaskSignError(f"hover mask at {where}, matrix {nm}: {e}") from None
 
 
 def unmasked_disagreements(M_s, M_t, rel_threshold):
