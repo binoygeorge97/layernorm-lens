@@ -1,4 +1,4 @@
-# Project state (handoff), 5 October 2026, updated after the author's review of prereg/p1.md
+# Project state (handoff), 5 October 2026, prereg/p1.md committed for the author's tag
 
 For a fresh Claude Code session with no other context. Read this, then `CLAUDE.md`
 (rules; they override defaults), `docs/theory.md` (definitions; authoritative) and
@@ -26,8 +26,8 @@ The argument has two halves:
   surrogates, Jacobian error concentrates near the lens, which damages
   linearisation (LQR) and gradient-based MPC; fixes are compared at equal accuracy.
   `prereg/p1.md` (predictions 1–4 from the author's protocol amendments v3, item 3,
-  plus prediction 5 and H1) was reviewed by the author at ade76d6 and is being revised;
-  the revision waits on the degeneracy criterion (A5). The author tags `prereg-p1`.
+  plus prediction 5 and H1), revised after the author's review, is committed and waits
+  for the author's tag `prereg-p1`.
   Gate G2 (18 Oct).
 
 Gate G3 (13 Nov): every main-text claim backed.
@@ -50,7 +50,7 @@ Gate G3 (13 Nov): every main-text claim backed.
 | `docs/DECISIONS.md`, `docs/plans/` | The decision log for choices the specs leave open, and per-task plans |
 | `experiments/initial_lens/` | Initial-lens check: `run.py`, `config.yaml`. 1,000 draws per (H, k, ε, init) for inits (a) zero bias, (b) torch default, (c) Flax, (d) TD-MPC2. Results in `results/initial_lens/` |
 | `experiments/r6_tdmpc2/` | R6 (below) |
-| `prereg/` | `r6.md` and deviations parts 1–4 (all tagged); `p1.md` (ade76d6, under revision after the author's review; not tagged); `drafts/p1-draft.md` (v3) |
+| `prereg/` | `r6.md` and deviations parts 1–4 (all tagged); `p1.md` (revised; awaiting the tag `prereg-p1`); `drafts/` (p1 draft v3 and the revised text) |
 | `tests/` | pytest suite; `tests/golden/` holds core.py regression outputs |
 | `figures/` | The only source of paper figures (empty so far) |
 | `notebooks/` | Exploration only |
@@ -182,7 +182,8 @@ regression in tolerance mode: `LENS_TOL=1 python -m pytest -q tests/test_core_re
 | 0966917 | `results/p1/trims/`: the 200 trims, sampled before any training (trims.csv SHA-256 5b5f7105…9f95) |
 | da742dd, ade76d6 | Draft v3; `prereg/p1.md` (reviewed by the author: not approved yet) |
 | 0eb600a, 6de7d31 | The author's review A1–A9: vector-field sign mask, prediction 4 on the stack with a unit-free ratio, ρ_eff everywhere, divergence and restarts, atomic deterministic outputs, launcher, pre-flight, throughput and determinism scripts; tests |
-| (next) | `results/p1/throughput/`, `results/p1/determinism/`, `results/p1_preflight/` summaries, `docs/plans/p1_traceability.md` |
+| c1626b8, c070d2e | Throughput, determinism, pre-flight evidence, traceability; the revised text as a draft |
+| c5baae8, ab39eea, 539dea4 | Hover-mask stop, Corollary 1 stress test (`results/p1/corollary1_stress/`), `copy_verified.py`, launcher logs under `--out-root`; `p1_load` (P-I's run.py as p1_run); draft updated |
 
 ## 4. R6 status
 
@@ -352,10 +353,13 @@ A1–A9 and a pre-flight P1–P5, all implemented (0eb600a, 6de7d31).
 - Determinism: byte-identical.
 - Traceability: `docs/plans/p1_traceability.md`.
 
-The revised `prereg/p1.md` is drafted but not committed, because A5 stops on the
-degeneracy criterion. theory.md defines c⊥ = 0 with no numeric tolerance. Next: the
-author's choice, then `prereg/p1.md` committed alone, then the tag. Only then may any
-P-I stage touch quadrotor data.
+A5 was decided by the author: c⊥ = 0, read as ‖c⊥‖ ≤ 1e-12·‖b‖ (`DEGENERATE_RTOL`).
+Also added: the hover-mask stop, the Corollary 1 stress test (maximum 4e-12), and
+outputs on local disk with verified copies to Drive. `prereg/p1.md` is committed alone
+and waits for the author's annotated tag `prereg-p1`. Only then may any P-I stage touch
+quadrotor data.
+- Run the stages with `--out-root C:\Users\binoy\p1_runs`.
+- Training goes through `launch.py --stage train -- --out-root ...`.
 - After the tag, run on the laptop: generate; the 40-model grid; the 10 long runs;
   then analyse, hover, p5 (`--of train` and `--of train_long`), analyse_long and
   predictions.
@@ -382,15 +386,7 @@ marked `BRANCH` parameter cell, set to `r6-criterion`.
 
 ## Questions for the author
 
-Blocking `prereg/p1.md` (A5):
-
-1. The numeric criterion for a degenerate lens. theory.md defines it exactly, as c⊥ = 0
-   (Remark 1; convention 4), with no tolerance. `lens/geometry.py` (used by R6, so not
-   changeable) treats ‖c⊥‖ ≤ 1e-12·‖b‖ as zero. Proposed: cite that test as the
-   numerical reading of c⊥ = 0.
-   - After A5 it affects only the reported degenerate flag and which models the
-     Corollary 1 stop applies to.
-   - No prediction's verdict depends on it.
+None open. Waiting for the tag `prereg-p1` on origin.
 
 ## 7. Known issues
 
